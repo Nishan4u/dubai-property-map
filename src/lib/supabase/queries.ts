@@ -59,16 +59,44 @@ export async function requireAdmin() {
   return profile as NonNullable<typeof profile>;
 }
 
-export async function getPublishedProjects() {
+export async function getPublishedProjects(developerId?: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("projects")
     .select("*, developers(*), communities(*)")
-    .in("status", ["published", "featured"])
-    .order("created_at", { ascending: false });
+    .in("status", ["published", "featured"]);
+
+  if (developerId) {
+    query = query.eq("developer_id", developerId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as ProjectWithRelations[];
+}
+
+// A logged-in Developer or Salesperson account only ever sees their own
+// developer's projects on the main map/search/filters — everything else
+// (areas, communities) stays visible. Salespersons don't carry developer_id
+// on their own profile row, so it's looked up via their salesperson record.
+// Public visitors, admins, and brokers get null (unrestricted).
+export async function getViewerProjectScope(): Promise<string | null> {
+  const profile = await getCurrentProfile();
+  if (!profile) return null;
+  if (profile.developer_id) return profile.developer_id;
+
+  if (profile.salesperson_id) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("salespersons")
+      .select("developer_id")
+      .eq("id", profile.salesperson_id)
+      .maybeSingle();
+    return data?.developer_id ?? null;
+  }
+
+  return null;
 }
 
 export async function getProjectBySlug(slug: string) {

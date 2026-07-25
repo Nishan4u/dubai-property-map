@@ -7,6 +7,7 @@ import {
   getDevelopers,
   getNavLinks,
   getPublishedProjects,
+  getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
 import { getCmsMetadata } from "@/components/public/CmsPage";
@@ -18,6 +19,11 @@ export async function generateMetadata() {
 }
 
 export default async function Home() {
+  // A logged-in Developer or Salesperson only ever sees their own
+  // developer's projects on this page — areas/communities stay unrestricted.
+  // Resolved up front since getPublishedProjects needs it for its query.
+  const viewerDeveloperId = await getViewerProjectScope();
+
   const [
     communityRows,
     developerRows,
@@ -29,7 +35,7 @@ export default async function Home() {
   ] = await Promise.all([
     getCommunities(),
     getDevelopers(),
-    getPublishedProjects(),
+    getPublishedProjects(viewerDeveloperId ?? undefined),
     getActiveHomepageBanner(),
     getActiveSidebarBanner(),
     getActiveSponsoredPinProjectIds(),
@@ -61,6 +67,7 @@ export default async function Home() {
       }
       sponsoredPinIds={Array.from(sponsoredPinIds)}
       navLinks={navLinks.map((l) => ({ label: l.label, url: l.url }))}
+      viewerDeveloperId={viewerDeveloperId}
     />
   );
 }

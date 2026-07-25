@@ -35,6 +35,7 @@ export function HomeClient({
   sidebarBanner,
   sponsoredPinIds,
   navLinks,
+  viewerDeveloperId = null,
 }: {
   communities: Community[];
   developers: Developer[];
@@ -43,6 +44,11 @@ export function HomeClient({
   sidebarBanner?: HomepageBanner | null;
   sponsoredPinIds?: string[];
   navLinks?: { label: string; url: string }[];
+  /** Set when the logged-in viewer is a Developer or Salesperson account —
+   * `projects` has already been scoped to their developer server-side; this
+   * just tells the UI to lock/hide the Developer filter and other-developer
+   * directory bits instead of offering choices that would be a no-op. */
+  viewerDeveloperId?: string | null;
 }) {
   const validTags: (ProjectTag | "all")[] = [
     "new-launch",
@@ -262,6 +268,7 @@ export function HomeClient({
               filters={filters}
               onApply={setFilters}
               sidebarBanner={sidebarBanner}
+              viewerDeveloperId={viewerDeveloperId}
             />
           </div>
         )}
@@ -373,6 +380,7 @@ export function HomeClient({
                   setMobileFiltersOpen(false);
                 }}
                 sidebarBanner={sidebarBanner}
+                viewerDeveloperId={viewerDeveloperId}
               />
             </div>
           </div>

@@ -9,14 +9,19 @@ import {
   getDevelopers,
   getNavLinks,
   getPublishedProjects,
+  getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapDeveloper } from "@/lib/supabase/mappers";
 
 export async function PublicShell({ children }: { children: React.ReactNode }) {
+  // Keeps the header search consistent with the main map: a logged-in
+  // Developer/Salesperson only finds their own developer's projects here too.
+  const viewerDeveloperId = await getViewerProjectScope();
+
   const [headerLinks, footerLinks, projects, communities, developers] = await Promise.all([
     getNavLinks("header"),
     getNavLinks("footer"),
-    getPublishedProjects(),
+    getPublishedProjects(viewerDeveloperId ?? undefined),
     getCommunities(),
     getDevelopers(),
   ]);

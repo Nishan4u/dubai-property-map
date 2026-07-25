@@ -49,6 +49,7 @@ export function FilterSidebar({
   filters,
   onApply,
   sidebarBanner,
+  viewerDeveloperId = null,
 }: {
   developers: Developer[];
   communities: Community[];
@@ -58,6 +59,12 @@ export function FilterSidebar({
   filters: ProjectFilters;
   onApply: (filters: ProjectFilters) => void;
   sidebarBanner?: { title: string; targetUrl: string | null; developerName?: string } | null;
+  /** Set for logged-in Developer/Salesperson accounts — the results are
+   * already locked to this one developer, so the developer picker and the
+   * other-developers directory widget are hidden rather than offered as a
+   * choice that would just be a no-op (or worse, imply competitors are
+   * browsable, which they aren't for these accounts). */
+  viewerDeveloperId?: string | null;
 }) {
   const [draft, setDraft] = useState<ProjectFilters>(filters);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
@@ -142,13 +149,15 @@ export function FilterSidebar({
               placeholder="e.g. Dubai Marina, Business Bay…"
             />
           </div>
-          <CompactSelect
-            label="Developer"
-            placeholder="All Developers"
-            value={draft.developerId}
-            onChange={(v) => set("developerId", v)}
-            options={developers.map((d) => ({ label: d.name, value: d.id }))}
-          />
+          {!viewerDeveloperId && (
+            <CompactSelect
+              label="Developer"
+              placeholder="All Developers"
+              value={draft.developerId}
+              onChange={(v) => set("developerId", v)}
+              options={developers.map((d) => ({ label: d.name, value: d.id }))}
+            />
+          )}
           <CompactSelect
             label="Community"
             placeholder="All Communities"
@@ -316,42 +325,44 @@ export function FilterSidebar({
         )}
       </div>
 
-      <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink-100">Top Developers</h3>
+      {!viewerDeveloperId && (
+        <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-ink-100">Top Developers</h3>
+            <Link
+              href="/developers"
+              className="text-xs font-medium text-gold-400 hover:text-gold-300"
+            >
+              View All
+            </Link>
+          </div>
+          <ul className="space-y-1">
+            {developers.slice(0, 5).map((dev) => (
+              <li key={dev.id}>
+                <Link
+                  href={`/developers/${dev.slug}`}
+                  className="flex items-center justify-between rounded-lg px-1.5 py-1.5 text-sm hover:bg-navy-800"
+                >
+                  <span className="flex items-center gap-2 text-ink-200">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ background: dev.color }}
+                    />
+                    {dev.name}
+                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 text-ink-500" />
+                </Link>
+              </li>
+            ))}
+          </ul>
           <Link
             href="/developers"
-            className="text-xs font-medium text-gold-400 hover:text-gold-300"
+            className="mt-2 flex items-center gap-1 px-1.5 text-xs font-medium text-ink-500 hover:text-ink-300"
           >
-            View All
+            <MapPin className="h-3.5 w-3.5" /> + More
           </Link>
         </div>
-        <ul className="space-y-1">
-          {developers.slice(0, 5).map((dev) => (
-            <li key={dev.id}>
-              <Link
-                href={`/developers/${dev.slug}`}
-                className="flex items-center justify-between rounded-lg px-1.5 py-1.5 text-sm hover:bg-navy-800"
-              >
-                <span className="flex items-center gap-2 text-ink-200">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: dev.color }}
-                  />
-                  {dev.name}
-                </span>
-                <ChevronRight className="h-3.5 w-3.5 text-ink-500" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <Link
-          href="/developers"
-          className="mt-2 flex items-center gap-1 px-1.5 text-xs font-medium text-ink-500 hover:text-ink-300"
-        >
-          <MapPin className="h-3.5 w-3.5" /> + More
-        </Link>
-      </div>
+      )}
 
       {sidebarBanner && (
         <Link
