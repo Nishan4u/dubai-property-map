@@ -192,6 +192,9 @@ export function HomeClient({
         getInvestmentScore(p) < Number(filters.minInvestmentScore)
       )
         return false;
+      // Blank/unset escrow status only ever shows under "All" — never
+      // matches a specific Available/Not Available selection.
+      if (filters.escrowStatus && p.escrowStatus !== filters.escrowStatus) return false;
       return true;
     });
   }, [allProjects, activeTab, activeTag, filters, searchQuery]);
@@ -255,7 +258,9 @@ export function HomeClient({
           </button>
         </div>
       )}
-      {!isFullscreen && <PartnerDevelopersSlider developers={developers} />}
+      {!isFullscreen && !viewerDeveloperId && (
+        <PartnerDevelopersSlider developers={developers} />
+      )}
       <div className="flex min-h-0 flex-1">
         {!isFullscreen && (
           <div className="hidden lg:block">

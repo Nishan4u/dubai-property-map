@@ -3,6 +3,7 @@ import { AdRequestSection } from "@/components/dashboard/AdRequestSection";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAdPlacementsForDeveloper,
+  getBankTransferSettings,
   getCommunities,
   getProjectsForDeveloper,
   getSubscriptionPlans,
@@ -16,13 +17,15 @@ export default async function DeveloperPackagesPage() {
   const developerId = profile.developer_id;
 
   const supabase = await createClient();
-  const [{ data: developer }, placements, projects, communities, plans] = await Promise.all([
-    supabase.from("developers").select("plan_tier").eq("id", developerId).single(),
-    getAdPlacementsForDeveloper(developerId),
-    getProjectsForDeveloper(developerId),
-    getCommunities(),
-    getSubscriptionPlans(),
-  ]);
+  const [{ data: developer }, placements, projects, communities, plans, bankDetails] =
+    await Promise.all([
+      supabase.from("developers").select("plan_tier").eq("id", developerId).single(),
+      getAdPlacementsForDeveloper(developerId),
+      getProjectsForDeveloper(developerId),
+      getCommunities(),
+      getSubscriptionPlans(),
+      getBankTransferSettings(),
+    ]);
 
   return (
     <div className="space-y-6 p-6">
@@ -34,7 +37,12 @@ export default async function DeveloperPackagesPage() {
         </p>
       </div>
 
-      <PlanCards plans={plans} currentPlan={developer?.plan_tier ?? "free"} />
+      <PlanCards
+        plans={plans}
+        currentPlan={developer?.plan_tier ?? "free"}
+        developerId={developerId}
+        bankDetails={bankDetails}
+      />
 
       <AdRequestSection
         placements={placements}

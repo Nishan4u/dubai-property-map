@@ -22,6 +22,7 @@ export interface ProjectFilters {
   ready: boolean;
   nearMetro: boolean;
   minInvestmentScore: string;
+  escrowStatus: string;
 }
 
 export const emptyFilters: ProjectFilters = {
@@ -38,6 +39,7 @@ export const emptyFilters: ProjectFilters = {
   ready: false,
   nearMetro: false,
   minInvestmentScore: "",
+  escrowStatus: "",
 };
 
 export function FilterSidebar({
@@ -269,6 +271,16 @@ export function FilterSidebar({
               { label: "70+", value: "70" },
               { label: "80+", value: "80" },
               { label: "90+", value: "90" },
+            ]}
+          />
+          <Select
+            label="Escrow Account"
+            placeholder="All"
+            value={draft.escrowStatus}
+            onChange={(v) => set("escrowStatus", v)}
+            options={[
+              { label: "Available", value: "available" },
+              { label: "Not Available", value: "not_available" },
             ]}
           />
         </div>

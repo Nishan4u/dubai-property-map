@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Check } from "lucide-react";
+import { Check, Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
+import type { SubscriptionBankTransferRow } from "@/types/database";
 
 interface Plan {
   key: string;
@@ -12,20 +14,41 @@ interface Plan {
   features: string[];
 }
 
+const bankTransferStatusLabel: Record<SubscriptionBankTransferRow["status"], string> = {
+  verification_pending: "Payment Verification Pending",
+  paid: "Paid",
+  rejected: "Rejected",
+};
+const bankTransferStatusTone: Record<
+  SubscriptionBankTransferRow["status"],
+  "green" | "gold" | "red"
+> = {
+  verification_pending: "gold",
+  paid: "green",
+  rejected: "red",
+};
+
 export function BrokerSubscriptionClient({
   plans,
   currentPlanKey,
   subscriptionStatus,
   hasStripeCustomer,
+  brokerId,
+  bankDetails,
+  latestBankTransfer,
 }: {
   plans: Plan[];
   currentPlanKey: string | null;
   subscriptionStatus: string;
   hasStripeCustomer: boolean;
+  brokerId: string;
+  bankDetails: BankDetails;
+  latestBankTransfer?: SubscriptionBankTransferRow | null;
 }) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState("");
+  const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
 
   async function handleSubscribe(plan: string) {
     setLoadingPlan(plan);
@@ -67,6 +90,24 @@ export function BrokerSubscriptionClient({
         <p className="rounded-lg border border-rose-600/40 bg-rose-500/10 px-4 py-2 text-xs font-medium text-rose-300">
           {error}
         </p>
+      )}
+
+      {latestBankTransfer && (
+        <div className="max-w-lg rounded-lg border border-navy-700 bg-navy-900 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-ink-300">
+              Bank Transfer — {latestBankTransfer.plan_key}
+            </p>
+            <Badge tone={bankTransferStatusTone[latestBankTransfer.status]}>
+              {bankTransferStatusLabel[latestBankTransfer.status]}
+            </Badge>
+          </div>
+          {latestBankTransfer.status === "rejected" && latestBankTransfer.rejection_reason && (
+            <p className="mt-1 text-xs text-rose-400">
+              Reason: {latestBankTransfer.rejection_reason}
+            </p>
+          )}
+        </div>
       )}
 
       {isActive && (
@@ -117,10 +158,31 @@ export function BrokerSubscriptionClient({
               >
                 {isCurrent ? "Current Plan" : loadingPlan === plan.key ? "Redirecting…" : "Subscribe"}
               </button>
+              {!isCurrent && (
+                <button
+                  onClick={() =>
+                    setBankTransferPlan((cur) => (cur?.key === plan.key ? null : plan))
+                  }
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-navy-600 py-2 text-xs font-medium text-ink-300 hover:text-ink-100"
+                >
+                  <Landmark className="h-3.5 w-3.5" />
+                  {bankTransferPlan?.key === plan.key ? "Hide Bank Transfer" : "Pay via Bank Transfer"}
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      {bankTransferPlan && (
+        <BankTransferPayment
+          accountType="broker"
+          accountId={brokerId}
+          planKey={bankTransferPlan.key}
+          planLabel={bankTransferPlan.name}
+          bankDetails={bankDetails}
+        />
+      )}
     </div>
   );
 }

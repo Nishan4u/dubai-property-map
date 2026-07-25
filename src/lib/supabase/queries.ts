@@ -388,6 +388,80 @@ export async function getBrokerSubscriptionPlans() {
   return data ?? [];
 }
 
+export async function getBankTransferSettings() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("key, value")
+    .in("key", [
+      "bank_transfer_bank_name",
+      "bank_transfer_account_name",
+      "bank_transfer_account_number",
+      "bank_transfer_iban",
+      "bank_transfer_swift",
+    ]);
+
+  if (error) throw error;
+  const byKey = Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
+  return {
+    bankName: byKey.bank_transfer_bank_name ?? "",
+    accountName: byKey.bank_transfer_account_name ?? "",
+    accountNumber: byKey.bank_transfer_account_number ?? "",
+    iban: byKey.bank_transfer_iban ?? "",
+    swift: byKey.bank_transfer_swift ?? "",
+  };
+}
+
+// PostgREST's "table not in schema cache" — thrown until
+// patch_39_bank_transfer_payments.sql has been run. Billing/Subscription
+// pages must keep working either way, so this degrades to "no submissions"
+// instead of taking the whole page down.
+const UNDEFINED_TABLE = "PGRST205";
+
+export async function getBankTransfersForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_bank_transfers")
+    .select("*")
+    .eq("developer_id", developerId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
+export async function getBankTransfersForBroker(brokerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_bank_transfers")
+    .select("*")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
+export async function getAllBankTransfersAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_bank_transfers")
+    .select("*, developers(name), brokers(full_name)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getAllSubscriptionPlansAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase

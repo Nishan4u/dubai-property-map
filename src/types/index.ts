@@ -89,6 +89,7 @@ export interface Project {
   unitTypePrices?: Record<string, number>;
   paymentPlanDetails?: { label: string; percent: number }[];
   constructionProgressPercent?: number;
+  escrowStatus?: "available" | "not_available" | null;
   // Optional denormalized fields populated when sourced from a Supabase
   // join (real data). Falls back to the mock `getDeveloper`/`getCommunity`
   // lookups when absent, so existing mock-backed pages keep working.

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Check } from "lucide-react";
+import { Check, Landmark } from "lucide-react";
+import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 
 interface Plan {
   key: string;
@@ -14,12 +15,17 @@ interface Plan {
 export function PlanCards({
   plans,
   currentPlan,
+  developerId,
+  bankDetails,
 }: {
   plans: Plan[];
   currentPlan: string;
+  developerId: string;
+  bankDetails: BankDetails;
 }) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
 
   async function handleUpgrade(plan: string) {
     setLoadingPlan(plan);
@@ -84,10 +90,33 @@ export function PlanCards({
                       ? "Downgrade in Billing"
                       : "Upgrade"}
               </button>
+              {!isCurrent && plan.key !== "free" && (
+                <button
+                  onClick={() =>
+                    setBankTransferPlan((cur) => (cur?.key === plan.key ? null : plan))
+                  }
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-navy-600 py-2 text-xs font-medium text-ink-300 hover:text-ink-100"
+                >
+                  <Landmark className="h-3.5 w-3.5" />
+                  {bankTransferPlan?.key === plan.key ? "Hide Bank Transfer" : "Pay via Bank Transfer"}
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      {bankTransferPlan && (
+        <div className="mt-4">
+          <BankTransferPayment
+            accountType="developer"
+            accountId={developerId}
+            planKey={bankTransferPlan.key}
+            planLabel={bankTransferPlan.name}
+            bankDetails={bankDetails}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Banknote,
   Bell,
   Briefcase,
   Building2,
@@ -41,6 +42,7 @@ const navItems = [
   { label: "Ads", href: "/ads", icon: Megaphone },
   { label: "Payments", href: "/payments", icon: Wallet },
   { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
+  { label: "Bank Transfers", href: "/bank-transfers", icon: Banknote },
   { label: "Packages", href: "/packages", icon: Package },
   { label: "Content", href: "/content", icon: FileText },
   { label: "Menus", href: "/menus", icon: MenuIcon },

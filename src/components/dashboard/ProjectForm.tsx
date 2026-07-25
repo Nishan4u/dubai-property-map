@@ -137,6 +137,7 @@ export function ProjectForm({
       property_type: String(formData.get("property_type")),
       price_from_aed: Number(formData.get("price_from_aed")) || 0,
       payment_plan: String(formData.get("payment_plan") ?? ""),
+      escrow_status: String(formData.get("escrow_status") ?? "").trim() || null,
       bedrooms_from: Number(formData.get("bedrooms_from")) || 0,
       bedrooms_to: Number(formData.get("bedrooms_to")) || 0,
       handover_quarter: String(formData.get("handover_quarter") ?? ""),
@@ -262,6 +263,16 @@ export function ProjectForm({
             name="payment_plan"
             defaultValue={project?.paymentPlan}
             placeholder="e.g. 70/30"
+          />
+          <SelectField
+            label="Escrow Account"
+            name="escrow_status"
+            defaultValue={project?.escrowStatus ?? ""}
+            options={[
+              { label: "Leave blank", value: "" },
+              { label: "Available", value: "available" },
+              { label: "Not Available", value: "not_available" },
+            ]}
           />
           <SelectField
             label="Handover Quarter"

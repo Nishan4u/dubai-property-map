@@ -42,6 +42,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     unitTypePrices: row.unit_type_prices ?? {},
     paymentPlanDetails: row.payment_plan_details ?? [],
     constructionProgressPercent: row.construction_progress_percent ?? 0,
+    escrowStatus: row.escrow_status ?? null,
     createdAt: row.created_at,
     developerName: row.developers?.name,
     developerColor: row.developers?.color,

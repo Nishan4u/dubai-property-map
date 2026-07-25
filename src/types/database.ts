@@ -13,6 +13,27 @@ export type DbBrokerSubscriptionStatus =
   | "cancelled"
   | "payment_failed";
 export type DbSalespersonStatus = "active" | "inactive";
+export type DbBankTransferAccountType = "developer" | "broker";
+export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";
+
+export interface SubscriptionBankTransferRow {
+  id: string;
+  account_type: DbBankTransferAccountType;
+  developer_id: string | null;
+  broker_id: string | null;
+  plan_key: string;
+  amount_aed: number;
+  receipt_url: string;
+  transaction_reference: string | null;
+  transfer_date: string | null;
+  note: string | null;
+  status: DbBankTransferStatus;
+  rejection_reason: string | null;
+  submitted_by: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
 export type DbEmailLogStatus = "pending" | "sent" | "failed";
 export type DeveloperStatus = "pending" | "active" | "suspended";
 export type DbProjectStatus =
@@ -169,6 +190,7 @@ export interface ProjectRow {
   unit_type_prices: Record<string, number>;
   payment_plan_details: { label: string; percent: number }[];
   construction_progress_percent: number;
+  escrow_status: "available" | "not_available" | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

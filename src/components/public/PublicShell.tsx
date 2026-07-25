@@ -84,7 +84,9 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
-      <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} />
+      {!viewerDeveloperId && (
+        <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} />
+      )}
       <main className="flex-1">{children}</main>
       <footer className="border-t border-navy-800 px-6 py-6 text-center text-xs text-ink-500">
         <div className="mb-2 flex flex-wrap justify-center gap-4">

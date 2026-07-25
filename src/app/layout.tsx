@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
 import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
 import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
+import { InstallAppPrompt } from "@/components/public/InstallAppPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -56,6 +57,7 @@ export default async function RootLayout({
         <FavoritesProvider>
           <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
         </FavoritesProvider>
+        <InstallAppPrompt />
       </body>
     </html>
   );

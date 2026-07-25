@@ -1,7 +1,12 @@
 import { CreditCard } from "lucide-react";
 import { BrokerSubscriptionClient } from "@/components/broker/BrokerSubscriptionClient";
 import { createClient } from "@/lib/supabase/server";
-import { getBrokerSubscriptionPlans, requireBrokerProfile } from "@/lib/supabase/queries";
+import {
+  getBankTransferSettings,
+  getBankTransfersForBroker,
+  getBrokerSubscriptionPlans,
+  requireBrokerProfile,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -9,13 +14,15 @@ export default async function BrokerSubscriptionPage() {
   const profile = await requireBrokerProfile();
   const supabase = await createClient();
 
-  const [plans, { data: broker }] = await Promise.all([
+  const [plans, { data: broker }, bankDetails, bankTransfers] = await Promise.all([
     getBrokerSubscriptionPlans(),
     supabase
       .from("brokers")
       .select("plan_key, subscription_status, stripe_customer_id, subscription_expires_at")
       .eq("id", profile.broker_id)
       .single(),
+    getBankTransferSettings(),
+    getBankTransfersForBroker(profile.broker_id),
   ]);
 
   return (
@@ -37,6 +44,9 @@ export default async function BrokerSubscriptionPage() {
         currentPlanKey={broker?.plan_key ?? null}
         subscriptionStatus={broker?.subscription_status ?? "no_subscription"}
         hasStripeCustomer={!!broker?.stripe_customer_id}
+        brokerId={profile.broker_id}
+        bankDetails={bankDetails}
+        latestBankTransfer={bankTransfers[0] ?? null}
       />
     </div>
   );

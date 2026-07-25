@@ -1,17 +1,20 @@
 import { BillingClient } from "@/components/dashboard/BillingClient";
 import { createClient } from "@/lib/supabase/server";
-import { requireDeveloperProfile } from "@/lib/supabase/queries";
+import { getBankTransfersForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
   const profile = await requireDeveloperProfile();
   const supabase = await createClient();
-  const { data: developer } = await supabase
-    .from("developers")
-    .select("plan_tier, subscription_status, stripe_customer_id")
-    .eq("id", profile.developer_id)
-    .single();
+  const [{ data: developer }, bankTransfers] = await Promise.all([
+    supabase
+      .from("developers")
+      .select("plan_tier, subscription_status, stripe_customer_id")
+      .eq("id", profile.developer_id)
+      .single(),
+    getBankTransfersForDeveloper(profile.developer_id),
+  ]);
 
   return (
     <div className="space-y-4 p-6">
@@ -26,6 +29,7 @@ export default async function BillingPage() {
         planTier={developer?.plan_tier ?? "free"}
         subscriptionStatus={developer?.subscription_status ?? "inactive"}
         hasStripeCustomer={!!developer?.stripe_customer_id}
+        latestBankTransfer={bankTransfers[0] ?? null}
       />
     </div>
   );
