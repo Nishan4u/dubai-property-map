@@ -40,12 +40,17 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
       name: c.name,
       href: `/communities/${c.slug}`,
     })),
-    ...developers.map((d) => ({
-      type: "developer" as const,
-      id: d.id,
-      name: d.name,
-      href: `/developers/${d.slug}`,
-    })),
+    // The Developers directory itself is hidden from Developer/Salesperson
+    // accounts (they only ever manage their own), so it shouldn't surface
+    // as a search shortcut for them either.
+    ...(viewerDeveloperId
+      ? []
+      : developers.map((d) => ({
+          type: "developer" as const,
+          id: d.id,
+          name: d.name,
+          href: `/developers/${d.slug}`,
+        }))),
   ];
 
   return (
@@ -77,11 +82,13 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <nav className="flex items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-6 py-2 text-xs font-medium text-ink-400">
-          {headerLinks.map((link) => (
-            <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
-              {link.label}
-            </Link>
-          ))}
+          {headerLinks
+            .filter((link) => !viewerDeveloperId || link.url !== "/developers")
+            .map((link) => (
+              <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
+                {link.label}
+              </Link>
+            ))}
         </nav>
       </div>
       {!viewerDeveloperId && (
@@ -90,11 +97,13 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
       <footer className="border-t border-navy-800 px-6 py-6 text-center text-xs text-ink-500">
         <div className="mb-2 flex flex-wrap justify-center gap-4">
-          {footerLinks.map((link) => (
-            <Link key={link.id} href={link.url} className="hover:text-ink-300">
-              {link.label}
-            </Link>
-          ))}
+          {footerLinks
+            .filter((link) => !viewerDeveloperId || link.url !== "/developers")
+            .map((link) => (
+              <Link key={link.id} href={link.url} className="hover:text-ink-300">
+                {link.label}
+              </Link>
+            ))}
         </div>
         © 2026 Dubai Property Map. All rights reserved.
       </footer>

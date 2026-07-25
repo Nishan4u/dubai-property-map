@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Award, BadgeCheck } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
@@ -11,6 +11,7 @@ import {
   getDeveloperBySlug,
   getDeveloperReviews,
   getProjectsForDeveloper,
+  getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapProject, currentYear } from "@/lib/supabase/mappers";
 
@@ -42,6 +43,11 @@ export default async function DeveloperProfilePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const viewerDeveloperId = await getViewerProjectScope();
+  if (viewerDeveloperId) {
+    redirect("/");
+  }
+
   const { slug } = await params;
   const developer = await getDeveloperBySlug(slug);
   if (!developer) notFound();

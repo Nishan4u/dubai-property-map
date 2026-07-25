@@ -66,7 +66,9 @@ export default async function Home() {
           : null
       }
       sponsoredPinIds={Array.from(sponsoredPinIds)}
-      navLinks={navLinks.map((l) => ({ label: l.label, url: l.url }))}
+      navLinks={navLinks
+        .filter((l) => !viewerDeveloperId || l.url !== "/developers")
+        .map((l) => ({ label: l.label, url: l.url }))}
       viewerDeveloperId={viewerDeveloperId}
     />
   );

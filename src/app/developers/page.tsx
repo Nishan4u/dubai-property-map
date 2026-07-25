@@ -1,10 +1,19 @@
+import { redirect } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { DevelopersPageClient } from "@/components/public/DevelopersPageClient";
-import { getDevelopers, getPublishedProjects } from "@/lib/supabase/queries";
+import { getDevelopers, getPublishedProjects, getViewerProjectScope } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function DevelopersPage() {
+  // Developer/Salesperson accounts only ever manage their own developer —
+  // the public directory of every developer isn't for them. Enforced here
+  // (not just by hiding the nav link) so direct URL visits are blocked too.
+  const viewerDeveloperId = await getViewerProjectScope();
+  if (viewerDeveloperId) {
+    redirect("/");
+  }
+
   const [developers, projects] = await Promise.all([
     getDevelopers(),
     getPublishedProjects(),

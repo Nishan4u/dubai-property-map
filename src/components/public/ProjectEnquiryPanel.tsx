@@ -1,12 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Download, MessageCircle, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { notifyDeveloperTeam, sendLeadWebhook } from "@/lib/notify";
+
+type VerificationStatus = "loading" | "guest" | "unverified" | "inactive" | "ok";
 
 export function ProjectEnquiryPanel({
   projectId,
@@ -33,6 +36,25 @@ export function ProjectEnquiryPanel({
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
     "idle"
   );
+  // Book Appointment / Enquire Now is registered-users-only (checked again
+  // by RLS server-side — this is just what decides what the UI shows).
+  const [verification, setVerification] = useState<VerificationStatus>("loading");
+
+  useEffect(() => {
+    fetch("/api/account/verification-status")
+      .then((r) => r.json())
+      .then((d) => setVerification(d.status ?? "guest"))
+      .catch(() => setVerification("guest"));
+  }, []);
+  const [showGate, setShowGate] = useState(false);
+
+  function handleActionClick(nextMode: "enquire" | "viewing") {
+    if (verification === "ok") {
+      setMode(nextMode);
+    } else if (verification !== "loading") {
+      setShowGate(true);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,18 +154,49 @@ export function ProjectEnquiryPanel({
         <p className="text-sm font-semibold text-ink-100">
           Interested in this project?
         </p>
-        <button
-          onClick={() => setMode("viewing")}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gold-500 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400"
-        >
-          <Calendar className="h-4 w-4" /> Book Appointment
-        </button>
-        <button
-          onClick={() => setMode("enquire")}
-          className="mt-2 w-full rounded-lg border border-emerald-600/40 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"
-        >
-          Enquire Now
-        </button>
+        {showGate ? (
+          <div className="mt-3 rounded-lg border border-gold-500/30 bg-gold-500/10 p-3">
+            <p className="text-sm font-semibold text-gold-300">Registration Required</p>
+            <p className="mt-1 text-xs text-ink-300">
+              {verification === "unverified"
+                ? "Please verify your email to continue."
+                : verification === "inactive"
+                  ? "Your account isn't active yet — contact support if this seems wrong."
+                  : "Please register or log in to continue."}
+            </p>
+            {verification === "guest" && (
+              <div className="mt-2 flex gap-2">
+                <Link
+                  href="/login"
+                  className="flex-1 rounded-lg bg-gold-500 py-1.5 text-center text-xs font-semibold text-navy-950 hover:bg-gold-400"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex-1 rounded-lg border border-navy-600 py-1.5 text-center text-xs font-medium text-ink-300 hover:text-ink-100"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => handleActionClick("viewing")}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gold-500 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400"
+            >
+              <Calendar className="h-4 w-4" /> Book Appointment
+            </button>
+            <button
+              onClick={() => handleActionClick("enquire")}
+              className="mt-2 w-full rounded-lg border border-emerald-600/40 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"
+            >
+              Enquire Now
+            </button>
+          </>
+        )}
         {developerPhone && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <a
