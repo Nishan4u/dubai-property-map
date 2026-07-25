@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
 import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
@@ -19,6 +19,26 @@ export const metadata: Metadata = {
   title: "Dubai Property Map | Find Off-Plan & Ready Properties",
   description:
     "Explore Dubai's premium property market on an interactive map — off-plan launches, ready homes, developers, and communities.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Dubai Property Map",
+    statusBarStyle: "black-translucent",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#05080f",
 };
 
 export default async function RootLayout({
