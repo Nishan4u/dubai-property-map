@@ -3,36 +3,61 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
+import "mapbox-gl/dist/mapbox-gl.css";
 import {
+  ChevronLeft,
+  ChevronRight,
   Compass,
-  Layers,
+  Maximize,
+  Minimize,
   Minus,
   Plus,
+  RotateCcw,
+  RotateCw,
   Star,
   X,
 } from "lucide-react";
 import type { Community, Project } from "@/types";
 import { formatAed, getDeveloper } from "@/data/mock";
+import { poiLayers } from "@/data/poi";
+import { trackProjectEvent } from "@/lib/trackEvent";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const POI_SOURCE_ID = "poi-source";
 
 export function DubaiMap({
   communities,
   projects,
   selectedCommunityId,
   onSelectCommunity,
+  activeLayers = [],
+  sponsoredPinIds = [],
+  focusProjectId = null,
+  isFullscreen = false,
+  onFullscreenToggle,
 }: {
   communities: Community[];
   projects: Project[];
   selectedCommunityId: string | null;
   onSelectCommunity: (id: string | null) => void;
+  activeLayers?: string[];
+  sponsoredPinIds?: string[];
+  focusProjectId?: string | null;
+  isFullscreen?: boolean;
+  onFullscreenToggle?: () => void;
 }) {
   const [zoom, setZoom] = useState(1);
   const [satellite, setSatellite] = useState(false);
   const [useLiveMap, setUseLiveMap] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
+  const markerElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const propertyMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
+  const selectedCommunityIdRef = useRef(selectedCommunityId);
+  selectedCommunityIdRef.current = selectedCommunityId;
+  const [popupIndex, setPopupIndex] = useState(0);
 
   const countByCommunity = useMemo(() => {
     const map = new Map<string, number>();
@@ -49,11 +74,40 @@ export function DubaiMap({
   const selectedCommunity = communities.find(
     (c) => c.id === selectedCommunityId
   );
-  const topProjectInCommunity = selectedCommunity
-    ? projects.find((p) => p.communityId === selectedCommunity.id)
-    : undefined;
+  const communityProjects = useMemo(
+    () =>
+      selectedCommunity
+        ? projects.filter((p) => p.communityId === selectedCommunity.id)
+        : [],
+    [projects, selectedCommunity]
+  );
+  const activeProject = communityProjects[popupIndex] ?? communityProjects[0];
 
-  // Attempt to boot a real Mapbox GL map when a token is provided.
+  useEffect(() => {
+    if (!focusProjectId) {
+      setPopupIndex(0);
+      return;
+    }
+    const idx = communityProjects.findIndex((p) => p.id === focusProjectId);
+    setPopupIndex(idx >= 0 ? idx : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCommunityId, focusProjectId, communityProjects]);
+
+  // Fly the camera to a project's exact coordinates when it's selected from
+  // outside the map (e.g. clicking a card in the list panel), falling back
+  // to the community's coordinates if the project has none of its own.
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current || !focusProjectId) return;
+    const project = projects.find((p) => p.id === focusProjectId);
+    if (!project) return;
+    const community = communities.find((c) => c.id === project.communityId);
+    const lng = project.lng ?? community?.lng;
+    const lat = project.lat ?? community?.lat;
+    if (lng == null || lat == null) return;
+    mapRef.current.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+  }, [focusProjectId, projects, communities, useLiveMap]);
+
+  // Attempt to boot a real Mapbox GL map (with 3D buildings) when a token is provided.
   useEffect(() => {
     if (!MAPBOX_TOKEN || !mapContainer.current) return;
     let cancelled = false;
@@ -65,31 +119,314 @@ export function DubaiMap({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/dark-v11",
         center: [55.24, 25.15],
-        zoom: 10.2,
+        zoom: 10.5,
+        pitch: 55,
+        bearing: -17,
+        antialias: true,
         attributionControl: false,
+        // Explicit (matches Mapbox defaults) so rotation always works via a
+        // trackpad/mouse (right-click-drag or ctrl+drag) and via a two-finger
+        // twist on touchscreens, on top of the explicit rotate buttons.
+        dragRotate: true,
+        touchZoomRotate: true,
+        touchPitch: true,
+        pitchWithRotate: true,
       });
+      map.touchZoomRotate.enableRotation();
       mapRef.current = map;
       setUseLiveMap(true);
+
+      map.on("error", (e) => {
+        // eslint-disable-next-line no-console
+        console.error("[DubaiMap] mapbox error:", e.error);
+      });
+
+      // Mapbox measures the container at construction time; if flexbox
+      // layout hasn't settled yet the canvas can end up sized 0x0 and no
+      // tiles ever get requested. Re-measure once mounted and on any
+      // subsequent container resize.
+      requestAnimationFrame(() => map.resize());
+      const resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(mapContainer.current);
+      resizeObserverRef.current = resizeObserver;
+
+      map.on("style.load", () => {
+        if (cancelled) return;
+
+        map.setFog({});
+
+        const layers = map.getStyle()?.layers ?? [];
+        const labelLayerId = layers.find(
+          (l) => l.type === "symbol" && !!l.layout && "text-field" in l.layout
+        )?.id;
+
+        if (!map.getLayer("3d-buildings")) {
+          map.addLayer(
+            {
+              id: "3d-buildings",
+              source: "composite",
+              "source-layer": "building",
+              filter: ["==", "extrude", "true"],
+              type: "fill-extrusion",
+              minzoom: 13,
+              paint: {
+                "fill-extrusion-color": "#2c3a5c",
+                "fill-extrusion-height": ["get", "height"],
+                "fill-extrusion-base": ["get", "min_height"],
+                "fill-extrusion-opacity": 0.85,
+              },
+            },
+            labelLayerId
+          );
+        }
+
+        if (!map.getSource(POI_SOURCE_ID)) {
+          map.addSource(POI_SOURCE_ID, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "poi-circles",
+            type: "circle",
+            source: POI_SOURCE_ID,
+            paint: {
+              "circle-radius": 9,
+              "circle-color": ["get", "color"],
+              "circle-stroke-width": 1.5,
+              "circle-stroke-color": "#0a0f1c",
+            },
+          });
+          // Category icon drawn on top of the circle. Color alone repeats
+          // across categories (hospitals and the metro red line are both
+          // red, golf and the metro green line are both green), so shape is
+          // what actually disambiguates them at a glance.
+          map.addLayer({
+            id: "poi-icons",
+            type: "symbol",
+            source: POI_SOURCE_ID,
+            layout: {
+              "icon-image": ["get", "icon"],
+              "icon-size": 0.65,
+              "icon-allow-overlap": true,
+              "icon-ignore-placement": true,
+            },
+            paint: {
+              "icon-color": "#ffffff",
+              "icon-opacity": 0.95,
+            },
+          });
+          map.addLayer({
+            id: "poi-labels",
+            type: "symbol",
+            source: POI_SOURCE_ID,
+            minzoom: 12,
+            layout: {
+              "text-field": ["get", "name"],
+              "text-size": 10,
+              "text-offset": [0, 1.2],
+              "text-anchor": "top",
+            },
+            paint: {
+              "text-color": "#e7ebf3",
+              "text-halo-color": "#0a0f1c",
+              "text-halo-width": 1,
+            },
+          });
+
+          const showPoiPopup = (
+            e: import("mapbox-gl").MapMouseEvent & {
+              features?: import("mapbox-gl").MapboxGeoJSONFeature[];
+            }
+          ) => {
+            const feature = e.features?.[0];
+            if (!feature) return;
+            const name = feature.properties?.name as string;
+            new mapboxgl.default.Popup({ closeButton: false, offset: 10 })
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="font-size:12px;color:#0a0f1c;font-weight:600;">${name}</div>`
+              )
+              .addTo(map);
+          };
+          ["poi-circles", "poi-icons"].forEach((layerId) => {
+            map.on("click", layerId, showPoiPopup);
+            map.on("mouseenter", layerId, () => {
+              map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", layerId, () => {
+              map.getCanvas().style.cursor = "";
+            });
+          });
+        }
+      });
 
       communities.forEach((c) => {
         const el = document.createElement("div");
         el.style.cursor = "pointer";
-        el.innerHTML = `<div style="width:36px;height:36px;border-radius:9999px;background:${c.pinColor};display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;border:2px solid rgba(255,255,255,0.35);">${
-          countByCommunity.get(c.id) ?? 0
-        }</div>`;
-        el.addEventListener("click", () => onSelectCommunity(c.id));
+        el.addEventListener("click", () => {
+          onSelectCommunity(
+            selectedCommunityIdRef.current === c.id ? null : c.id
+          );
+        });
         new mapboxgl.default.Marker({ element: el })
           .setLngLat([c.lng, c.lat])
           .addTo(map);
+        markerElsRef.current.set(c.id, el);
       });
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[DubaiMap] failed to load mapbox-gl:", err);
     });
 
     return () => {
       cancelled = true;
+      resizeObserverRef.current?.disconnect();
       mapRef.current?.remove();
+      markerElsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Marker DOM elements are created once above; keep their displayed count
+  // and selected-state styling in sync whenever filters change the
+  // underlying project set (communities themselves never change).
+  useEffect(() => {
+    if (!useLiveMap) return;
+    communities.forEach((c) => {
+      const el = markerElsRef.current.get(c.id);
+      if (!el) return;
+      const count = countByCommunity.get(c.id) ?? 0;
+      if (count === 0) {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "";
+      const isSelected = c.id === selectedCommunityId;
+      el.innerHTML = `<div style="width:36px;height:36px;border-radius:9999px;background:${c.pinColor};display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;border:2px solid ${
+        isSelected ? "#f2c665" : "rgba(255,255,255,0.35)"
+      };${isSelected ? "box-shadow:0 0 0 3px rgba(242,198,101,0.4);" : ""}">${count}</div>`;
+    });
+  }, [communities, countByCommunity, selectedCommunityId, useLiveMap]);
+
+  // Real POI layers (Metro/Schools/Hospitals/etc.), all rendered through one
+  // GeoJSON source so toggling is just a data swap rather than adding/
+  // removing dozens of DOM markers. Each point uses its own color when set
+  // (e.g. metro stations colored by line) falling back to the layer color.
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current) return;
+    const map = mapRef.current;
+    const source = map.getSource(POI_SOURCE_ID) as
+      | import("mapbox-gl").GeoJSONSource
+      | undefined;
+    if (!source) return;
+
+    const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+
+    poiLayers
+      .filter((layer) => activeLayers.includes(layer.key))
+      .forEach((layer) => {
+        layer.points.forEach((pt) => {
+          features.push({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [pt.lng, pt.lat] },
+            properties: {
+              name: pt.name,
+              color: pt.color ?? layer.color,
+              icon: layer.icon,
+            },
+          });
+        });
+      });
+
+    source.setData({ type: "FeatureCollection", features });
+  }, [activeLayers, useLiveMap]);
+
+  // Show each individual property's exact pin (small dots) once a
+  // community is selected — this is in addition to the community-level
+  // cluster pin, so drilling into a community reveals real per-property
+  // locations instead of everything stacking on one point.
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current) return;
+    const map = mapRef.current;
+
+    propertyMarkersRef.current.forEach((m) => m.remove());
+    propertyMarkersRef.current = [];
+
+    if (!selectedCommunity) return;
+
+    import("mapbox-gl").then((mapboxgl) => {
+      communityProjects.forEach((p, i) => {
+        if (p.lat === null || p.lat === undefined || p.lng === null || p.lng === undefined) {
+          return;
+        }
+        const el = document.createElement("div");
+        el.style.cursor = "pointer";
+        const isActive = i === popupIndex;
+        const isSponsored = sponsoredPinIds.includes(p.id);
+        el.innerHTML = isSponsored
+          ? `<div style="position:relative;width:20px;height:20px;border-radius:9999px;background:#f2c665;border:2px solid #0a0f1c;box-shadow:0 0 0 3px rgba(242,198,101,0.35),0 1px 4px rgba(0,0,0,0.5);"></div>`
+          : `<div style="width:16px;height:16px;border-radius:9999px;background:${
+              isActive ? "#f2c665" : "#ffffff"
+            };border:2px solid #0a0f1c;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`;
+        el.title = isSponsored ? `${p.name} (Sponsored)` : p.name;
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          setPopupIndex(i);
+          trackProjectEvent(p.id, "map_click");
+        });
+        const marker = new mapboxgl.default.Marker({ element: el })
+          .setLngLat([p.lng, p.lat])
+          .addTo(map);
+        propertyMarkersRef.current.push(marker);
+      });
+    });
+
+    return () => {
+      propertyMarkersRef.current.forEach((m) => m.remove());
+      propertyMarkersRef.current = [];
+    };
+  }, [communityProjects, selectedCommunity, popupIndex, useLiveMap, sponsoredPinIds]);
+
+  function handleZoomIn() {
+    if (mapRef.current) mapRef.current.zoomIn();
+    else setZoom((z) => Math.min(2, z + 0.2));
+  }
+
+  function handleZoomOut() {
+    if (mapRef.current) mapRef.current.zoomOut();
+    else setZoom((z) => Math.max(0.6, z - 0.2));
+  }
+
+  function handleResetView() {
+    if (mapRef.current) {
+      mapRef.current.easeTo({ pitch: 55, bearing: -17, zoom: 10.5, duration: 600 });
+    } else {
+      setZoom(1);
+    }
+  }
+
+  function handleStyleToggle(nextSatellite: boolean) {
+    setSatellite(nextSatellite);
+    if (mapRef.current) {
+      mapRef.current.setStyle(
+        nextSatellite
+          ? "mapbox://styles/mapbox/satellite-streets-v12"
+          : "mapbox://styles/mapbox/dark-v11"
+      );
+    }
+  }
+
+  function handleRotateLeft() {
+    if (mapRef.current) {
+      mapRef.current.rotateTo(mapRef.current.getBearing() - 30, { duration: 300 });
+    }
+  }
+
+  function handleRotateRight() {
+    if (mapRef.current) {
+      mapRef.current.rotateTo(mapRef.current.getBearing() + 30, { duration: 300 });
+    }
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -146,7 +483,10 @@ export function DubaiMap({
         </div>
       )}
 
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div
+        ref={mapContainer}
+        style={{ position: "absolute", inset: 0 }}
+      />
 
       {/* Pins (fallback view) */}
       {!useLiveMap && (
@@ -185,58 +525,107 @@ export function DubaiMap({
       {/* Zoom / map controls */}
       <div className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1 rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
         <button
-          onClick={() => setZoom((z) => Math.min(2, z + 0.2))}
+          onClick={handleZoomIn}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
         >
           <Plus className="h-4 w-4" />
         </button>
         <button
-          onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))}
+          onClick={handleZoomOut}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
         >
           <Minus className="h-4 w-4" />
         </button>
+        <div className="my-0.5 h-px bg-navy-700" />
         <button
-          onClick={() => setZoom(1)}
+          onClick={handleRotateLeft}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+          title="Rotate left"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+        <button
+          onClick={handleRotateRight}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+          title="Rotate right"
+        >
+          <RotateCw className="h-4 w-4" />
+        </button>
+        <button
+          onClick={handleResetView}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+          title="Reset view"
         >
           <Compass className="h-4 w-4" />
         </button>
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100">
-          <Layers className="h-4 w-4" />
+      </div>
+
+      {/* Map / Satellite toggle + fullscreen */}
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+        <div className="flex items-center gap-1 rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
+          <button
+            onClick={() => handleStyleToggle(false)}
+            className={clsx(
+              "rounded-lg px-3 py-1.5 text-xs font-medium",
+              !satellite ? "bg-gold-500 text-navy-950" : "text-ink-300"
+            )}
+          >
+            Map
+          </button>
+          <button
+            onClick={() => handleStyleToggle(true)}
+            className={clsx(
+              "rounded-lg px-3 py-1.5 text-xs font-medium",
+              satellite ? "bg-gold-500 text-navy-950" : "text-ink-300"
+            )}
+          >
+            Satellite
+          </button>
+        </div>
+        <button
+          onClick={onFullscreenToggle}
+          title={isFullscreen ? "Exit full screen" : "Full screen"}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-navy-700 bg-navy-900/90 text-ink-300 backdrop-blur hover:text-ink-100"
+        >
+          {isFullscreen ? (
+            <Minimize className="h-4 w-4" />
+          ) : (
+            <Maximize className="h-4 w-4" />
+          )}
         </button>
       </div>
 
-      {/* Map / Satellite toggle */}
-      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1 rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
-        <button
-          onClick={() => setSatellite(false)}
-          className={clsx(
-            "rounded-lg px-3 py-1.5 text-xs font-medium",
-            !satellite ? "bg-gold-500 text-navy-950" : "text-ink-300"
-          )}
-        >
-          Map
-        </button>
-        <button
-          onClick={() => setSatellite(true)}
-          className={clsx(
-            "rounded-lg px-3 py-1.5 text-xs font-medium",
-            satellite ? "bg-gold-500 text-navy-950" : "text-ink-300"
-          )}
-        >
-          Satellite
-        </button>
-      </div>
-
-      {/* Pin click popup */}
-      {selectedCommunity && topProjectInCommunity && (
-        <div className="absolute bottom-20 left-1/2 z-20 w-80 -translate-x-1/2 overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl sm:left-24 sm:translate-x-0">
+      {/* Pin click popup — browses every property in the selected community */}
+      {selectedCommunity && activeProject && (
+        <div className="absolute bottom-28 left-1/2 z-20 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl sm:left-24 sm:translate-x-0">
           <div className="relative">
             <ProjectThumb
-              gradient={topProjectInCommunity.gradient}
+              gradient={activeProject.gradient}
+              imageUrl={activeProject.coverImageUrl}
               className="h-28 w-full"
             />
+            {communityProjects.length > 1 && (
+              <>
+                <button
+                  onClick={() =>
+                    setPopupIndex(
+                      (i) => (i - 1 + communityProjects.length) % communityProjects.length
+                    )
+                  }
+                  className="absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-navy-950/70 text-ink-200 hover:text-ink-100"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() =>
+                    setPopupIndex((i) => (i + 1) % communityProjects.length)
+                  }
+                  className="absolute right-9 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-navy-950/70 text-ink-200 hover:text-ink-100"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
             <button
               onClick={() => onSelectCommunity(null)}
               className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-navy-950/70 text-ink-300 hover:text-ink-100"
@@ -245,28 +634,65 @@ export function DubaiMap({
             </button>
           </div>
           <div className="p-3">
-            <p className="text-xs font-medium text-gold-400">
-              {selectedCommunity.name} · {countByCommunity.get(selectedCommunity.id)}{" "}
-              projects
+            <p className="flex items-center justify-between text-xs font-medium text-gold-400">
+              <span>
+                {selectedCommunity.name} · {communityProjects.length} projects
+              </span>
+              {communityProjects.length > 1 && (
+                <span className="text-ink-500">
+                  {popupIndex + 1} / {communityProjects.length}
+                </span>
+              )}
             </p>
-            <h4 className="mt-0.5 text-sm font-semibold text-ink-100">
-              {topProjectInCommunity.name}
+            <h4 className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-ink-100">
+              {activeProject.name}
+              {sponsoredPinIds.includes(activeProject.id) && (
+                <span className="rounded-full bg-gold-500/15 px-1.5 py-0.5 text-[10px] font-medium text-gold-400">
+                  Sponsored
+                </span>
+              )}
             </h4>
             <p className="text-xs text-ink-500">
-              by {getDeveloper(topProjectInCommunity.developerId)?.name}
+              by{" "}
+              {activeProject.developerName ??
+                getDeveloper(activeProject.developerId)?.name}
             </p>
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="font-semibold text-ink-100">
-                {formatAed(topProjectInCommunity.priceFromAed)}
+                {formatAed(activeProject.priceFromAed)}
               </span>
               <span className="flex items-center gap-1 text-ink-400">
                 <Star className="h-3 w-3 fill-gold-400 text-gold-400" />
-                {topProjectInCommunity.rating || "New"}
+                {activeProject.rating || "New"}
               </span>
             </div>
+            {(activeProject.videoUrl || activeProject.virtualTourUrl) && (
+              <div className="mt-2 flex gap-3 text-xs">
+                {activeProject.videoUrl && (
+                  <a
+                    href={activeProject.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:underline"
+                  >
+                    ▶ Video
+                  </a>
+                )}
+                {activeProject.virtualTourUrl && (
+                  <a
+                    href={activeProject.virtualTourUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:underline"
+                  >
+                    360° Virtual Tour
+                  </a>
+                )}
+              </div>
+            )}
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Link
-                href={`/projects/${topProjectInCommunity.slug}`}
+                href={`/projects/${activeProject.slug}`}
                 className="rounded-lg bg-gold-500 py-1.5 text-center text-xs font-semibold text-navy-950 hover:bg-gold-400"
               >
                 View Project

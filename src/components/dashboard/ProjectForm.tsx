@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Plus, Trash2 } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { Project } from "@/types";
-import { developers } from "@/data/mock";
+import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
+import { ConstructionMilestonesManager } from "@/components/dashboard/ConstructionMilestonesManager";
+import { createClient } from "@/lib/supabase/client";
+import type { Community, Project, ProjectTag } from "@/types";
+import type { ConstructionMilestoneRow } from "@/types/database";
 
-const allAmenities = [
+const unitTypeOptions = ["Studio", "1BR", "2BR", "3BR", "4BR", "Penthouse", "Villa"];
+
+const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
+
+const fallbackAmenities = [
   "Pool",
   "Gym",
   "Kids Area",
@@ -17,12 +27,75 @@ const allAmenities = [
   "Parking",
   "Pet Friendly",
 ];
+const fallbackPropertyTypes = ["Apartments", "Villas", "Townhouses", "Penthouse"];
 
-export function ProjectForm({ project }: { project?: Project }) {
-  const [amenities, setAmenities] = useState<string[]>(
-    project?.amenities ?? []
+const allTags: { label: string; value: ProjectTag }[] = [
+  { label: "New Launch", value: "new-launch" },
+  { label: "Luxury", value: "luxury" },
+  { label: "Waterfront", value: "waterfront" },
+  { label: "Villas", value: "villas" },
+  { label: "Under 1M", value: "under-1m" },
+  { label: "High ROI", value: "high-roi" },
+];
+
+const gradients = [
+  "from-amber-500/40 via-slate-800 to-slate-950",
+  "from-sky-500/40 via-slate-800 to-slate-950",
+  "from-emerald-500/40 via-slate-800 to-slate-950",
+  "from-fuchsia-500/40 via-slate-800 to-slate-950",
+  "from-rose-500/40 via-slate-800 to-slate-950",
+  "from-indigo-500/40 via-slate-800 to-slate-950",
+];
+
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export function ProjectForm({
+  project,
+  developerId,
+  developerOptions,
+  communities,
+  constructionMilestones = [],
+  propertyTypes = fallbackPropertyTypes,
+  amenityOptions = fallbackAmenities,
+}: {
+  project?: Project;
+  developerId?: string;
+  developerOptions?: { id: string; name: string }[];
+  communities: Community[];
+  constructionMilestones?: ConstructionMilestoneRow[];
+  propertyTypes?: string[];
+  amenityOptions?: string[];
+}) {
+  const router = useRouter();
+  const [amenities, setAmenities] = useState<string[]>(project?.amenities ?? []);
+  const [tags, setTags] = useState<ProjectTag[]>(project?.tags ?? []);
+  const [status, setStatus] = useState<"idle" | "loading" | "saved" | "error">(
+    "idle"
   );
-  const [saved, setSaved] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [coords, setCoords] = useState({
+    lat: project?.lat ?? DUBAI_CENTER.lat,
+    lng: project?.lng ?? DUBAI_CENTER.lng,
+  });
+  const [unitPrices, setUnitPrices] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const [k, v] of Object.entries(project?.unitTypePrices ?? {})) {
+      initial[k] = String(v);
+    }
+    return initial;
+  });
+  const [installments, setInstallments] = useState<{ label: string; percent: string }[]>(
+    (project?.paymentPlanDetails ?? []).map((d) => ({
+      label: d.label,
+      percent: String(d.percent),
+    }))
+  );
 
   function toggleAmenity(a: string) {
     setAmenities((prev) =>
@@ -30,39 +103,137 @@ export function ProjectForm({ project }: { project?: Project }) {
     );
   }
 
+  function toggleTag(t: ProjectTag) {
+    setTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
+  }
+
+  function addInstallment() {
+    setInstallments((prev) => [...prev, { label: "", percent: "" }]);
+  }
+
+  function updateInstallment(i: number, field: "label" | "percent", value: string) {
+    setInstallments((prev) =>
+      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
+    );
+  }
+
+  function removeInstallment(i: number) {
+    setInstallments((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setStatus("loading");
+    setErrorMsg("");
+
+    const formData = new FormData(e.currentTarget);
+    const name = String(formData.get("name") ?? "");
+
+    const payload = {
+      name,
+      community_id: String(formData.get("community_id")),
+      property_type: String(formData.get("property_type")),
+      price_from_aed: Number(formData.get("price_from_aed")) || 0,
+      payment_plan: String(formData.get("payment_plan") ?? ""),
+      bedrooms_from: Number(formData.get("bedrooms_from")) || 0,
+      bedrooms_to: Number(formData.get("bedrooms_to")) || 0,
+      handover_quarter: String(formData.get("handover_quarter") ?? ""),
+      handover_year: Number(formData.get("handover_year")) || null,
+      description: String(formData.get("description") ?? ""),
+      video_url: String(formData.get("video_url") ?? "").trim() || null,
+      virtual_tour_url: String(formData.get("virtual_tour_url") ?? "").trim() || null,
+      launch_date: String(formData.get("launch_date") ?? "").trim() || null,
+      lat: coords.lat,
+      lng: coords.lng,
+      unit_type_prices: Object.fromEntries(
+        Object.entries(unitPrices)
+          .filter(([, v]) => v.trim() !== "")
+          .map(([k, v]) => [k, Number(v)])
+      ),
+      payment_plan_details: installments
+        .filter((i) => i.label.trim() !== "" && i.percent.trim() !== "")
+        .map((i) => ({ label: i.label.trim(), percent: Number(i.percent) })),
+      amenities,
+      tags,
+    };
+
+    const supabase = createClient();
+
+    if (project) {
+      const { error } = await supabase
+        .from("projects")
+        .update(payload)
+        .eq("id", project.id);
+
+      if (error) {
+        setStatus("error");
+        setErrorMsg(error.message);
+        return;
+      }
+    } else {
+      const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 7)}`;
+      const resolvedDeveloperId = developerOptions
+        ? String(formData.get("developer_id"))
+        : developerId;
+      const { error } = await supabase.from("projects").insert({
+        ...payload,
+        slug,
+        developer_id: resolvedDeveloperId,
+        listing_type: "off-plan",
+        status: "published",
+        approval_status: developerOptions ? "approved" : "pending",
+        unit_types: [],
+        gradient: gradients[Math.floor(Math.random() * gradients.length)],
+        rating: 0,
+        reviews: 0,
+        views: 0,
+      });
+
+      if (error) {
+        setStatus("error");
+        setErrorMsg(error.message);
+        return;
+      }
+    }
+
+    setStatus("saved");
+    router.push(developerOptions ? "/admin/projects" : "/dashboard/projects");
+    router.refresh();
+  }
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
-      }}
-      className="space-y-6"
-    >
+    <form onSubmit={handleSubmit} className="space-y-6">
       <SectionCard title="General">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Project Name" defaultValue={project?.name} />
-          <SelectField
-            label="Developer"
-            defaultValue={project?.developerId}
-            options={developers.map((d) => ({ label: d.name, value: d.id }))}
+          {developerOptions && !project && (
+            <SelectField
+              label="Developer"
+              name="developer_id"
+              options={developerOptions.map((d) => ({ label: d.name, value: d.id }))}
+            />
+          )}
+          <Field
+            label="Project Name"
+            name="name"
+            defaultValue={project?.name}
+            required
           />
-          <Field label="Community" defaultValue={project?.communityId} />
-          <Field label="Coordinates (lat, lng)" placeholder="25.19, 55.27" />
+          <SelectField
+            label="Community"
+            name="community_id"
+            defaultValue={project?.communityId}
+            options={communities.map((c) => ({ label: c.name, value: c.id }))}
+          />
           <SelectField
             label="Property Type"
+            name="property_type"
             defaultValue={project?.propertyType}
-            options={["Apartments", "Villas", "Townhouses", "Penthouse"].map((v) => ({
+            options={propertyTypes.map((v) => ({
               label: v,
               value: v,
             }))}
-          />
-          <SelectField
-            label="Status"
-            defaultValue={project?.status}
-            options={["draft", "published", "featured", "expired", "rejected", "archived"].map(
-              (v) => ({ label: v, value: v })
-            )}
           />
         </div>
         <div className="mt-4">
@@ -70,6 +241,7 @@ export function ProjectForm({ project }: { project?: Project }) {
             Description
           </label>
           <textarea
+            name="description"
             defaultValue={project?.description}
             rows={3}
             className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
@@ -79,15 +251,150 @@ export function ProjectForm({ project }: { project?: Project }) {
 
       <SectionCard title="Pricing & Payment Plan">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="Starting Price (AED)" defaultValue={project?.priceFromAed?.toString()} />
-          <Field label="Payment Plan" defaultValue={project?.paymentPlan} />
-          <Field label="Handover" defaultValue={`${project?.handoverQuarter ?? ""} ${project?.handoverYear ?? ""}`} />
+          <Field
+            label="Starting Price (AED)"
+            name="price_from_aed"
+            type="number"
+            defaultValue={project?.priceFromAed?.toString()}
+          />
+          <Field
+            label="Payment Plan"
+            name="payment_plan"
+            defaultValue={project?.paymentPlan}
+            placeholder="e.g. 70/30"
+          />
+          <SelectField
+            label="Handover Quarter"
+            name="handover_quarter"
+            defaultValue={project?.handoverQuarter}
+            options={["Q1", "Q2", "Q3", "Q4", "Ready"].map((v) => ({ label: v, value: v }))}
+          />
+          <Field
+            label="Handover Year"
+            name="handover_year"
+            type="number"
+            defaultValue={project?.handoverYear?.toString()}
+          />
+          <Field
+            label="Bedrooms From"
+            name="bedrooms_from"
+            type="number"
+            defaultValue={project?.bedroomsFrom?.toString() ?? "0"}
+          />
+          <Field
+            label="Bedrooms To"
+            name="bedrooms_to"
+            type="number"
+            defaultValue={project?.bedroomsTo?.toString() ?? "0"}
+          />
+          <Field
+            label="Launch Date"
+            name="launch_date"
+            type="date"
+            defaultValue={project?.launchDate ?? ""}
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Location">
+        <CoordinatesPicker
+          lat={coords.lat}
+          lng={coords.lng}
+          onChange={(lat, lng) => setCoords({ lat, lng })}
+        />
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Latitude
+            </label>
+            <input
+              type="number"
+              step="any"
+              value={coords.lat}
+              onChange={(e) =>
+                setCoords((prev) => ({ ...prev, lat: Number(e.target.value) || 0 }))
+              }
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Longitude
+            </label>
+            <input
+              type="number"
+              step="any"
+              value={coords.lng}
+              onChange={(e) =>
+                setCoords((prev) => ({ ...prev, lng: Number(e.target.value) || 0 }))
+              }
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Price by Unit Type">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {unitTypeOptions.map((u) => (
+            <div key={u}>
+              <label className="mb-1 block text-xs font-medium text-ink-400">{u}</label>
+              <input
+                type="number"
+                placeholder="AED"
+                value={unitPrices[u] ?? ""}
+                onChange={(e) =>
+                  setUnitPrices((prev) => ({ ...prev, [u]: e.target.value }))
+                }
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+              />
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-ink-500">
+          Leave a unit type blank if it&apos;s not offered in this project.
+        </p>
+      </SectionCard>
+
+      <SectionCard title="Installment Plan">
+        <div className="space-y-2">
+          {installments.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                placeholder="e.g. On Booking"
+                value={item.label}
+                onChange={(e) => updateInstallment(i, "label", e.target.value)}
+                className="flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+              />
+              <input
+                type="number"
+                placeholder="%"
+                value={item.percent}
+                onChange={(e) => updateInstallment(i, "percent", e.target.value)}
+                className="w-24 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => removeInstallment(i)}
+                className="text-ink-500 hover:text-rose-400"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addInstallment}
+            className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-3 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Milestone
+          </button>
         </div>
       </SectionCard>
 
       <SectionCard title="Amenities">
         <div className="flex flex-wrap gap-2">
-          {allAmenities.map((a) => (
+          {amenityOptions.map((a) => (
             <button
               type="button"
               key={a}
@@ -104,44 +411,95 @@ export function ProjectForm({ project }: { project?: Project }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Gallery & Documents">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {[
-            "Images",
-            "Videos / Drone",
-            "360° Virtual Tour",
-            "Master Plan",
-            "Brochure (PDF)",
-            "Price List (PDF)",
-          ].map((label) => (
-            <div
-              key={label}
-              className="flex items-center justify-between rounded-lg border border-dashed border-navy-600 px-4 py-3 text-sm text-ink-400"
+      <SectionCard title="Tags">
+        <div className="flex flex-wrap gap-2">
+          {allTags.map((t) => (
+            <button
+              type="button"
+              key={t.value}
+              onClick={() => toggleTag(t.value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                tags.includes(t.value)
+                  ? "bg-gold-500 text-navy-950"
+                  : "border border-navy-600 text-ink-300 hover:text-ink-100"
+              }`}
             >
-              {label}
-              <span className="text-xs font-medium text-gold-400">Upload</span>
-            </div>
+              {t.label}
+            </button>
           ))}
         </div>
       </SectionCard>
 
-      <SectionCard title="Construction Updates">
+      <SectionCard title="Video & Virtual Tour">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Progress %" defaultValue={project ? `${project.leads % 100}` : "0"} />
-          <Field label="Latest Milestone" placeholder="e.g. Foundation complete" />
+          <Field
+            label="Video URL (YouTube, Vimeo, drone footage…)"
+            name="video_url"
+            defaultValue={project?.videoUrl ?? ""}
+            placeholder="https://youtube.com/watch?v=..."
+          />
+          <Field
+            label="360° Virtual Tour URL (Matterport, Kuula…)"
+            name="virtual_tour_url"
+            defaultValue={project?.virtualTourUrl ?? ""}
+            placeholder="https://my.matterport.com/show/?m=..."
+          />
         </div>
+        <p className="mt-2 text-xs text-ink-500">
+          These links appear on the map pin popup and the project details page. Leave
+          blank to hide.
+        </p>
       </SectionCard>
+
+      <SectionCard title="Documents & Media">
+        {project ? (
+          <p className="text-sm text-ink-400">
+            Manage images and documents for this project from{" "}
+            <Link href="/dashboard/media" className="text-gold-400 hover:underline">
+              Media Library
+            </Link>{" "}
+            and{" "}
+            <Link href="/dashboard/documents" className="text-gold-400 hover:underline">
+              Documents
+            </Link>
+            {" "}— select &quot;{project.name}&quot; from the project dropdown there.
+          </p>
+        ) : (
+          <p className="text-sm text-ink-500">
+            Save this project first, then come back to add images and documents
+            from the Media Library and Documents pages.
+          </p>
+        )}
+      </SectionCard>
+
+      {project && (
+        <SectionCard title="Construction Updates">
+          <ConstructionMilestonesManager
+            projectId={project.id}
+            initialProgress={project.constructionProgressPercent ?? 0}
+            initialMilestones={constructionMilestones}
+          />
+        </SectionCard>
+      )}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          className="rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400"
+          disabled={status === "loading"}
+          className="rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
         >
-          {project ? "Save Changes" : "Submit for Review"}
+          {status === "loading"
+            ? "Saving…"
+            : project
+              ? "Save Changes"
+              : "Submit for Review"}
         </button>
-        {saved && (
-          <span className="text-xs font-medium text-emerald-400">
-            Saved (prototype only — not persisted)
+        {status === "error" && (
+          <span className="text-xs font-medium text-rose-400">{errorMsg}</span>
+        )}
+        {!project && (
+          <span className="text-xs text-ink-500">
+            New projects go live once an admin approves them.
           </span>
         )}
       </div>
@@ -151,12 +509,18 @@ export function ProjectForm({ project }: { project?: Project }) {
 
 function Field({
   label,
+  name,
   defaultValue,
   placeholder,
+  type = "text",
+  required,
 }: {
   label: string;
+  name: string;
   defaultValue?: string;
   placeholder?: string;
+  type?: string;
+  required?: boolean;
 }) {
   return (
     <div>
@@ -164,6 +528,9 @@ function Field({
         {label}
       </label>
       <input
+        name={name}
+        type={type}
+        required={required}
         defaultValue={defaultValue}
         placeholder={placeholder}
         className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
@@ -174,10 +541,12 @@ function Field({
 
 function SelectField({
   label,
+  name,
   defaultValue,
   options,
 }: {
   label: string;
+  name: string;
   defaultValue?: string;
   options: { label: string; value: string }[];
 }) {
@@ -187,6 +556,7 @@ function SelectField({
         {label}
       </label>
       <select
+        name={name}
         defaultValue={defaultValue}
         className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
       >

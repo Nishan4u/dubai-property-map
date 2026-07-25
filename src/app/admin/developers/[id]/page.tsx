@@ -1,8 +1,16 @@
 import { notFound } from "next/navigation";
-import { BadgeCheck, Star } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
-import { developers, getDeveloper, projectsForDeveloper } from "@/data/mock";
+import { DeveloperStatusActions } from "@/components/admin/DeveloperStatusActions";
+import { EditDeveloperForm } from "@/components/admin/EditDeveloperForm";
+import { DeleteDeveloperButton } from "@/components/admin/DeleteDeveloperButton";
+import { createClient } from "@/lib/supabase/server";
+import { getProjectsForDeveloper } from "@/lib/supabase/queries";
+import { mapProject, currentYear } from "@/lib/supabase/mappers";
+import type { DeveloperRow } from "@/types/database";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminDeveloperDetailPage({
   params,
@@ -10,53 +18,68 @@ export default async function AdminDeveloperDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const developer = getDeveloper(id);
+  const supabase = await createClient();
+  const { data: developer } = await supabase
+    .from("developers")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
   if (!developer) notFound();
 
-  const devProjects = projectsForDeveloper(developer.id);
+  const devProjectRows = await getProjectsForDeveloper(developer.id);
+  const devProjects = devProjectRows.map((p) => mapProject(p));
+  const completedCount = devProjectRows.filter(
+    (p) => (p.handover_year ?? currentYear()) < currentYear()
+  ).length;
 
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-navy-700 bg-navy-850 p-5">
         <div className="flex items-center gap-4">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
-            style={{ background: developer.color }}
-          >
-            {developer.initial}
-          </div>
+          {developer.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={developer.logo_url}
+              alt={developer.name}
+              className="h-14 w-14 shrink-0 rounded-2xl border border-navy-700 bg-navy-900 object-contain p-1.5"
+            />
+          ) : (
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold text-white"
+              style={{ background: developer.color }}
+            >
+              {developer.initial}
+            </div>
+          )}
           <div>
             <h1 className="flex items-center gap-2 text-lg font-bold text-ink-100">
               {developer.name}
               {developer.verified && <BadgeCheck className="h-4 w-4 text-sky-400" />}
             </h1>
-            <p className="flex items-center gap-1 text-xs text-ink-500">
-              <Star className="h-3.5 w-3.5 fill-gold-400 text-gold-400" />
-              {developer.rating} · {developer.reviews} reviews · Since {developer.founded}
-            </p>
+            {developer.founded && (
+              <p className="text-xs text-ink-500">Since {developer.founded}</p>
+            )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="rounded-lg bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/25">
-            Approve
-          </button>
-          <button className="rounded-lg bg-rose-500/15 px-4 py-2 text-sm font-medium text-rose-400 hover:bg-rose-500/25">
-            Suspend
-          </button>
-          <button className="rounded-lg bg-gold-500/15 px-4 py-2 text-sm font-medium text-gold-400 hover:bg-gold-500/25">
-            Feature
-          </button>
+        <div className="flex items-center gap-4">
+          <DeveloperStatusActions developerId={developer.id} status={developer.status} />
+          <DeleteDeveloperButton
+            developerId={developer.id}
+            developerName={developer.name}
+            redirectTo="/admin/developers"
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MiniStat label="Total Projects" value={developer.projectsCount} />
-        <MiniStat label="Completed" value={developer.completedCount} />
-        <MiniStat label="Under Construction" value={developer.underConstructionCount} />
-        <MiniStat label="Subscription" value="Professional" isText />
+        <MiniStat label="Total Projects" value={devProjectRows.length} />
+        <MiniStat label="Completed" value={completedCount} />
+        <MiniStat label="Under Construction" value={devProjectRows.length - completedCount} />
+        <MiniStat label="Status" value={developer.status} isText />
       </div>
 
-      <p className="max-w-3xl text-sm text-ink-300">{developer.description}</p>
+      <EditDeveloperForm developer={developer as DeveloperRow} />
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Projects</h2>
@@ -64,18 +87,17 @@ export default async function AdminDeveloperDetailPage({
           columns={[
             { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
             { header: "Status", render: (p) => <Badge tone="green">{p.status}</Badge> },
+            { header: "Approval", render: (p) => <Badge tone="gold">{p.approvalStatus}</Badge> },
             { header: "Views", render: (p) => p.views.toLocaleString() },
-            { header: "Leads", render: (p) => p.leads },
           ]}
           rows={devProjects}
         />
+        {devProjects.length === 0 && (
+          <p className="mt-3 text-sm text-ink-500">No projects yet.</p>
+        )}
       </div>
     </div>
   );
-}
-
-export function generateStaticParams() {
-  return developers.map((d) => ({ id: d.id }));
 }
 
 function MiniStat({
@@ -90,7 +112,7 @@ function MiniStat({
   return (
     <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
       <p className="text-xs text-ink-400">{label}</p>
-      <p className={`mt-1 font-semibold text-ink-100 ${isText ? "text-sm" : "text-xl"}`}>
+      <p className={`mt-1 font-semibold text-ink-100 capitalize ${isText ? "text-sm" : "text-xl"}`}>
         {value}
       </p>
     </div>

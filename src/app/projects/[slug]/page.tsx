@@ -1,25 +1,51 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Building2,
-  Calendar,
-  Download,
-  MapPin,
-  Play,
-  Star,
-} from "lucide-react";
+import { Building2, Download, FileText, MapPin, Play, Star } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { MortgageCalculator } from "@/components/public/MortgageCalculator";
 import { ProjectCard } from "@/components/public/ProjectCard";
+import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
+import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
+import { formatAed } from "@/data/mock";
 import {
-  formatAed,
-  getCommunity,
-  getDeveloper,
-  getProject,
-  projects,
-} from "@/data/mock";
+  getActiveProjectBanner,
+  getConstructionMilestones,
+  getProjectBySlug,
+  getProjectDocumentsByCategory,
+  getProjectMediaFiles,
+  getProjectsForCommunity,
+  incrementProjectViews,
+} from "@/lib/supabase/queries";
+import { mapProject } from "@/lib/supabase/mappers";
+import { getLocationEmbedUrl, getVideoEmbedUrl } from "@/lib/mediaEmbed";
+import { getProjectStatusLabel } from "@/lib/projectStatus";
+import { documentCategories } from "@/lib/documentCategories";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const row = await getProjectBySlug(slug);
+  if (!row) return {};
+
+  const project = mapProject(row);
+  const title = `${project.name} by ${project.developerName ?? row.developers?.name} | Dubai Property Map`;
+  const description =
+    project.description ||
+    `${project.propertyType} in ${project.communityName ?? row.communities?.name}, starting from AED ${project.priceFromAed.toLocaleString()}.`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "website" },
+  };
+}
 
 export default async function ProjectDetailsPage({
   params,
@@ -27,20 +53,79 @@ export default async function ProjectDetailsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const project = getProject(slug);
-  if (!project) notFound();
+  const row = await getProjectBySlug(slug);
+  if (!row) notFound();
 
-  const developer = getDeveloper(project.developerId);
-  const community = getCommunity(project.communityId);
-  const similar = projects
-    .filter((p) => p.id !== project.id && p.communityId === project.communityId)
-    .slice(0, 3);
+  const project = mapProject(row);
+  const developer = row.developers;
+  const community = row.communities;
+  await incrementProjectViews(project.id);
+  const similarRows = await getProjectsForCommunity(row.community_id);
+  const similar = similarRows
+    .filter((p) => p.id !== project.id)
+    .slice(0, 3)
+    .map((p) => mapProject(p));
+
+  const [gallery, documents, milestones, projectBanner] = await Promise.all([
+    getProjectMediaFiles(project.id, "gallery"),
+    getProjectDocumentsByCategory(project.id),
+    getConstructionMilestones(project.id),
+    getActiveProjectBanner(project.id),
+  ]);
+  const images = gallery.filter((f) => f.isImage);
+  const brochureDoc =
+    documents.find((d) => d.category === "Brochure") ?? documents[0] ?? null;
+  const videoEmbedUrl = project.videoUrl ? getVideoEmbedUrl(project.videoUrl) : null;
+  const locationEmbedUrl = getLocationEmbedUrl({
+    lat: project.lat,
+    lng: project.lng,
+    fallbackQuery: `${community?.name ?? ""}, Dubai`,
+  });
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: project.name,
+    description: project.description || undefined,
+    url: `https://dubaipropertymap.com/projects/${project.slug}`,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: community?.name,
+      addressRegion: "Dubai",
+      addressCountry: "AE",
+    },
+    offers: {
+      "@type": "Offer",
+      price: project.priceFromAed,
+      priceCurrency: "AED",
+    },
+  };
 
   return (
     <PublicShell>
-      <ProjectThumb gradient={project.gradient} className="h-64 w-full sm:h-72" />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ProjectThumb
+        gradient={project.gradient}
+        imageUrl={project.coverImageUrl}
+        className="h-64 w-full sm:h-72"
+      />
 
       <div className="mx-auto max-w-6xl px-6 pb-16 pt-6">
+        {projectBanner && (
+          <Link
+            href={projectBanner.target_url ?? "#"}
+            className="mb-4 block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
+          >
+            <p className="text-xs font-semibold text-gold-400">Sponsored</p>
+            <p className="mt-1 text-sm font-medium text-ink-100">{projectBanner.title}</p>
+            {projectBanner.developers?.name && (
+              <p className="mt-0.5 text-xs text-ink-500">by {projectBanner.developers.name}</p>
+            )}
+          </Link>
+        )}
         <div className="rounded-2xl border border-navy-700 bg-navy-900 p-6 shadow-2xl">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -117,89 +202,201 @@ export default async function ProjectDetailsPage({
               </div>
             </Section>
 
-            <Section title="Gallery & Virtual Tour">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <ProjectThumb
-                    key={i}
-                    gradient={project.gradient}
-                    className="h-24 rounded-lg"
-                  />
-                ))}
-              </div>
-              <button className="mt-3 flex items-center gap-2 text-sm font-medium text-gold-400 hover:text-gold-300">
-                <Play className="h-4 w-4" /> Watch 360° Virtual Tour
-              </button>
-            </Section>
-
-            <Section title="Floor Plans">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {project.unitTypes.map((u) => (
-                  <div
-                    key={u}
-                    className="flex items-center justify-between rounded-lg border border-navy-700 bg-navy-850 px-4 py-3 text-sm"
-                  >
-                    <span className="font-medium text-ink-100">{u} Layout</span>
-                    <span className="text-ink-500">View PDF</span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Construction Updates">
-              <div className="flex items-center gap-4 rounded-lg border border-navy-700 bg-navy-850 p-4">
-                <div className="relative h-16 w-16 shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90">
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="#17213a" strokeWidth="4" />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="16"
-                      fill="none"
-                      stroke="#e3ab3d"
-                      strokeWidth="4"
-                      strokeDasharray={`${(project.leads % 100)} 100`}
-                      strokeLinecap="round"
+            <Section title="Gallery">
+              {images.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {images.map((img) => (
+                    <a
+                      key={img.url}
+                      href={img.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block h-24 overflow-hidden rounded-lg border border-navy-700 bg-navy-850"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.url}
+                        alt={img.name}
+                        className="h-full w-full object-cover transition-transform hover:scale-105"
+                      />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <ProjectThumb
+                      key={i}
+                      gradient={project.gradient}
+                      className="h-24 rounded-lg"
                     />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-ink-100">
-                    {project.leads % 100}%
-                  </span>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-ink-100">
-                    Construction in progress
-                  </p>
-                  <p className="text-xs text-ink-500">
-                    Last milestone photo update: 2 weeks ago
-                  </p>
+              )}
+              {images.length === 0 && (
+                <p className="mt-2 text-xs text-ink-500">
+                  No photos uploaded by the developer yet.
+                </p>
+              )}
+            </Section>
+
+            {(videoEmbedUrl || project.videoUrl || project.virtualTourUrl) && (
+              <Section title="Video & Virtual Tour">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {project.videoUrl &&
+                    (videoEmbedUrl ? (
+                      <div className="aspect-video overflow-hidden rounded-lg border border-navy-700">
+                        <iframe
+                          src={videoEmbedUrl}
+                          title="Project video"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      </div>
+                    ) : (
+                      <a
+                        href={project.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 rounded-lg border border-navy-700 bg-navy-850 py-10 text-sm font-medium text-gold-400 hover:text-gold-300"
+                      >
+                        <Play className="h-4 w-4" /> Watch Video
+                      </a>
+                    ))}
+                  {project.virtualTourUrl && (
+                    <div className="aspect-video overflow-hidden rounded-lg border border-navy-700">
+                      <iframe
+                        src={project.virtualTourUrl}
+                        title="360° virtual tour"
+                        allow="xr-spatial-tracking; gyroscope; accelerometer"
+                        allowFullScreen
+                        className="h-full w-full"
+                      />
+                    </div>
+                  )}
                 </div>
+              </Section>
+            )}
+
+            <Section title="Master Plan, Floor Plans & Brochure">
+              {documents.length > 0 ? (
+                <div className="space-y-4">
+                  {documentCategories
+                    .filter((cat) => documents.some((d) => d.category === cat))
+                    .map((cat) => (
+                      <div key={cat}>
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                          {cat}
+                        </p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {documents
+                            .filter((d) => d.category === cat)
+                            .map((doc) => (
+                              <a
+                                key={doc.url}
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between rounded-lg border border-navy-700 bg-navy-850 px-4 py-3 text-sm hover:border-gold-500/40"
+                              >
+                                <span className="flex min-w-0 items-center gap-2 truncate font-medium text-ink-100">
+                                  <FileText className="h-4 w-4 shrink-0 text-gold-400" />
+                                  <span className="truncate">{doc.name}</span>
+                                </span>
+                                <Download className="h-4 w-4 shrink-0 text-ink-500" />
+                              </a>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-sm text-ink-500">
+                  The developer hasn&apos;t uploaded a master plan, floor plans or
+                  brochure for this project yet.
+                </p>
+              )}
+            </Section>
+
+            <Section title="Project Status">
+              <div className="rounded-lg border border-navy-700 bg-navy-850 p-4">
+                <p className="text-sm font-medium text-ink-100">
+                  {getProjectStatusLabel(project)}
+                </p>
+                <p className="text-xs text-ink-500">
+                  {project.handoverQuarter} {project.handoverYear} handover ·{" "}
+                  {project.listingType === "ready" ? "Ready" : "Off-plan"}
+                </p>
+
+                {project.listingType !== "ready" && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-ink-500">
+                      <span>Construction Progress</span>
+                      <span>{project.constructionProgressPercent ?? 0}%</span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-navy-800">
+                      <div
+                        className="h-full rounded-full bg-gold-500"
+                        style={{ width: `${project.constructionProgressPercent ?? 0}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {milestones.length > 0 && (
+                  <ul className="mt-4 space-y-2 border-t border-navy-800 pt-3">
+                    {milestones.map((m) => (
+                      <li key={m.id} className="flex items-center gap-2 text-xs">
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full ${
+                            m.completed ? "bg-emerald-500" : "bg-navy-600"
+                          }`}
+                        />
+                        <span className={m.completed ? "text-ink-300" : "text-ink-500"}>
+                          {m.title}
+                        </span>
+                        {m.milestone_date && (
+                          <span className="text-ink-600">
+                            {new Date(m.milestone_date).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                            })}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </Section>
 
             <Section title="Location">
-              <div className="flex h-48 items-center justify-center rounded-lg border border-navy-700 bg-[radial-gradient(circle_at_30%_20%,#0f2035,#0a1526_55%,#070d18)] text-sm text-ink-500">
-                <MapPin className="mr-2 h-4 w-4 text-gold-400" />
-                {community?.name}, Dubai — interactive map on homepage
+              <div className="h-64 overflow-hidden rounded-lg border border-navy-700">
+                <iframe
+                  src={locationEmbedUrl}
+                  title="Project location"
+                  loading="lazy"
+                  className="h-full w-full"
+                />
               </div>
+              <p className="mt-2 flex items-center gap-1 text-xs text-ink-500">
+                <MapPin className="h-3.5 w-3.5 text-gold-400" />
+                {community?.name}, Dubai
+              </p>
             </Section>
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl border border-navy-700 bg-navy-850 p-5">
-              <p className="text-sm font-semibold text-ink-100">
-                Interested in this project?
-              </p>
-              <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gold-500 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400">
-                <Calendar className="h-4 w-4" /> Book Appointment
-              </button>
-              <button className="mt-2 w-full rounded-lg border border-emerald-600/40 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10">
-                WhatsApp Agent
-              </button>
-              <button className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-navy-600 py-2.5 text-sm font-medium text-ink-300 hover:text-ink-100">
-                <Download className="h-4 w-4" /> Download Brochure
-              </button>
-            </div>
+            <RequestPropertyPanel projectId={project.id} developerId={project.developerId} />
+
+            <ProjectEnquiryPanel
+              projectId={project.id}
+              projectName={project.name}
+              developerId={project.developerId}
+              brochureUrl={brochureDoc?.url}
+              developerPhone={developer?.phone}
+            />
 
             <div className="rounded-xl border border-navy-700 bg-navy-850 p-5">
               <p className="mb-3 text-sm font-semibold text-ink-100">
@@ -225,7 +422,8 @@ export default async function ProjectDetailsPage({
                     {developer?.name}
                   </p>
                   <p className="text-xs text-ink-500">
-                    {developer?.projectsCount} Projects · {developer?.rating}★
+                    {developer?.verified ? "Verified developer" : "Developer"}
+                    {developer?.founded ? ` · Since ${developer.founded}` : ""}
                   </p>
                 </div>
               </Link>

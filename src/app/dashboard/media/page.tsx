@@ -1,13 +1,19 @@
-import { Image as ImageIcon } from "lucide-react";
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { MediaLibraryClient } from "@/components/dashboard/MediaLibraryClient";
+import { getProjectsForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
 
-export default function MediaPage() {
+export const dynamic = "force-dynamic";
+
+export default async function MediaPage() {
+  const profile = await requireDeveloperProfile();
+  const projects = await getProjectsForDeveloper(profile.developer_id);
+
   return (
-    <PlaceholderPage
-      icon={ImageIcon}
+    <MediaLibraryClient
       title="Media Library"
-      description="Manage images, videos, drone footage, and 360° virtual tours across all your projects."
-      bullets={["Images & videos", "Drone footage", "360° virtual tours"]}
+      description="Upload images, drone shots and other visuals for each project."
+      folder="gallery"
+      accept="image/*,video/*"
+      projects={projects.map((p) => ({ id: p.id, name: p.name }))}
     />
   );
 }

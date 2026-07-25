@@ -1,72 +1,95 @@
 import Link from "next/link";
-import { Heart, Search } from "lucide-react";
+import Image from "next/image";
+import { Heart } from "lucide-react";
+import { AuthStatus } from "@/components/auth/AuthStatus";
+import { GlobalSearchBox, type SearchItem } from "@/components/public/GlobalSearchBox";
+import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSlider";
+import {
+  getCommunities,
+  getDevelopers,
+  getNavLinks,
+  getPublishedProjects,
+} from "@/lib/supabase/queries";
+import { mapDeveloper } from "@/lib/supabase/mappers";
 
-const secondaryLinks = [
-  { label: "Developers", href: "/developers" },
-  { label: "Communities", href: "/communities" },
-  { label: "Blog", href: "/blog" },
-  { label: "Compare", href: "/compare" },
-  { label: "Advertise", href: "/advertise" },
-];
+export async function PublicShell({ children }: { children: React.ReactNode }) {
+  const [headerLinks, footerLinks, projects, communities, developers] = await Promise.all([
+    getNavLinks("header"),
+    getNavLinks("footer"),
+    getPublishedProjects(),
+    getCommunities(),
+    getDevelopers(),
+  ]);
 
-export function PublicShell({ children }: { children: React.ReactNode }) {
+  const searchItems: SearchItem[] = [
+    ...projects.map((p) => ({
+      type: "project" as const,
+      id: p.id,
+      name: p.name,
+      href: `/projects/${p.slug}`,
+      subtitle: p.communities?.name ?? p.developers?.name ?? undefined,
+    })),
+    ...communities.map((c) => ({
+      type: "community" as const,
+      id: c.id,
+      name: c.name,
+      href: `/communities/${c.slug}`,
+    })),
+    ...developers.map((d) => ({
+      type: "developer" as const,
+      id: d.id,
+      name: d.name,
+      href: `/developers/${d.slug}`,
+    })),
+  ];
+
   return (
     <div className="flex min-h-screen flex-col bg-navy-950">
       <div className="border-b border-navy-700 bg-navy-900">
-        <header className="flex items-center gap-4 px-6 py-3">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-500 font-bold text-navy-950">
-              D
-            </div>
-            <div className="leading-tight">
-              <div className="text-sm font-bold text-ink-100">Dubai</div>
-              <div className="text-[10px] font-medium tracking-widest text-gold-400">
-                PROPERTY MAP
-              </div>
-            </div>
+        <header className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center">
+            <Image
+              src="/logo/dubai-property-map-logo.png"
+              alt="Dubai Property Map"
+              width={883}
+              height={237}
+              priority
+              className="h-8 w-auto sm:h-9"
+            />
           </Link>
 
-          <div className="hidden min-w-0 flex-1 items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2 lg:flex">
-            <Search className="h-4 w-4 shrink-0 text-ink-500" />
-            <input
-              className="w-full bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-              placeholder="Search projects, communities or developers..."
-            />
-          </div>
+          <GlobalSearchBox items={searchItems} />
 
           <Link
             href="/favorites"
-            className="hidden shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100 lg:flex"
+            className="hidden shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100 sm:flex"
           >
             <Heart className="h-4 w-4" />
           </Link>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-lg border border-navy-700 px-3 py-2 text-sm font-medium text-ink-300 hover:text-ink-100"
-            >
-              Login / Register
-            </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-gold-500 px-3 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400"
-            >
-              List Your Property
-            </Link>
+            <AuthStatus />
           </div>
         </header>
         <nav className="flex items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-6 py-2 text-xs font-medium text-ink-400">
-          {secondaryLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="shrink-0 hover:text-ink-100">
+          {headerLinks.map((link) => (
+            <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
               {link.label}
             </Link>
           ))}
         </nav>
       </div>
+      <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} />
       <main className="flex-1">{children}</main>
       <footer className="border-t border-navy-800 px-6 py-6 text-center text-xs text-ink-500">
-        © 2026 Dubai Property Map. Prototype build — data shown is illustrative.
+        <div className="mb-2 flex flex-wrap justify-center gap-4">
+          {footerLinks.map((link) => (
+            <Link key={link.id} href={link.url} className="hover:text-ink-300">
+              {link.label}
+            </Link>
+          ))}
+        </div>
+        © 2026 Dubai Property Map. All rights reserved.
       </footer>
     </div>
   );

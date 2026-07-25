@@ -1,15 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import type { LucideIcon } from "lucide-react";
-import { Building2, ChevronDown } from "lucide-react";
+import { Building2, Menu, X } from "lucide-react";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  // When true, `href` is used as-is instead of being prefixed with
+  // `basePath` — for nav items that intentionally point outside this
+  // portal (e.g. a broker portal's "Property Map" linking to the public "/").
+  absolute?: boolean;
 }
 
 export function DashboardShell({
@@ -30,23 +36,49 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Close the mobile drawer automatically on navigation, so it doesn't
+  // stay open over the next page.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   return (
     <div className="flex min-h-screen bg-navy-950">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-navy-700 bg-navy-900">
+      {mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+        />
+      )}
+      <aside
+        className={clsx(
+          "fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-navy-700 bg-navy-900 transition-transform duration-200 lg:relative lg:z-auto lg:translate-x-0",
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="flex items-center gap-2 border-b border-navy-700 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-500/15 text-gold-400">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gold-500/15 text-gold-400">
             <BrandIcon className="h-5 w-5" />
           </div>
-          <span className="text-sm font-semibold text-ink-100">
+          <span className="truncate text-sm font-semibold text-ink-100">
             {brandLabel}
           </span>
+          <button
+            onClick={() => setMobileNavOpen(false)}
+            className="ml-auto shrink-0 rounded-lg p-1 text-ink-400 hover:text-ink-100 lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {navItems.map((item) => {
-            const href = `${basePath}${item.href}`;
-            const active =
-              item.href === ""
+            const href = item.absolute ? item.href : `${basePath}${item.href}`;
+            const active = item.absolute
+              ? pathname === href
+              : item.href === ""
                 ? pathname === basePath
                 : pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -60,7 +92,7 @@ export function DashboardShell({
                     : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4 shrink-0" />
                 {item.label}
               </Link>
             );
@@ -76,20 +108,31 @@ export function DashboardShell({
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-navy-700 bg-navy-900 px-6 py-4">
-          <div className="text-sm text-ink-400">
-            {brandLabel}
-          </div>
-          <button className="flex items-center gap-2 rounded-full border border-navy-700 bg-navy-850 py-1.5 pl-1.5 pr-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-navy-950">
-              {userLabel.charAt(0)}
+        <header className="flex items-center justify-between gap-3 border-b border-navy-700 bg-navy-900 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="shrink-0 rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100 lg:hidden"
+              aria-label="Open menu"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <div className="hidden truncate text-sm text-ink-400 sm:block">
+              {brandLabel}
             </div>
-            <span className="text-sm text-ink-100">{userLabel}</span>
-            <span className="text-xs text-ink-500">{userRole}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-ink-500" />
-          </button>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 rounded-full border border-navy-700 bg-navy-850 py-1.5 pl-1.5 pr-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-navy-950">
+                {userLabel.charAt(0)}
+              </div>
+              <span className="max-w-[8rem] truncate text-sm text-ink-100 sm:max-w-none">{userLabel}</span>
+              <span className="hidden text-xs text-ink-500 sm:inline">{userRole}</span>
+            </div>
+            <SignOutButton className="rounded-lg border border-navy-700 px-3 py-1.5 text-sm font-medium text-ink-300 hover:text-ink-100" />
+          </div>
         </header>
-        <main className="flex flex-1 flex-col overflow-y-auto bg-navy-950">
+        <main className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-navy-950">
           {children}
         </main>
       </div>

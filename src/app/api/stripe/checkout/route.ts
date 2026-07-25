@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getStripe } from "@/lib/stripe";
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(request: NextRequest) {
+  const { plan } = await request.json();
+
+  const supabase = await createClient();
+  const { data: planRow } = await supabase
+    .from("subscription_plans")
+    .select("stripe_price_id")
+    .eq("key", plan)
+    .maybeSingle();
+
+  const priceId = planRow?.stripe_price_id;
+  if (!priceId) {
+    return NextResponse.json(
+      {
+        error: `No Stripe price configured for the "${plan}" plan yet. Set its Stripe Price ID in Admin → Packages & Plans.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("developer_id, developers(stripe_customer_id)")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.developer_id) {
+    return NextResponse.json({ error: "No developer account found." }, { status: 400 });
+  }
+
+  const existingCustomerId = Array.isArray(profile.developers)
+    ? profile.developers[0]?.stripe_customer_id
+    : (profile.developers as { stripe_customer_id: string | null } | null)?.stripe_customer_id;
+
+  try {
+    const stripe = getStripe();
+    const origin = request.headers.get("origin") ?? "http://localhost:3000";
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer: existingCustomerId ?? undefined,
+      customer_email: existingCustomerId ? undefined : user.email,
+      client_reference_id: profile.developer_id,
+      metadata: { developer_id: profile.developer_id, plan },
+      success_url: `${origin}/dashboard/packages?checkout=success`,
+      cancel_url: `${origin}/dashboard/packages?checkout=cancelled`,
+    });
+
+    return NextResponse.json({ url: session.url });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Stripe error" },
+      { status: 500 }
+    );
+  }
+}

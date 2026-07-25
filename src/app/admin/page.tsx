@@ -1,20 +1,60 @@
-import {
-  Building2,
-  ClipboardList,
-  MessageSquare,
-  Users,
-  UserCog,
-} from "lucide-react";
+import { Building2, CalendarCheck, ClipboardList, UserCog, Users } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { DonutChart, TrendLineChart } from "@/components/ui/Charts";
-import { developers, platformLeadsAnalytics, adminActivity } from "@/data/mock";
+import { DonutChart } from "@/components/ui/Charts";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getAllDevelopersAdmin,
+  getAllLeadsAdmin,
+  getAllProjectsAdmin,
+} from "@/lib/supabase/queries";
 
-const topDevelopers = [...developers]
-  .sort((a, b) => b.projectsCount - a.projectsCount)
-  .slice(0, 3);
+export const dynamic = "force-dynamic";
 
-export default function AdminDashboardHome() {
+export default async function AdminDashboardHome() {
+  const supabase = await createClient();
+  const [developers, projects, leads, { count: userCount }, { data: bookings }] =
+    await Promise.all([
+      getAllDevelopersAdmin(),
+      getAllProjectsAdmin(),
+      getAllLeadsAdmin(),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("bookings").select("id"),
+    ]);
+
+  const approvalCounts = { approved: 0, pending: 0, review: 0, rejected: 0 };
+  for (const p of projects) approvalCounts[p.approval_status]++;
+
+  const sourceCounts = new Map<string, number>();
+  for (const l of leads) {
+    sourceCounts.set(l.source, (sourceCounts.get(l.source) ?? 0) + 1);
+  }
+  const sourceColors = ["#3b82f6", "#22c55e", "#f97316", "#a855f7", "#eab308"];
+  const sourceData = Array.from(sourceCounts.entries()).map(([name, value], i) => ({
+    name,
+    value,
+    color: sourceColors[i % sourceColors.length],
+  }));
+
+  const topDevelopers = [...developers]
+    .map((d) => ({ ...d, count: projects.filter((p) => p.developer_id === d.id).length }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const recentActivity = [
+    ...projects.map((p) => ({
+      text: `Project "${p.name}" ${p.approval_status === "pending" ? "submitted for review" : "updated"}`,
+      time: p.created_at,
+    })),
+    ...developers.map((d) => ({ text: `Developer "${d.name}" registered`, time: d.created_at })),
+    ...leads.slice(0, 5).map((l) => ({
+      text: `New lead from ${l.projects?.name ?? "a project"}`,
+      time: l.created_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 6);
+
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -25,51 +65,55 @@ export default function AdminDashboardHome() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Developers" value="156" delta="+6 This Month" icon={Building2} />
-        <StatCard label="Total Projects" value="2,341" delta="+28 This Month" icon={ClipboardList} />
-        <StatCard label="Total Leads" value="12,842" delta="+15.3%" icon={Users} />
-        <StatCard label="Total Enquiries" value="8,754" delta="+11.2%" icon={MessageSquare} />
-        <StatCard label="Total Users" value="24,591" delta="+9.4%" icon={UserCog} />
+        <StatCard label="Total Developers" value={String(developers.length)} icon={Building2} />
+        <StatCard label="Total Projects" value={String(projects.length)} icon={ClipboardList} />
+        <StatCard label="Total Leads" value={String(leads.length)} icon={Users} />
+        <StatCard label="Total Bookings" value={String(bookings?.length ?? 0)} icon={CalendarCheck} />
+        <StatCard label="Total Users" value={String(userCount ?? 0)} icon={UserCog} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Projects Overview">
+        <SectionCard title="Projects by Approval Status">
           <DonutChart
             data={[
-              { name: "Off Plan (53%)", value: 1245, color: "#3b82f6" },
-              { name: "Ready (29%)", value: 684, color: "#22c55e" },
-              { name: "Under Construction (18%)", value: 412, color: "#a855f7" },
+              { name: "Approved", value: approvalCounts.approved, color: "#22c55e" },
+              { name: "Pending", value: approvalCounts.pending, color: "#eab308" },
+              { name: "Review", value: approvalCounts.review, color: "#3b82f6" },
+              { name: "Rejected", value: approvalCounts.rejected, color: "#ef4444" },
             ]}
           />
         </SectionCard>
-        <SectionCard title="Leads Overview" action={<span className="text-xs text-ink-500">This Month</span>}>
-          <TrendLineChart
-            data={platformLeadsAnalytics}
-            lines={[{ key: "leads", color: "#22c55e", label: "Leads" }]}
-          />
+        <SectionCard title="Lead Sources">
+          {sourceData.length > 0 ? (
+            <DonutChart data={sourceData} />
+          ) : (
+            <p className="py-10 text-center text-sm text-ink-500">No leads yet.</p>
+          )}
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <SectionCard title="Recent Activities">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SectionCard title="Recent Activity">
           <ul className="space-y-3">
-            {adminActivity.map((a) => (
-              <li key={a.id} className="flex items-start gap-2 text-sm">
+            {recentActivity.map((a, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-500" />
                 <div>
                   <p className="text-ink-200">{a.text}</p>
-                  <p className="text-xs text-ink-500">{a.time}</p>
+                  <p className="text-xs text-ink-500">
+                    {new Date(a.time).toLocaleString()}
+                  </p>
                 </div>
               </li>
             ))}
+            {recentActivity.length === 0 && (
+              <p className="text-sm text-ink-500">No activity yet.</p>
+            )}
           </ul>
         </SectionCard>
 
         <SectionCard
-          title={
-            <h3 className="text-sm font-semibold text-ink-100">Top Developers</h3>
-          }
-          action={<span className="text-xs font-medium text-gold-400">View All</span>}
+          title={<h3 className="text-sm font-semibold text-ink-100">Top Developers</h3>}
         >
           <ul className="space-y-3">
             {topDevelopers.map((d) => (
@@ -83,23 +127,10 @@ export default function AdminDashboardHome() {
                   </span>
                   {d.name}
                 </span>
-                <span className="text-xs text-ink-500">
-                  {d.projectsCount} Projects · {d.rating}★
-                </span>
+                <span className="text-xs text-ink-500">{d.count} Projects</span>
               </li>
             ))}
           </ul>
-        </SectionCard>
-
-        <SectionCard title="Traffic Sources">
-          <DonutChart
-            data={[
-              { name: "Direct", value: 22500, color: "#3b82f6" },
-              { name: "Organic Search", value: 15000, color: "#22c55e" },
-              { name: "Social Media", value: 7500, color: "#f97316" },
-              { name: "Referral", value: 5000, color: "#a855f7" },
-            ]}
-          />
         </SectionCard>
       </div>
     </div>

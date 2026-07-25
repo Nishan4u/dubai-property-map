@@ -1,49 +1,33 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { AdminShellClient } from "@/components/admin/AdminShellClient";
 
-import {
-  BarChart3,
-  Building2,
-  FileText,
-  Landmark,
-  Megaphone,
-  Settings,
-  Shield,
-  Users,
-  Wallet,
-  Package,
-  ClipboardList,
-  UserCog,
-  CalendarCheck,
-} from "lucide-react";
-import { DashboardShell } from "@/components/ui/DashboardShell";
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-const navItems = [
-  { label: "Dashboard", href: "", icon: BarChart3 },
-  { label: "Developers", href: "/developers", icon: Building2 },
-  { label: "Projects", href: "/projects", icon: ClipboardList },
-  { label: "Communities", href: "/communities", icon: Landmark },
-  { label: "Leads", href: "/leads", icon: Users },
-  { label: "Users", href: "/users", icon: UserCog },
-  { label: "Bookings", href: "/bookings", icon: CalendarCheck },
-  { label: "Ads", href: "/ads", icon: Megaphone },
-  { label: "Payments", href: "/payments", icon: Wallet },
-  { label: "Packages", href: "/packages", icon: Package },
-  { label: "Content", href: "/content", icon: FileText },
-  { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Settings", href: "/settings", icon: Settings },
-];
+  if (!user) redirect("/login");
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") redirect("/");
+
   return (
-    <DashboardShell
-      brandLabel="Admin Dashboard"
-      brandIcon={Shield}
-      basePath="/admin"
-      navItems={navItems}
-      userLabel="Admin User"
+    <AdminShellClient
+      userLabel={profile.full_name ?? "Admin"}
       userRole="Super Admin"
     >
       {children}
-    </DashboardShell>
+    </AdminShellClient>
   );
 }

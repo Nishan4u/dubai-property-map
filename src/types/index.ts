@@ -32,6 +32,10 @@ export interface Developer {
   rating: number;
   reviews: number;
   description: string;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  logoUrl?: string | null;
 }
 
 export interface Community {
@@ -70,12 +74,31 @@ export interface Project {
   rating: number;
   reviews: number;
   gradient: string;
+  coverImageUrl?: string | null;
   tags: ProjectTag[];
   description: string;
   amenities: string[];
   views: number;
   leads: number;
   bookings: number;
+  lat?: number | null;
+  lng?: number | null;
+  videoUrl?: string | null;
+  virtualTourUrl?: string | null;
+  launchDate?: string | null;
+  unitTypePrices?: Record<string, number>;
+  paymentPlanDetails?: { label: string; percent: number }[];
+  constructionProgressPercent?: number;
+  // Optional denormalized fields populated when sourced from a Supabase
+  // join (real data). Falls back to the mock `getDeveloper`/`getCommunity`
+  // lookups when absent, so existing mock-backed pages keep working.
+  developerName?: string;
+  developerColor?: string;
+  developerSlug?: string;
+  developerPhone?: string | null;
+  communityName?: string;
+  communitySlug?: string;
+  createdAt?: string;
 }
 
 export interface Lead {

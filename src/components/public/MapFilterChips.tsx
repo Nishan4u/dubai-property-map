@@ -29,7 +29,7 @@ export function MapFilterChips({
   onChange: (v: ProjectTag | "all") => void;
 }) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 px-3 py-2 backdrop-blur">
+    <div className="inline-flex max-w-full items-center gap-2 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 px-3 py-2 backdrop-blur">
       {chips.map((chip) => (
         <button
           key={chip.value}

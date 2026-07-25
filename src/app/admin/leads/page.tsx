@@ -1,12 +1,12 @@
-"use client";
-
-import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
-import { leads } from "@/data/mock";
-import type { Lead } from "@/types";
+import { AdminLeadsExportButton } from "@/components/admin/AdminLeadsExportButton";
+import { getAllLeadsAdmin } from "@/lib/supabase/queries";
+import type { DbLeadStatus } from "@/types/database";
 
-const statusTone: Record<Lead["status"], "gold" | "blue" | "green" | "neutral" | "red"> = {
+export const dynamic = "force-dynamic";
+
+const statusTone: Record<DbLeadStatus, "gold" | "blue" | "green" | "neutral" | "red"> = {
   new: "gold",
   contacted: "blue",
   qualified: "green",
@@ -14,7 +14,9 @@ const statusTone: Record<Lead["status"], "gold" | "blue" | "green" | "neutral" |
   lost: "red",
 };
 
-export default function AdminLeadsPage() {
+export default async function AdminLeadsPage() {
+  const leads = await getAllLeadsAdmin();
+
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
@@ -24,19 +26,17 @@ export default function AdminLeadsPage() {
             Aggregated leads across every developer on the platform.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2 text-sm font-medium text-ink-300 hover:text-ink-100">
-          <Download className="h-4 w-4" /> Export
-        </button>
+        <AdminLeadsExportButton leads={leads} />
       </div>
 
-      <DataTable<Lead>
+      <DataTable
         columns={[
           { header: "Name", render: (l) => <span className="font-medium text-ink-100">{l.name}</span> },
-          { header: "Country", render: (l) => l.country },
-          { header: "Project", render: (l) => l.projectName },
+          { header: "Country", render: (l) => l.country ?? "—" },
+          { header: "Project", render: (l) => l.projects?.name ?? "—" },
           { header: "Source", render: (l) => l.source },
-          { header: "Status", render: (l) => <Badge tone={statusTone[l.status]}>{l.status}</Badge> },
-          { header: "Date", render: (l) => l.date },
+          { header: "Status", render: (l) => <Badge tone={statusTone[l.status as DbLeadStatus]}>{l.status}</Badge> },
+          { header: "Date", render: (l) => new Date(l.created_at).toLocaleDateString() },
         ]}
         rows={leads}
       />

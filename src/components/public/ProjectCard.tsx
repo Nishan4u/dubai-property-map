@@ -1,25 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Heart } from "lucide-react";
 import type { Project } from "@/types";
 import { formatAed, getDeveloper, getCommunity } from "@/data/mock";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
+import { useFavorites } from "@/components/auth/FavoritesProvider";
 
-export function ProjectCard({ project }: { project: Project }) {
-  const [saved, setSaved] = useState(false);
-  const developer = getDeveloper(project.developerId);
-  const community = getCommunity(project.communityId);
+export function ProjectCard({
+  project,
+  onSelect,
+}: {
+  project: Project;
+  onSelect?: (project: Project) => void;
+}) {
+  const router = useRouter();
+  const { favoriteIds, toggle } = useFavorites();
+  const saved = favoriteIds.has(project.id);
+  const developerName = project.developerName ?? getDeveloper(project.developerId)?.name;
+  const communityName = project.communityName ?? getCommunity(project.communityId)?.name;
 
   return (
     <Link
       href={`/projects/${project.slug}`}
+      onClick={(e) => {
+        if (!onSelect) return;
+        e.preventDefault();
+        onSelect(project);
+      }}
       className="group flex gap-3 rounded-xl border border-navy-700 bg-navy-850 p-3 transition-colors hover:border-gold-500/40"
     >
       <ProjectThumb
         gradient={project.gradient}
+        imageUrl={project.coverImageUrl}
         className="h-24 w-28 shrink-0 rounded-lg"
       />
       <div className="min-w-0 flex-1">
@@ -28,9 +43,11 @@ export function ProjectCard({ project }: { project: Project }) {
             {project.name}
           </h4>
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              setSaved((s) => !s);
+              e.stopPropagation();
+              const result = await toggle(project.id);
+              if (result === "needs-login") router.push("/login");
             }}
             className="shrink-0 text-ink-500 hover:text-rose-400"
           >
@@ -39,8 +56,8 @@ export function ProjectCard({ project }: { project: Project }) {
             />
           </button>
         </div>
-        <p className="truncate text-xs text-ink-500">by {developer?.name}</p>
-        <p className="truncate text-xs text-ink-500">{community?.name}</p>
+        <p className="truncate text-xs text-ink-500">by {developerName}</p>
+        <p className="truncate text-xs text-ink-500">{communityName}</p>
         <p className="mt-1 text-sm font-semibold text-gold-400">
           From {formatAed(project.priceFromAed)}
         </p>

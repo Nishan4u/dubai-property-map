@@ -1,0 +1,35 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function BrokerSubscriptionActions({ brokerId }: { brokerId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function runAction(action: "extend" | "complimentary" | "cancel") {
+    if (action === "cancel" && !window.confirm("Cancel this broker's subscription?")) return;
+    setLoading(true);
+    await fetch(`/api/admin/brokers/${brokerId}/subscription`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, days: 30 }),
+    });
+    router.refresh();
+    setLoading(false);
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button disabled={loading} onClick={() => runAction("extend")} className="text-xs font-medium text-gold-400 hover:text-gold-300 disabled:opacity-50">
+        Extend 30d
+      </button>
+      <button disabled={loading} onClick={() => runAction("complimentary")} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
+        Give Complimentary
+      </button>
+      <button disabled={loading} onClick={() => runAction("cancel")} className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50">
+        Cancel
+      </button>
+    </div>
+  );
+}

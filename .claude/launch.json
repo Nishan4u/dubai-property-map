@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "dubai-property-map",
-      "runtimeExecutable": "/Users/Nishan/.local/node-v24/bin/npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/Users/nishan/.nvm/versions/node/v24.18.0/bin/node",
+      "runtimeArgs": ["--require", "/Volumes/NISHAN/DPM/dubai-property-map/.claude/path-preload.js", "node_modules/next/dist/bin/next", "dev"],
       "port": 3000
     }
   ]

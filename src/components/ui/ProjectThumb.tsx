@@ -3,11 +3,24 @@ import { Building2 } from "lucide-react";
 
 export function ProjectThumb({
   gradient,
+  imageUrl,
   className,
 }: {
   gradient: string;
+  imageUrl?: string | null;
   className?: string;
 }) {
+  if (imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt=""
+        className={clsx("object-cover", className)}
+      />
+    );
+  }
+
   return (
     <div
       className={clsx(

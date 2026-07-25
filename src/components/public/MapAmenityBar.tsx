@@ -1,46 +1,43 @@
 "use client";
 
-import { useState } from "react";
 import { clsx } from "clsx";
 import {
   Building,
   Cross,
-  Landmark,
   Palmtree,
   Plane,
   School,
   ShoppingBag,
+  TrainFront,
   Trees,
 } from "lucide-react";
 
-const amenities = [
-  { label: "Metro Lines", icon: Landmark },
-  { label: "Schools", icon: School },
-  { label: "Hospitals", icon: Cross },
-  { label: "Malls", icon: ShoppingBag },
-  { label: "Airports", icon: Plane },
-  { label: "Beaches", icon: Palmtree },
-  { label: "Golf Courses", icon: Building },
-  { label: "Parks", icon: Trees },
+export const amenityLayers = [
+  { key: "metro", label: "Metro Lines", icon: TrainFront },
+  { key: "schools", label: "Schools", icon: School },
+  { key: "hospitals", label: "Hospitals", icon: Cross },
+  { key: "malls", label: "Malls", icon: ShoppingBag },
+  { key: "airports", label: "Airports", icon: Plane },
+  { key: "beaches", label: "Beaches", icon: Palmtree },
+  { key: "golf", label: "Golf Courses", icon: Building },
+  { key: "parks", label: "Parks", icon: Trees },
 ];
 
-export function MapAmenityBar() {
-  const [active, setActive] = useState<string[]>([]);
-
-  function toggle(label: string) {
-    setActive((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
-    );
-  }
-
+export function MapAmenityBar({
+  active,
+  onToggle,
+}: {
+  active: string[];
+  onToggle: (key: string) => void;
+}) {
   return (
-    <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 px-2 py-2 backdrop-blur">
-      {amenities.map((a) => {
-        const isActive = active.includes(a.label);
+    <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 px-2 py-2 backdrop-blur">
+      {amenityLayers.map((a) => {
+        const isActive = active.includes(a.key);
         return (
           <button
-            key={a.label}
-            onClick={() => toggle(a.label)}
+            key={a.key}
+            onClick={() => onToggle(a.key)}
             className={clsx(
               "flex shrink-0 flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-colors",
               isActive

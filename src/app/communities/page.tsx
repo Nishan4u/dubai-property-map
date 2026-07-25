@@ -1,9 +1,36 @@
-import Link from "next/link";
-import { TrendingUp } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
-import { communities, formatAed } from "@/data/mock";
+import { CommunitiesPageClient } from "@/components/public/CommunitiesPageClient";
+import { getCommunities, getPublishedProjects } from "@/lib/supabase/queries";
 
-export default function CommunitiesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CommunitiesPage() {
+  const [communities, projects] = await Promise.all([
+    getCommunities(),
+    getPublishedProjects(),
+  ]);
+
+  const stats = new Map<string, { count: number; totalPrice: number }>();
+  for (const p of projects) {
+    const entry = stats.get(p.community_id) ?? { count: 0, totalPrice: 0 };
+    entry.count += 1;
+    entry.totalPrice += p.price_from_aed;
+    stats.set(p.community_id, entry);
+  }
+
+  const communitiesWithStats = communities.map((c) => {
+    const stat = stats.get(c.id);
+    return {
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      pinColor: c.pin_color,
+      projectsCount: stat?.count ?? 0,
+      avgPrice: stat ? stat.totalPrice / stat.count : 0,
+    };
+  });
+
   return (
     <PublicShell>
       <div className="mx-auto max-w-6xl px-6 py-10">
@@ -12,36 +39,7 @@ export default function CommunitiesPage() {
           Explore {communities.length} master communities across Dubai.
         </p>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {communities.map((c) => (
-            <Link
-              key={c.id}
-              href={`/communities/${c.slug}`}
-              className="rounded-xl border border-navy-700 bg-navy-850 p-5 transition-colors hover:border-gold-500/40"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: c.pinColor }}
-                />
-                <h3 className="text-sm font-semibold text-ink-100">
-                  {c.name}
-                </h3>
-              </div>
-              <p className="mt-2 line-clamp-2 text-xs text-ink-400">
-                {c.description}
-              </p>
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-ink-500">
-                  {c.projectsCount} Projects · Avg {formatAed(c.avgPriceAed)}
-                </span>
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <TrendingUp className="h-3 w-3" /> {c.priceTrendPct}%
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <CommunitiesPageClient communities={communitiesWithStats} />
       </div>
     </PublicShell>
   );

@@ -1,13 +1,30 @@
-import { Settings } from "lucide-react";
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { DeveloperSettingsForm } from "@/components/dashboard/DeveloperSettingsForm";
+import { requireDeveloperProfile } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
 
-export default function DeveloperSettingsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DeveloperSettingsPage() {
+  const profile = await requireDeveloperProfile();
+  const developerId = profile.developer_id;
+
+  const supabase = await createClient();
+  const { data: developer } = await supabase
+    .from("developers")
+    .select("notification_prefs, lead_webhook_url")
+    .eq("id", developerId)
+    .single();
+
   return (
-    <PlaceholderPage
-      icon={Settings}
-      title="Settings"
-      description="Notification preferences, API keys, and integrations for your developer account."
-      bullets={["Notification preferences", "API access", "Integrations"]}
+    <DeveloperSettingsForm
+      developerId={developerId}
+      notificationPrefs={
+        (developer?.notification_prefs as {
+          new_leads?: boolean;
+          new_messages?: boolean;
+        }) ?? { new_leads: true, new_messages: true }
+      }
+      leadWebhookUrl={developer?.lead_webhook_url ?? ""}
     />
   );
 }

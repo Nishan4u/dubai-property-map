@@ -1,62 +1,66 @@
-"use client";
+import { HomeClient } from "@/components/public/HomeClient";
+import {
+  getActiveHomepageBanner,
+  getActiveSidebarBanner,
+  getActiveSponsoredPinProjectIds,
+  getCommunities,
+  getDevelopers,
+  getNavLinks,
+  getPublishedProjects,
+} from "@/lib/supabase/queries";
+import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
+import { getCmsMetadata } from "@/components/public/CmsPage";
 
-import { useMemo, useState } from "react";
-import { SiteHeader } from "@/components/public/SiteHeader";
-import { FilterSidebar } from "@/components/public/FilterSidebar";
-import { ProjectListPanel } from "@/components/public/ProjectListPanel";
-import { DubaiMap } from "@/components/public/DubaiMap";
-import { MapFilterChips } from "@/components/public/MapFilterChips";
-import { MapAmenityBar } from "@/components/public/MapAmenityBar";
-import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
-import { communities, projects as allProjects } from "@/data/mock";
-import type { ListingType, ProjectTag } from "@/types";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState<ListingType>("buy");
-  const [activeTag, setActiveTag] = useState<ProjectTag | "all">("all");
-  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
-    null
-  );
+export async function generateMetadata() {
+  return getCmsMetadata("homepage_hero");
+}
 
-  const filteredProjects = useMemo(() => {
-    return allProjects.filter((p) => {
-      const matchesTab = activeTab === "buy" ? true : p.listingType === activeTab;
-      const matchesTag = activeTag === "all" || p.tags.includes(activeTag);
-      return matchesTab && matchesTag;
-    });
-  }, [activeTab, activeTag]);
+export default async function Home() {
+  const [
+    communityRows,
+    developerRows,
+    projectRows,
+    banner,
+    sidebarBanner,
+    sponsoredPinIds,
+    navLinks,
+  ] = await Promise.all([
+    getCommunities(),
+    getDevelopers(),
+    getPublishedProjects(),
+    getActiveHomepageBanner(),
+    getActiveSidebarBanner(),
+    getActiveSponsoredPinProjectIds(),
+    getNavLinks("header"),
+  ]);
 
-  const featuredProject =
-    filteredProjects.find((p) => p.featured) ?? filteredProjects[0];
+  const communities = communityRows.map((c) => mapCommunity(c));
+  const developers = developerRows.map((d) => mapDeveloper(d));
+  const projects = projectRows.map((p) => mapProject(p));
 
   return (
-    <div className="flex h-screen flex-col bg-navy-950">
-      <SiteHeader
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        activeFilterCount={3}
-      />
-      <div className="flex min-h-0 flex-1">
-        <FilterSidebar />
-        <ProjectListPanel projects={filteredProjects} />
-        <div className="relative flex-1">
-          <div className="absolute left-4 right-[21rem] top-4 z-10">
-            <MapFilterChips active={activeTag} onChange={setActiveTag} />
-          </div>
-          <DubaiMap
-            communities={communities}
-            projects={filteredProjects}
-            selectedCommunityId={selectedCommunityId}
-            onSelectCommunity={setSelectedCommunityId}
-          />
-          {featuredProject && (
-            <FeaturedProjectCard key={featuredProject.id} project={featuredProject} />
-          )}
-          <div className="absolute inset-x-4 bottom-4 z-10">
-            <MapAmenityBar />
-          </div>
-        </div>
-      </div>
-    </div>
+    <HomeClient
+      communities={communities}
+      developers={developers}
+      projects={projects}
+      banner={
+        banner
+          ? { title: banner.title, targetUrl: banner.target_url, developerName: banner.developers?.name }
+          : null
+      }
+      sidebarBanner={
+        sidebarBanner
+          ? {
+              title: sidebarBanner.title,
+              targetUrl: sidebarBanner.target_url,
+              developerName: sidebarBanner.developers?.name,
+            }
+          : null
+      }
+      sponsoredPinIds={Array.from(sponsoredPinIds)}
+      navLinks={navLinks.map((l) => ({ label: l.label, url: l.url }))}
+    />
   );
 }

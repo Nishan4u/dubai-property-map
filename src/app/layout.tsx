@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
+import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
+import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,7 +21,7 @@ export const metadata: Metadata = {
     "Explore Dubai's premium property market on an interactive map — off-plan launches, ready homes, developers, and communities.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -29,7 +32,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-navy-950 text-ink-100">
-        {children}
+        <AnalyticsScripts />
+        <FavoritesProvider>
+          <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
+        </FavoritesProvider>
       </body>
     </html>
   );

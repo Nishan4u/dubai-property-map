@@ -1,13 +1,19 @@
-import { FileText } from "lucide-react";
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { MediaLibraryClient } from "@/components/dashboard/MediaLibraryClient";
+import { getProjectsForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
 
-export default function DocumentsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DocumentsPage() {
+  const profile = await requireDeveloperProfile();
+  const projects = await getProjectsForDeveloper(profile.developer_id);
+
   return (
-    <PlaceholderPage
-      icon={FileText}
+    <MediaLibraryClient
       title="Documents"
-      description="Store brochures, factsheets, payment plan PDFs, price lists, NOCs and legal documents."
-      bullets={["Brochures & factsheets", "Payment plans & price lists", "NOC & legal documents"]}
+      description="Brochures, factsheets, payment plans and price lists per project."
+      folder="documents"
+      accept="application/pdf"
+      projects={projects.map((p) => ({ id: p.id, name: p.name }))}
     />
   );
 }

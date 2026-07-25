@@ -1,6 +1,23 @@
 import { ProjectForm } from "@/components/dashboard/ProjectForm";
+import {
+  getAmenitiesList,
+  getCommunities,
+  getPropertyTypes,
+  requireDeveloperProfile,
+} from "@/lib/supabase/queries";
+import { mapCommunity } from "@/lib/supabase/mappers";
 
-export default function NewProjectPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewProjectPage() {
+  const [profile, communityRows, propertyTypes, amenities] = await Promise.all([
+    requireDeveloperProfile(),
+    getCommunities(),
+    getPropertyTypes(),
+    getAmenitiesList(),
+  ]);
+  const communities = communityRows.map((c) => mapCommunity(c));
+
   return (
     <div className="space-y-4 p-6">
       <div>
@@ -9,7 +26,12 @@ export default function NewProjectPage() {
           Fill in your project details for review and publishing.
         </p>
       </div>
-      <ProjectForm />
+      <ProjectForm
+        developerId={profile.developer_id}
+        communities={communities}
+        propertyTypes={propertyTypes.map((p) => p.name)}
+        amenityOptions={amenities.map((a) => a.name)}
+      />
     </div>
   );
 }
