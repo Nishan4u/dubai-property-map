@@ -71,6 +71,13 @@ export function HomeClient({
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // iOS/iPadOS Safari has never supported the Fullscreen API on arbitrary
+  // elements (only on <video>), so requestFullscreen() there silently
+  // rejects and nothing used to happen when tapping the button. When that's
+  // the case (or the API doesn't exist at all), fall back to a fixed,
+  // full-viewport overlay instead — same UI branching as real fullscreen,
+  // just without asking the browser's chrome to hide.
+  const [simulatedFullscreen, setSimulatedFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const savedSearchId = searchParams.get("saved");
@@ -87,17 +94,61 @@ export function HomeClient({
   }, [tagParam]);
 
   useEffect(() => {
-    const onChange = () =>
-      setIsFullscreen(document.fullscreenElement === rootRef.current);
+    const onChange = () => {
+      if (document.fullscreenElement === rootRef.current) {
+        setIsFullscreen(true);
+        return;
+      }
+      // Native fullscreen exited (Esc, browser UI, etc.) — only clear
+      // isFullscreen here if we're not in the CSS-only simulated mode,
+      // which never touches document.fullscreenElement at all.
+      setSimulatedFullscreen((sim) => {
+        if (!sim) setIsFullscreen(false);
+        return sim;
+      });
+    };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  useEffect(() => {
+    if (!simulatedFullscreen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setSimulatedFullscreen(false);
+        setIsFullscreen(false);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [simulatedFullscreen]);
+
   function handleFullscreenToggle() {
-    if (!document.fullscreenElement) {
-      rootRef.current?.requestFullscreen().catch(() => {});
+    if (isFullscreen) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        setSimulatedFullscreen(false);
+        setIsFullscreen(false);
+      }
+      return;
+    }
+
+    const canUseNativeFullscreen =
+      typeof document.fullscreenEnabled === "boolean" ? document.fullscreenEnabled : !!rootRef.current?.requestFullscreen;
+
+    if (canUseNativeFullscreen && rootRef.current?.requestFullscreen) {
+      rootRef.current
+        .requestFullscreen()
+        .catch(() => {
+          // iOS/iPadOS Safari (and any other browser that rejects this on
+          // arbitrary elements) falls back to the CSS-only viewport mode.
+          setSimulatedFullscreen(true);
+          setIsFullscreen(true);
+        });
     } else {
-      document.exitFullscreen().catch(() => {});
+      setSimulatedFullscreen(true);
+      setIsFullscreen(true);
     }
   }
 
@@ -228,7 +279,13 @@ export function HomeClient({
   const featuredProject = featuredProjects[featuredIndex] ?? featuredProjects[0];
 
   return (
-    <div ref={rootRef} className="flex h-screen flex-col bg-navy-950">
+    <div
+      ref={rootRef}
+      className={clsx(
+        "flex flex-col bg-navy-950",
+        simulatedFullscreen ? "fixed inset-0 z-[100] h-[100dvh]" : "h-screen"
+      )}
+    >
       <SiteHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}
