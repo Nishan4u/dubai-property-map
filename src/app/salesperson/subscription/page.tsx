@@ -46,7 +46,7 @@ export default async function SalespersonSubscriptionPage() {
         hasStripeCustomer={!!salesperson?.stripe_customer_id}
         salespersonId={profile.salesperson_id}
         bankDetails={bankDetails}
-        latestBankTransfer={bankTransfers[0] ?? null}
+        bankTransfers={bankTransfers}
       />
     </div>
   );

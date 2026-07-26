@@ -29,7 +29,7 @@ export default async function BillingPage() {
         planTier={developer?.plan_tier ?? "free"}
         subscriptionStatus={developer?.subscription_status ?? "inactive"}
         hasStripeCustomer={!!developer?.stripe_customer_id}
-        latestBankTransfer={bankTransfers[0] ?? null}
+        bankTransfers={bankTransfers}
       />
     </div>
   );

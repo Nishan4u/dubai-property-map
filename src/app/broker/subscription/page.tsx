@@ -46,7 +46,7 @@ export default async function BrokerSubscriptionPage() {
         hasStripeCustomer={!!broker?.stripe_customer_id}
         brokerId={profile.broker_id}
         bankDetails={bankDetails}
-        latestBankTransfer={bankTransfers[0] ?? null}
+        bankTransfers={bankTransfers}
       />
     </div>
   );

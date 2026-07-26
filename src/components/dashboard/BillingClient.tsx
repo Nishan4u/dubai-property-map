@@ -2,32 +2,19 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
 import type { SubscriptionBankTransferRow } from "@/types/database";
-
-const bankTransferStatusLabel: Record<SubscriptionBankTransferRow["status"], string> = {
-  verification_pending: "Payment Verification Pending",
-  paid: "Paid",
-  rejected: "Rejected",
-};
-const bankTransferStatusTone: Record<
-  SubscriptionBankTransferRow["status"],
-  "green" | "gold" | "red"
-> = {
-  verification_pending: "gold",
-  paid: "green",
-  rejected: "red",
-};
 
 export function BillingClient({
   planTier,
   subscriptionStatus,
   hasStripeCustomer,
-  latestBankTransfer,
+  bankTransfers,
 }: {
   planTier: string;
   subscriptionStatus: string;
   hasStripeCustomer: boolean;
-  latestBankTransfer?: SubscriptionBankTransferRow | null;
+  bankTransfers: SubscriptionBankTransferRow[];
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -67,23 +54,7 @@ export function BillingClient({
       >
         {loading ? "Opening…" : "Manage Billing & Invoices"}
       </button>
-      {latestBankTransfer && (
-        <div className="rounded-lg border border-navy-700 bg-navy-900 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-ink-300">
-              Bank Transfer — {latestBankTransfer.plan_key}
-            </p>
-            <Badge tone={bankTransferStatusTone[latestBankTransfer.status]}>
-              {bankTransferStatusLabel[latestBankTransfer.status]}
-            </Badge>
-          </div>
-          {latestBankTransfer.status === "rejected" && latestBankTransfer.rejection_reason && (
-            <p className="mt-1 text-xs text-rose-400">
-              Reason: {latestBankTransfer.rejection_reason}
-            </p>
-          )}
-        </div>
-      )}
+      <BankTransferHistory transfers={bankTransfers} />
 
       {!hasStripeCustomer && (
         <p className="text-xs text-ink-500">
