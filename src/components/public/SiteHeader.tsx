@@ -53,7 +53,7 @@ export function SiteHeader({
         />
       </Link>
 
-      <div className="relative w-full min-w-0 sm:w-auto sm:flex-1">
+      <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
         <div className="flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2">
           <Search className="h-4 w-4 shrink-0 text-ink-500" />
           <input
