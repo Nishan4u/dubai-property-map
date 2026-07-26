@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import type { DeveloperAwardRow, DeveloperRow } from "@/types/database";
 
 export function DeveloperProfileForm({
@@ -18,7 +20,8 @@ export function DeveloperProfileForm({
   const [website, setWebsite] = useState(developer.website ?? "");
   const [description, setDescription] = useState(developer.description ?? "");
   const [logoUrl, setLogoUrl] = useState(developer.logo_url ?? "");
-  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPercent, setLogoPercent] = useState(0);
   const [logoError, setLogoError] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
@@ -44,21 +47,21 @@ export function DeveloperProfileForm({
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setLogoUploading(true);
+    setLogoFile(file);
+    setLogoPercent(0);
     setLogoError("");
 
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `developer-logos/${developer.id}/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage
-      .from("project-media")
-      .upload(path, file);
+    const { promise } = uploadFileWithProgress("project-media", path, file, setLogoPercent);
+    const { error: uploadError } = await promise;
 
     if (uploadError) {
       setLogoError(uploadError.message);
-      e.target.value = "";
-      setLogoUploading(false);
+      setLogoFile(null);
       return;
     }
 
@@ -69,8 +72,7 @@ export function DeveloperProfileForm({
       .eq("id", developer.id);
 
     setLogoUrl(data.publicUrl);
-    e.target.value = "";
-    setLogoUploading(false);
+    setLogoFile(null);
   }
 
   async function handleAddAward(e: React.FormEvent) {
@@ -126,19 +128,32 @@ export function DeveloperProfileForm({
               </span>
             )}
           </div>
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
-            <Upload className="h-4 w-4" />
-            {logoUploading ? "Uploading…" : logoUrl ? "Replace Logo" : "Upload Logo"}
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              className="hidden"
-              disabled={logoUploading}
-              onChange={handleLogoUpload}
-            />
-          </label>
+          <div className="min-w-0 flex-1">
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
+              <Upload className="h-4 w-4" />
+              {logoFile ? "Uploading…" : logoUrl ? "Replace Logo" : "Upload Logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                disabled={!!logoFile}
+                onChange={handleLogoUpload}
+              />
+            </label>
+            {logoFile && (
+              <div className="mt-2 max-w-xs">
+                <UploadProgressItem
+                  fileName={logoFile.name}
+                  fileSize={logoFile.size}
+                  state={logoError ? "error" : "uploading"}
+                  percent={logoPercent}
+                  errorMessage={logoError}
+                  onRemove={logoError ? () => setLogoFile(null) : undefined}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        {logoError && <p className="text-xs font-medium text-rose-400">{logoError}</p>}
       </div>
 
       <form onSubmit={handleSave} className="max-w-2xl space-y-4 rounded-xl border border-navy-700 bg-navy-850 p-5">

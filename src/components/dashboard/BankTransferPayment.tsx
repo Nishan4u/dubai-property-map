@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Landmark, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
 export interface BankDetails {
   bankName: string;
@@ -46,6 +48,7 @@ export function BankTransferPayment({
     "idle"
   );
   const [error, setError] = useState("");
+  const [uploadPercent, setUploadPercent] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,9 +72,9 @@ export function BankTransferPayment({
     const ext = file.name.split(".").pop();
     const path = `${accountId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("payment-receipts")
-      .upload(path, file);
+    setUploadPercent(0);
+    const { promise } = uploadFileWithProgress("payment-receipts", path, file, setUploadPercent);
+    const { error: uploadError } = await promise;
     if (uploadError) {
       setError(uploadError.message);
       setStatus("error");
@@ -160,9 +163,15 @@ export function BankTransferPayment({
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
             required
+            disabled={status === "submitting"}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="block w-full text-xs text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-navy-700 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink-100 hover:file:bg-navy-600"
           />
+          {file && status === "submitting" && (
+            <div className="mt-2">
+              <UploadProgressItem fileName={file.name} fileSize={file.size} state="uploading" percent={uploadPercent} />
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

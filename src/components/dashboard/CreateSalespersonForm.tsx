@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Copy, Plus, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
 interface CreatedSalesperson {
   id: string;
@@ -28,7 +30,8 @@ export function CreateSalespersonForm() {
   const [created, setCreated] = useState<CreatedSalesperson | null>(null);
   const [copied, setCopied] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
-  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPercent, setPhotoPercent] = useState(0);
   const [photoError, setPhotoError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,19 +78,21 @@ export function CreateSalespersonForm() {
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file || !created) return;
-    setPhotoUploading(true);
+    setPhotoFile(file);
+    setPhotoPercent(0);
     setPhotoError("");
 
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `salesperson-photos/${created.id}/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from("project-media").upload(path, file);
+    const { promise } = uploadFileWithProgress("project-media", path, file, setPhotoPercent);
+    const { error: uploadError } = await promise;
 
     if (uploadError) {
       setPhotoError(uploadError.message);
-      e.target.value = "";
-      setPhotoUploading(false);
+      setPhotoFile(null);
       return;
     }
 
@@ -95,8 +100,7 @@ export function CreateSalespersonForm() {
     await supabase.from("salespersons").update({ photo_url: data.publicUrl }).eq("id", created.id);
 
     setPhotoUrl(data.publicUrl);
-    e.target.value = "";
-    setPhotoUploading(false);
+    setPhotoFile(null);
     router.refresh();
   }
 
@@ -231,19 +235,30 @@ export function CreateSalespersonForm() {
                 </span>
               )}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2 text-xs font-medium text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
                 <Upload className="h-3.5 w-3.5" />
-                {photoUploading ? "Uploading…" : photoUrl ? "Replace Photo" : "Add Photo Now"}
+                {photoFile ? "Uploading…" : photoUrl ? "Replace Photo" : "Add Photo Now"}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   className="hidden"
-                  disabled={photoUploading}
+                  disabled={!!photoFile}
                   onChange={handlePhotoUpload}
                 />
               </label>
-              {photoError && <p className="mt-1 text-xs font-medium text-rose-400">{photoError}</p>}
+              {photoFile && (
+                <div className="mt-2 max-w-xs">
+                  <UploadProgressItem
+                    fileName={photoFile.name}
+                    fileSize={photoFile.size}
+                    state={photoError ? "error" : "uploading"}
+                    percent={photoPercent}
+                    errorMessage={photoError}
+                    onRemove={photoError ? () => setPhotoFile(null) : undefined}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

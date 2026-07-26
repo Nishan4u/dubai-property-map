@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
 export function BrokerOnboarding() {
   const router = useRouter();
@@ -19,6 +21,9 @@ export function BrokerOnboarding() {
 
   const [reraFile, setReraFile] = useState<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [reraPercent, setReraPercent] = useState(0);
+  const [photoPercent, setPhotoPercent] = useState(0);
+  const [uploadStage, setUploadStage] = useState<"rera" | "photo" | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -71,25 +76,28 @@ export function BrokerOnboarding() {
 
     const supabase = createClient();
 
+    setUploadStage("rera");
+    setReraPercent(0);
     const safeReraName = reraFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const reraPath = `${brokerId}/rera-card/${Date.now()}-${safeReraName}`;
-    const { error: reraError } = await supabase.storage
-      .from("broker-documents")
-      .upload(reraPath, reraFile);
+    const { promise: reraPromise } = uploadFileWithProgress("broker-documents", reraPath, reraFile, setReraPercent);
+    const { error: reraError } = await reraPromise;
 
     if (reraError) {
       setErrorMsg(reraError.message);
       setLoading(false);
+      setUploadStage(null);
       return;
     }
 
     let photoUrl: string | null = null;
     if (photoFile) {
+      setUploadStage("photo");
+      setPhotoPercent(0);
       const safePhotoName = photoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
       const photoPath = `broker-photos/${brokerId}/${Date.now()}-${safePhotoName}`;
-      const { error: photoError } = await supabase.storage
-        .from("project-media")
-        .upload(photoPath, photoFile);
+      const { promise: photoPromise } = uploadFileWithProgress("project-media", photoPath, photoFile, setPhotoPercent);
+      const { error: photoError } = await photoPromise;
       if (!photoError) {
         photoUrl = supabase.storage.from("project-media").getPublicUrl(photoPath).data.publicUrl;
       }
@@ -100,6 +108,7 @@ export function BrokerOnboarding() {
       .update({ rera_card_path: reraPath, ...(photoUrl ? { photo_url: photoUrl } : {}) })
       .eq("id", brokerId);
 
+    setUploadStage(null);
     if (updateError) {
       setErrorMsg(updateError.message);
       setLoading(false);
@@ -229,6 +238,13 @@ export function BrokerOnboarding() {
                 />
               </label>
             </div>
+
+            {uploadStage === "rera" && (
+              <UploadProgressItem fileName={reraFile!.name} fileSize={reraFile!.size} state="uploading" percent={reraPercent} />
+            )}
+            {uploadStage === "photo" && photoFile && (
+              <UploadProgressItem fileName={photoFile.name} fileSize={photoFile.size} state="uploading" percent={photoPercent} />
+            )}
 
             {errorMsg && <p className="text-xs font-medium text-rose-400">{errorMsg}</p>}
 

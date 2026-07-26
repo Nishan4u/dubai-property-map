@@ -6,7 +6,9 @@ import { Upload } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 
 interface BlogPost {
   id: string;
@@ -32,23 +34,32 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
   const [excerpt, setExcerpt] = useState("");
   const [body, setBody] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadError, setUploadError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setUploading(true);
+    setUploadingFile(file);
+    setUploadPercent(0);
+    setUploadError("");
+
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `blog-images/${Date.now()}-${safeName}`;
-    const { error } = await supabase.storage.from("project-media").upload(path, file);
-    if (!error) {
-      const { data } = supabase.storage.from("project-media").getPublicUrl(path);
-      setCoverImageUrl(data.publicUrl);
+    const { promise } = uploadFileWithProgress("project-media", path, file, setUploadPercent);
+    const { error } = await promise;
+    if (error) {
+      setUploadError(error.message);
+      setUploadingFile(null);
+      return;
     }
-    e.target.value = "";
-    setUploading(false);
+    const { data } = supabase.storage.from("project-media").getPublicUrl(path);
+    setCoverImageUrl(data.publicUrl);
+    setUploadingFile(null);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -122,6 +133,16 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
             placeholder="Full article body"
             className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
           />
+          {uploadingFile && (
+            <UploadProgressItem
+              fileName={uploadingFile.name}
+              fileSize={uploadingFile.size}
+              state={uploadError ? "error" : uploadPercent >= 100 ? "processing" : "uploading"}
+              percent={uploadPercent}
+              errorMessage={uploadError}
+              onRemove={uploadError ? () => setUploadingFile(null) : undefined}
+            />
+          )}
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-900">
               <ProjectThumb
@@ -132,12 +153,12 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
             </div>
             <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
               <Upload className="h-4 w-4" />
-              {uploading ? "Uploading…" : coverImageUrl ? "Replace Cover Image" : "Upload Cover Image"}
+              {uploadingFile ? "Uploading…" : coverImageUrl ? "Replace Cover Image" : "Upload Cover Image"}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 className="hidden"
-                disabled={uploading}
+                disabled={!!uploadingFile}
                 onChange={handleImageUpload}
               />
             </label>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import type { BrokerRow } from "@/types/database";
 
 export function BrokerProfileForm({ broker }: { broker: BrokerRow }) {
@@ -11,6 +13,7 @@ export function BrokerProfileForm({ broker }: { broker: BrokerRow }) {
   const [mobile, setMobile] = useState(broker.mobile);
   const [whatsapp, setWhatsapp] = useState(broker.whatsapp);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPercent, setPhotoPercent] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
@@ -25,9 +28,11 @@ export function BrokerProfileForm({ broker }: { broker: BrokerRow }) {
     let photoUrl = broker.photo_url;
 
     if (photoFile) {
+      setPhotoPercent(0);
       const safeName = photoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
       const path = `broker-photos/${broker.id}/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage.from("project-media").upload(path, photoFile);
+      const { promise } = uploadFileWithProgress("project-media", path, photoFile, setPhotoPercent);
+      const { error: uploadError } = await promise;
       if (uploadError) {
         setErrorMsg(uploadError.message);
         setLoading(false);
@@ -66,6 +71,15 @@ export function BrokerProfileForm({ broker }: { broker: BrokerRow }) {
           />
         </label>
       </div>
+
+      {photoFile && loading && (
+        <UploadProgressItem
+          fileName={photoFile.name}
+          fileSize={photoFile.size}
+          state="uploading"
+          percent={photoPercent}
+        />
+      )}
 
       <div>
         <label className="mb-1 block text-xs font-medium text-ink-400">Full Name</label>

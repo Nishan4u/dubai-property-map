@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Copy, Plus, Upload } from "lucide-react";
 import { logAudit } from "@/lib/auditLog";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
 interface CreatedDeveloper {
   id: string;
@@ -26,7 +28,8 @@ export function CreateDeveloperForm() {
   const [created, setCreated] = useState<CreatedDeveloper | null>(null);
   const [copied, setCopied] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
-  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPercent, setLogoPercent] = useState(0);
   const [logoError, setLogoError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -76,21 +79,21 @@ export function CreateDeveloperForm() {
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file || !created) return;
-    setLogoUploading(true);
+    setLogoFile(file);
+    setLogoPercent(0);
     setLogoError("");
 
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `developer-logos/${created.id}/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage
-      .from("project-media")
-      .upload(path, file);
+    const { promise } = uploadFileWithProgress("project-media", path, file, setLogoPercent);
+    const { error: uploadError } = await promise;
 
     if (uploadError) {
       setLogoError(uploadError.message);
-      e.target.value = "";
-      setLogoUploading(false);
+      setLogoFile(null);
       return;
     }
 
@@ -102,15 +105,13 @@ export function CreateDeveloperForm() {
 
     if (updateError) {
       setLogoError(updateError.message);
-      e.target.value = "";
-      setLogoUploading(false);
+      setLogoFile(null);
       return;
     }
 
     await logAudit("developer.logo_updated", "developer", created.id, { name: created.name });
     setLogoUrl(data.publicUrl);
-    e.target.value = "";
-    setLogoUploading(false);
+    setLogoFile(null);
     router.refresh();
   }
 
@@ -220,19 +221,30 @@ export function CreateDeveloperForm() {
                 </span>
               )}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2 text-xs font-medium text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
                 <Upload className="h-3.5 w-3.5" />
-                {logoUploading ? "Uploading…" : logoUrl ? "Replace Logo" : "Add Logo Now"}
+                {logoFile ? "Uploading…" : logoUrl ? "Replace Logo" : "Add Logo Now"}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/svg+xml"
                   className="hidden"
-                  disabled={logoUploading}
+                  disabled={!!logoFile}
                   onChange={handleLogoUpload}
                 />
               </label>
-              {logoError && <p className="mt-1 text-xs font-medium text-rose-400">{logoError}</p>}
+              {logoFile && (
+                <div className="mt-2 max-w-xs">
+                  <UploadProgressItem
+                    fileName={logoFile.name}
+                    fileSize={logoFile.size}
+                    state={logoError ? "error" : "uploading"}
+                    percent={logoPercent}
+                    errorMessage={logoError}
+                    onRemove={logoError ? () => setLogoFile(null) : undefined}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
