@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Plus, Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { logAudit } from "@/lib/auditLog";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
@@ -12,7 +11,7 @@ interface CreatedSalesperson {
   id: string;
   fullName: string;
   email: string;
-  password: string;
+  invitationStatus: "sent" | "failed";
 }
 
 export function CreateSalespersonForm() {
@@ -24,11 +23,9 @@ export function CreateSalespersonForm() {
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [created, setCreated] = useState<CreatedSalesperson | null>(null);
-  const [copied, setCopied] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPercent, setPhotoPercent] = useState(0);
@@ -42,7 +39,7 @@ export function CreateSalespersonForm() {
     const res = await fetch("/api/admin/salespersons/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName, jobTitle, employeeId, email, mobile, whatsapp, password }),
+      body: JSON.stringify({ fullName, jobTitle, employeeId, email, mobile, whatsapp }),
     });
     const data = await res.json();
 
@@ -52,8 +49,12 @@ export function CreateSalespersonForm() {
       return;
     }
 
-    await logAudit("salesperson.created", "salesperson", data.salesperson.id, { fullName });
-    setCreated({ id: data.salesperson.id, fullName, email, password });
+    setCreated({
+      id: data.salesperson.id,
+      fullName,
+      email,
+      invitationStatus: data.invitationStatus === "sent" ? "sent" : "failed",
+    });
     setPhotoUrl("");
     setFullName("");
     setJobTitle("");
@@ -61,19 +62,9 @@ export function CreateSalespersonForm() {
     setEmail("");
     setMobile("");
     setWhatsapp("");
-    setPassword("");
     setOpen(false);
     setStatus("idle");
     router.refresh();
-  }
-
-  async function handleCopy() {
-    if (!created) return;
-    await navigator.clipboard.writeText(
-      `Salesperson: ${created.fullName}\nEmail: ${created.email}\nPassword: ${created.password}\nLogin: ${window.location.origin}/login`
-    );
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -175,18 +166,6 @@ export function CreateSalespersonForm() {
               className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
             />
           </div>
-          <div className="sm:col-span-3">
-            <label className="mb-1 block text-xs font-medium text-ink-400">Password</label>
-            <input
-              required
-              minLength={6}
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-            />
-          </div>
 
           {status === "error" && (
             <p className="text-xs font-medium text-rose-400 sm:col-span-3">{errorMsg}</p>
@@ -197,34 +176,30 @@ export function CreateSalespersonForm() {
             disabled={status === "saving"}
             className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60 sm:col-span-3"
           >
-            {status === "saving" ? "Creating…" : "Create Account — active immediately"}
+            {status === "saving" ? "Sending invitation…" : "Send Invitation"}
           </button>
         </form>
       )}
 
       {created && (
-        <div className="space-y-4 rounded-xl border border-emerald-600/40 bg-emerald-500/10 p-4 text-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-semibold text-emerald-300">{created.fullName} — account created</p>
-              <p className="mt-1 text-ink-300">
-                Email: <span className="font-medium text-ink-100">{created.email}</span>
-                {" · "}Password: <span className="font-mono font-medium text-ink-100">{created.password}</span>
-              </p>
-              <p className="mt-1 text-xs text-ink-500">
-                Share these credentials with the salesperson — this password won&apos;t be shown again.
-              </p>
-            </div>
-            <button
-              onClick={handleCopy}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-navy-600 px-3 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              {copied ? "Copied!" : "Copy"}
-            </button>
-          </div>
+        <div
+          className={`space-y-4 rounded-xl border p-4 text-sm ${
+            created.invitationStatus === "sent"
+              ? "border-emerald-600/40 bg-emerald-500/10"
+              : "border-rose-600/40 bg-rose-500/10"
+          }`}
+        >
+          {created.invitationStatus === "sent" ? (
+            <p className="font-semibold text-emerald-300">
+              Invitation sent to {created.email} — {created.fullName} will set their own password to activate the account.
+            </p>
+          ) : (
+            <p className="font-semibold text-rose-300">
+              {created.fullName} was added, but the invitation email couldn&apos;t be sent — use Resend in the table below.
+            </p>
+          )}
 
-          <div className="flex items-center gap-4 border-t border-emerald-600/30 pt-4">
+          <div className="flex items-center gap-4 border-t border-navy-700/60 pt-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-navy-600 bg-navy-900">
               {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

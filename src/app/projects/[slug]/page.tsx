@@ -188,6 +188,22 @@ export default async function ProjectDetailsPage({
               </p>
             </Section>
 
+            {(project.paymentPlanDetails ?? []).length > 0 && (
+              <Section title="Payment Plan">
+                <div className="overflow-hidden rounded-lg border border-navy-700">
+                  {(project.paymentPlanDetails ?? []).map((stage, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between border-b border-navy-800 bg-navy-850 px-4 py-3 text-sm last:border-b-0"
+                    >
+                      <span className="text-ink-300">{stage.label}</span>
+                      <span className="font-semibold text-gold-400">{stage.percent}%</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
             <Section title="Amenities">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {project.amenities.map((a) => (

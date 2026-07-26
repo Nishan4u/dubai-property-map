@@ -12,11 +12,21 @@ interface TeamMember {
   name: string;
   email: string;
   role: string;
-  status: "invited" | "active" | "removed";
+  status: "invited" | "active" | "removed" | "expired" | "failed" | "cancelled";
+  invitation_id: string | null;
   can_manage_projects: boolean;
   can_manage_leads: boolean;
   can_manage_billing: boolean;
 }
+
+const statusTone: Record<TeamMember["status"], "green" | "gold" | "red" | "neutral"> = {
+  invited: "gold",
+  active: "green",
+  removed: "neutral",
+  expired: "red",
+  failed: "red",
+  cancelled: "neutral",
+};
 
 const permissionFields = [
   { key: "can_manage_projects" as const, label: "Projects" },
@@ -43,32 +53,53 @@ export function TeamTable({
     can_manage_billing: false,
   });
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("team_members")
-      .insert({
-        developer_id: developerId,
-        name,
-        email,
-        role,
-        status: "invited",
-        ...permissions,
-      })
-      .select()
-      .single();
+    setErrorMsg("");
+    const res = await fetch("/api/dashboard/team/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, role, permissions }),
+    });
+    const data = await res.json();
 
-    if (!error && data) {
-      setRows((prev) => [data, ...prev]);
-      setName("");
-      setEmail("");
-      setShowForm(false);
+    if (!res.ok) {
+      setErrorMsg(data.error ?? "Could not send invitation.");
+      setLoading(false);
+      return;
     }
+    setRows((prev) => [data.member, ...prev]);
+    if (data.invitationStatus === "failed") {
+      setErrorMsg("Team member was added, but the invitation email could not be sent — use Resend below.");
+    }
+    setName("");
+    setEmail("");
+    setShowForm(false);
     setLoading(false);
     router.refresh();
+  }
+
+  async function resendInvite(invitationId: string | null, memberId: string) {
+    if (!invitationId) return;
+    setActioningId(memberId);
+    const res = await fetch(`/api/invitations/${invitationId}/resend`, { method: "POST" });
+    const data = await res.json();
+    setRows((prev) =>
+      prev.map((m) => (m.id === memberId ? { ...m, status: data.ok ? "invited" : "failed" } : m))
+    );
+    setActioningId(null);
+  }
+
+  async function cancelInvite(invitationId: string | null, memberId: string) {
+    if (!invitationId) return;
+    setActioningId(memberId);
+    await fetch(`/api/invitations/${invitationId}/cancel`, { method: "POST" });
+    setRows((prev) => prev.map((m) => (m.id === memberId ? { ...m, status: "cancelled" } : m)));
+    setActioningId(null);
   }
 
   async function removeMember(id: string) {
@@ -168,6 +199,7 @@ export function TeamTable({
               ))}
             </div>
           </div>
+          {errorMsg && <p className="text-xs font-medium text-rose-400">{errorMsg}</p>}
         </form>
       )}
 
@@ -178,9 +210,7 @@ export function TeamTable({
           { header: "Email", render: (t) => t.email },
           {
             header: "Status",
-            render: (t) => (
-              <Badge tone={t.status === "active" ? "green" : "gold"}>{t.status}</Badge>
-            ),
+            render: (t) => <Badge tone={statusTone[t.status]}>{t.status}</Badge>,
           },
           {
             header: "Permissions",
@@ -203,12 +233,32 @@ export function TeamTable({
           {
             header: "",
             render: (t) => (
-              <button
-                onClick={() => removeMember(t.id)}
-                className="text-xs font-medium text-rose-400 hover:text-rose-300"
-              >
-                Remove
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {(t.status === "invited" || t.status === "failed" || t.status === "expired") && (
+                  <button
+                    disabled={actioningId === t.id}
+                    onClick={() => resendInvite(t.invitation_id, t.id)}
+                    className="text-xs font-medium text-gold-400 hover:text-gold-300 disabled:opacity-50"
+                  >
+                    Resend
+                  </button>
+                )}
+                {(t.status === "invited" || t.status === "failed" || t.status === "expired") && (
+                  <button
+                    disabled={actioningId === t.id}
+                    onClick={() => cancelInvite(t.invitation_id, t.id)}
+                    className="text-xs font-medium text-ink-400 hover:text-ink-200 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={() => removeMember(t.id)}
+                  className="text-xs font-medium text-rose-400 hover:text-rose-300"
+                >
+                  Remove
+                </button>
+              </div>
             ),
           },
         ]}

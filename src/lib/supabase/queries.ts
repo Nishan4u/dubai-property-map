@@ -740,6 +740,20 @@ export async function getAllUsersAdmin() {
   return data ?? [];
 }
 
+export async function getInvitationsAdmin(kind?: string | string[]) {
+  const supabase = await createClient();
+  let query = supabase.from("invitations").select("*, developers(name)").order("created_at", { ascending: false });
+  if (Array.isArray(kind)) query = query.in("kind", kind);
+  else if (kind) query = query.eq("kind", kind);
+  const { data, error } = await query;
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getAuditLog(limit = 200) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -779,7 +793,7 @@ export async function getSalespersonsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("salespersons")
-    .select("*")
+    .select("*, invitations(status)")
     .eq("developer_id", developerId)
     .order("created_at", { ascending: false });
 
@@ -791,7 +805,7 @@ export async function getAllSalespersonsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("salespersons")
-    .select("*, developers(name)")
+    .select("*, developers(name), invitations(status)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;

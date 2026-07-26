@@ -1,18 +1,28 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
-import { getAllSalespersonsAdmin } from "@/lib/supabase/queries";
+import { AdminCreateSalespersonForm } from "@/components/admin/AdminCreateSalespersonForm";
+import { InvitationsTable } from "@/components/admin/InvitationsTable";
+import { getAllDevelopersAdmin, getAllSalespersonsAdmin, getInvitationsAdmin } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSalespersonsPage() {
-  const salespersons = await getAllSalespersonsAdmin();
+  const [salespersons, developers, invitations] = await Promise.all([
+    getAllSalespersonsAdmin(),
+    getAllDevelopersAdmin(),
+    getInvitationsAdmin(["admin_salesperson", "developer_salesperson"]),
+  ]);
+
+  const activeDevelopers = developers.filter((d) => d.status === "active").map((d) => ({ id: d.id, name: d.name }));
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-6 p-6">
       <div>
         <h1 className="text-xl font-bold text-ink-100">Salespersons</h1>
         <p className="text-sm text-ink-400">{salespersons.length} salespersons across every developer on the platform.</p>
       </div>
+
+      <AdminCreateSalespersonForm developers={activeDevelopers} />
 
       <DataTable
         columns={[
@@ -37,11 +47,20 @@ export default async function AdminSalespersonsPage() {
           { header: "Email", render: (s) => s.email },
           {
             header: "Status",
-            render: (s) => <Badge tone={s.status === "active" ? "green" : "neutral"}>{s.status}</Badge>,
+            render: (s) => (
+              <Badge tone={s.status === "active" ? "green" : s.status === "pending_invitation" ? "gold" : "neutral"}>
+                {s.status.replace(/_/g, " ")}
+              </Badge>
+            ),
           },
         ]}
         rows={salespersons}
       />
+
+      <div className="space-y-3 border-t border-navy-800 pt-6">
+        <h2 className="text-sm font-semibold text-ink-100">Salesperson Invitations</h2>
+        <InvitationsTable invitations={invitations} showDeveloper />
+      </div>
     </div>
   );
 }
