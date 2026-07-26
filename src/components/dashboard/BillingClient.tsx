@@ -3,16 +3,19 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
+import { isExpiringSoon } from "@/lib/subscriptionStatus";
 import type { SubscriptionBankTransferRow } from "@/types/database";
 
 export function BillingClient({
   planTier,
   subscriptionStatus,
+  subscriptionExpiresAt,
   hasStripeCustomer,
   bankTransfers,
 }: {
   planTier: string;
   subscriptionStatus: string;
+  subscriptionExpiresAt?: string | null;
   hasStripeCustomer: boolean;
   bankTransfers: SubscriptionBankTransferRow[];
 }) {
@@ -40,9 +43,14 @@ export function BillingClient({
           <p className="text-sm font-semibold capitalize text-ink-100">{planTier} Plan</p>
           <p className="text-xs text-ink-500">Subscription status</p>
         </div>
-        <Badge tone={subscriptionStatus === "active" ? "green" : "neutral"}>
-          {subscriptionStatus}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {isExpiringSoon(subscriptionStatus, subscriptionExpiresAt) && (
+            <Badge tone="gold">Expiring Soon</Badge>
+          )}
+          <Badge tone={subscriptionStatus === "active" ? "green" : "neutral"}>
+            {subscriptionStatus}
+          </Badge>
+        </div>
       </div>
 
       {error && <p className="text-xs font-medium text-rose-400">{error}</p>}

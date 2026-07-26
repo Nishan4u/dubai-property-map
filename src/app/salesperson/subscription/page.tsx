@@ -43,6 +43,7 @@ export default async function SalespersonSubscriptionPage() {
         plans={plans}
         currentPlanKey={salesperson?.plan_key ?? null}
         subscriptionStatus={salesperson?.subscription_status ?? "no_subscription"}
+        subscriptionExpiresAt={salesperson?.subscription_expires_at ?? null}
         hasStripeCustomer={!!salesperson?.stripe_customer_id}
         salespersonId={profile.salesperson_id}
         bankDetails={bankDetails}

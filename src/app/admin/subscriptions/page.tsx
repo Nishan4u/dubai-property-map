@@ -5,6 +5,7 @@ import { AccountSubscriptionActions } from "@/components/admin/AccountSubscripti
 import { GrantSubscriptionForm } from "@/components/admin/GrantSubscriptionForm";
 import { RevokeGrantButton } from "@/components/admin/RevokeGrantButton";
 import {
+  getAllBankTransfersAdmin,
   getAllBrokerPaymentsAdmin,
   getAllBrokersAdmin,
   getAllDevelopersAdmin,
@@ -12,6 +13,7 @@ import {
   getAllSubscriptionPlansAdmin,
   getSubscriptionGrantsAdmin,
 } from "@/lib/supabase/queries";
+import { isExpiringSoon } from "@/lib/subscriptionStatus";
 import type {
   DbBrokerSubscriptionStatus,
   DbDeveloperSubscriptionStatus,
@@ -51,14 +53,20 @@ type GrantRow = SubscriptionGrantRow & {
 };
 
 export default async function AdminSubscriptionsPage() {
-  const [developers, brokers, salespersons, payments, plans, grants] = await Promise.all([
+  const [developers, brokers, salespersons, payments, plans, grants, bankTransfers] = await Promise.all([
     getAllDevelopersAdmin(),
     getAllBrokersAdmin(),
     getAllSalespersonsAdmin(),
     getAllBrokerPaymentsAdmin(),
     getAllSubscriptionPlansAdmin(),
     getSubscriptionGrantsAdmin(),
+    getAllBankTransfersAdmin(),
   ]);
+
+  const pendingTransfers = bankTransfers.filter((t) => t.status === "verification_pending");
+  const pendingDeveloperIds = new Set(pendingTransfers.map((t) => t.developer_id).filter(Boolean));
+  const pendingBrokerIds = new Set(pendingTransfers.map((t) => t.broker_id).filter(Boolean));
+  const pendingSalespersonIds = new Set(pendingTransfers.map((t) => t.salesperson_id).filter(Boolean));
 
   return (
     <div className="space-y-6 p-6">
@@ -89,6 +97,10 @@ export default async function AdminSubscriptionsPage() {
                   <Badge tone={developerStatusTone[d.subscription_status as DbDeveloperSubscriptionStatus]}>
                     {d.subscription_status.replace(/_/g, " ")}
                   </Badge>
+                  {isExpiringSoon(d.subscription_status, d.subscription_expires_at) && (
+                    <Badge tone="gold">Expiring Soon</Badge>
+                  )}
+                  {pendingDeveloperIds.has(d.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
                   {d.is_complimentary && <Badge tone="blue">complimentary</Badge>}
                   {d.payment_type && <Badge tone="purple">{paymentTypeLabel[d.payment_type as DbPaymentType]}</Badge>}
                 </div>
@@ -114,6 +126,10 @@ export default async function AdminSubscriptionsPage() {
                   <Badge tone={brokerStatusTone[b.subscription_status as DbBrokerSubscriptionStatus]}>
                     {b.subscription_status.replace(/_/g, " ")}
                   </Badge>
+                  {isExpiringSoon(b.subscription_status, b.subscription_expires_at) && (
+                    <Badge tone="gold">Expiring Soon</Badge>
+                  )}
+                  {pendingBrokerIds.has(b.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
                   {b.is_complimentary && <Badge tone="blue">complimentary</Badge>}
                   {b.payment_type && <Badge tone="purple">{paymentTypeLabel[b.payment_type as DbPaymentType]}</Badge>}
                 </div>
@@ -139,6 +155,10 @@ export default async function AdminSubscriptionsPage() {
                   <Badge tone={brokerStatusTone[s.subscription_status as DbBrokerSubscriptionStatus]}>
                     {s.subscription_status.replace(/_/g, " ")}
                   </Badge>
+                  {isExpiringSoon(s.subscription_status, s.subscription_expires_at) && (
+                    <Badge tone="gold">Expiring Soon</Badge>
+                  )}
+                  {pendingSalespersonIds.has(s.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
                   {s.is_complimentary && <Badge tone="blue">complimentary</Badge>}
                   {s.payment_type && <Badge tone="purple">{paymentTypeLabel[s.payment_type as DbPaymentType]}</Badge>}
                 </div>

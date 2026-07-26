@@ -6,6 +6,7 @@ import { Check, Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
+import { isExpiringSoon } from "@/lib/subscriptionStatus";
 import type { SubscriptionBankTransferRow } from "@/types/database";
 
 interface Plan {
@@ -21,6 +22,7 @@ export function BrokerSubscriptionClient({
   plans,
   currentPlanKey,
   subscriptionStatus,
+  subscriptionExpiresAt,
   hasStripeCustomer,
   brokerId,
   bankDetails,
@@ -29,6 +31,7 @@ export function BrokerSubscriptionClient({
   plans: Plan[];
   currentPlanKey: string | null;
   subscriptionStatus: string;
+  subscriptionExpiresAt?: string | null;
   hasStripeCustomer: boolean;
   brokerId: string;
   bankDetails: BankDetails;
@@ -87,7 +90,12 @@ export function BrokerSubscriptionClient({
         <div className="flex max-w-lg items-center justify-between rounded-xl border border-navy-700 bg-navy-850 p-4">
           <div>
             <p className="text-sm font-semibold text-ink-100">Current subscription</p>
-            <Badge tone="green">Active</Badge>
+            <div className="flex items-center gap-2">
+              {isExpiringSoon(subscriptionStatus, subscriptionExpiresAt) && (
+                <Badge tone="gold">Expiring Soon</Badge>
+              )}
+              <Badge tone="green">Active</Badge>
+            </div>
           </div>
           <button
             onClick={handleManageBilling}

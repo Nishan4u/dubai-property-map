@@ -43,6 +43,7 @@ export default async function BrokerSubscriptionPage() {
         plans={plans}
         currentPlanKey={broker?.plan_key ?? null}
         subscriptionStatus={broker?.subscription_status ?? "no_subscription"}
+        subscriptionExpiresAt={broker?.subscription_expires_at ?? null}
         hasStripeCustomer={!!broker?.stripe_customer_id}
         brokerId={profile.broker_id}
         bankDetails={bankDetails}

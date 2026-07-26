@@ -124,11 +124,21 @@ export async function POST(request: NextRequest) {
 
       const plan = session.metadata?.plan;
       if (developerId) {
+        let expiresAt: string | null = null;
+        if (typeof session.subscription === "string") {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
+            .toISOString()
+            .slice(0, 10);
+        }
+
         await supabase
           .from("developers")
           .update({
             plan_tier: plan ?? "starter",
             subscription_status: "active",
+            subscription_expires_at: expiresAt,
+            last_reminder_sent_days: null,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
             payment_type: "stripe",
@@ -150,16 +160,17 @@ export async function POST(request: NextRequest) {
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      const status = subscription.status === "active" ? "active" : "cancelled";
-      await supabase
-        .from("developers")
-        .update({ subscription_status: status })
-        .eq("stripe_subscription_id", subscription.id);
-
-      const brokerStatus = mapStripeStatusToBrokerStatus(subscription.status);
       const expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
         .toISOString()
         .slice(0, 10);
+
+      const developerStatus = mapStripeStatusToDeveloperStatus(subscription.status);
+      await supabase
+        .from("developers")
+        .update({ subscription_status: developerStatus, subscription_expires_at: expiresAt })
+        .eq("stripe_subscription_id", subscription.id);
+
+      const brokerStatus = mapStripeStatusToBrokerStatus(subscription.status);
       await supabase
         .from("brokers")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
@@ -309,6 +320,21 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+function mapStripeStatusToDeveloperStatus(status: Stripe.Subscription.Status) {
+  switch (status) {
+    case "active":
+    case "trialing":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+      return "cancelled";
+    default:
+      return "inactive";
+  }
 }
 
 function mapStripeStatusToBrokerStatus(status: Stripe.Subscription.Status) {
