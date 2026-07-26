@@ -20,12 +20,15 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, developer_id, broker_id, salesperson_id")
+    .select("role, developer_id, broker_id, salesperson_id, suspended")
     .eq("id", user.id)
     .single();
 
   if (!profile) {
     return NextResponse.json({ status: "unverified" });
+  }
+  if (profile.suspended) {
+    return NextResponse.json({ status: "inactive" });
   }
 
   if (profile.role === "buyer" || profile.role === "admin") {
