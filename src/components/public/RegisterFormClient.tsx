@@ -20,6 +20,8 @@ export function RegisterFormClient() {
     "idle"
   );
   const [errorMsg, setErrorMsg] = useState("");
+  const [resendStatus, setResendStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const [jobTitle, setJobTitle] = useState("");
   const [mobile, setMobile] = useState("");
@@ -40,6 +42,12 @@ export function RegisterFormClient() {
   }, [role]);
 
   const selectedDeveloper = developers.find((d) => d.id === developerId) ?? null;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,6 +108,23 @@ export function RegisterFormClient() {
     }
 
     setStatus("sent");
+    // Supabase enforces its own short throttle per email address on auth
+    // emails, and signUp() just sent one — start the cooldown right away so
+    // the button isn't inviting an immediate click that's guaranteed to fail.
+    setResendCooldown(60);
+  }
+
+  async function handleResend() {
+    setResendStatus("loading");
+    const supabase = createClient();
+    const next = role === "developer" ? "/dashboard" : role === "broker" ? "/broker" : role === "salesperson" ? "/salesperson" : "/";
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${next}` },
+    });
+    setResendStatus(error ? "error" : "sent");
+    setResendCooldown(60);
   }
 
   return (
@@ -112,8 +137,42 @@ export function RegisterFormClient() {
 
         {status === "sent" ? (
           <div className="mt-6 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-            Check <span className="font-medium">{email}</span> for a
-            confirmation link to activate your account.
+            <p>
+              Check <span className="font-medium">{email}</span> for a
+              confirmation link to activate your account.
+            </p>
+            <div className="mt-3 border-t border-emerald-600/30 pt-3">
+              {resendStatus === "sent" ? (
+                <p className="text-xs font-medium text-emerald-300">
+                  Confirmation email resent{resendCooldown > 0 ? ` — you can resend again in ${resendCooldown}s` : ""}.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-emerald-300/80">
+                    Didn&apos;t get it? It can take a minute, and some mail apps
+                    (like Gmail&apos;s mobile app) may open the link automatically —
+                    if that happens, just log in directly instead of resending.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendStatus === "loading" || resendCooldown > 0}
+                    className="mt-2 text-xs font-semibold text-gold-400 hover:underline disabled:opacity-60"
+                  >
+                    {resendStatus === "loading"
+                      ? "Resending…"
+                      : resendCooldown > 0
+                        ? `Resend available in ${resendCooldown}s`
+                        : "Resend confirmation email"}
+                  </button>
+                </>
+              )}
+              {resendStatus === "error" && (
+                <p className="mt-1 text-xs font-medium text-rose-400">
+                  Couldn&apos;t resend — please try again shortly.
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">

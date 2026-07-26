@@ -13,11 +13,15 @@ export function LoginFormClient() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    setUnconfirmed(false);
+    setResendStatus("idle");
 
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -27,6 +31,7 @@ export function LoginFormClient() {
 
     if (error) {
       setErrorMsg(error.message);
+      setUnconfirmed(error.code === "email_not_confirmed");
       setLoading(false);
       return;
     }
@@ -55,6 +60,17 @@ export function LoginFormClient() {
     else if (profile?.role === "developer") router.push("/dashboard");
     else if (profile?.role === "salesperson") router.push("/salesperson");
     else router.push("/");
+  }
+
+  async function handleResend() {
+    setResendStatus("loading");
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    });
+    setResendStatus(error ? "error" : "sent");
   }
 
   return (
@@ -103,7 +119,32 @@ export function LoginFormClient() {
           </div>
 
           {errorMsg && (
-            <p className="text-xs font-medium text-rose-400">{errorMsg}</p>
+            <div className="rounded-lg border border-rose-700/40 bg-rose-500/10 p-3">
+              <p className="text-xs font-medium text-rose-400">{errorMsg}</p>
+              {unconfirmed && (
+                <div className="mt-2">
+                  {resendStatus === "sent" ? (
+                    <p className="text-xs font-medium text-emerald-300">
+                      Confirmation email resent — check {email}.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resendStatus === "loading"}
+                      className="text-xs font-semibold text-gold-400 hover:underline disabled:opacity-60"
+                    >
+                      {resendStatus === "loading" ? "Resending…" : "Resend confirmation email"}
+                    </button>
+                  )}
+                  {resendStatus === "error" && (
+                    <p className="mt-1 text-xs font-medium text-rose-400">
+                      Couldn&apos;t resend — please try again shortly.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <button

@@ -1,8 +1,63 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+function ResendForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
+
+  async function handleResend(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    });
+    setStatus(error ? "error" : "sent");
+  }
+
+  if (status === "sent") {
+    return (
+      <p className="mt-4 text-xs font-medium text-emerald-300">
+        If an unconfirmed account exists for {email}, a new confirmation
+        email is on its way.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleResend} className="mt-4 space-y-2 text-left">
+      <label className="block text-xs font-medium text-ink-400">
+        Get a new confirmation link
+      </label>
+      <input
+        required
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@example.com"
+        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={status === "loading"}
+        className="w-full rounded-lg bg-gold-500 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
+      >
+        {status === "loading" ? "Sending…" : "Resend confirmation email"}
+      </button>
+      {status === "error" && (
+        <p className="text-xs font-medium text-rose-400">
+          Something went wrong — please try again shortly.
+        </p>
+      )}
+    </form>
+  );
+}
 
 function ConfirmCard({
   status,
@@ -23,9 +78,15 @@ function ConfirmCard({
               Confirmation link expired or invalid
             </h1>
             <p className="mt-2 text-sm text-ink-400">
-              Please try registering again, or log in if you&apos;ve already
-              confirmed.
+              This can happen if the link was already used, or if your mail
+              app opened it automatically before you clicked it. Request a
+              fresh one below, or{" "}
+              <Link href="/login" className="text-gold-400 hover:underline">
+                log in
+              </Link>{" "}
+              if you&apos;ve already confirmed.
             </p>
+            <ResendForm />
           </>
         )}
       </div>
