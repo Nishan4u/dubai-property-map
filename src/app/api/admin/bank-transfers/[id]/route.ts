@@ -36,6 +36,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "This submission has already been reviewed." }, { status: 400 });
   }
 
+  // Duration comes from the plan itself (admin-editable in Packages & Plans)
+  // rather than a hardcoded number, so bank-transfer approval matches
+  // whatever term the plan is actually sold as.
+  const { data: planRow } = await admin
+    .from("subscription_plans")
+    .select("duration_days")
+    .eq("key", transfer.plan_key)
+    .eq("plan_type", transfer.account_type)
+    .maybeSingle();
+  let expiresAt: string | null = null;
+  if (planRow?.duration_days) {
+    const expires = new Date();
+    expires.setDate(expires.getDate() + planRow.duration_days);
+    expiresAt = expires.toISOString().slice(0, 10);
+  }
+
   let accountName = "";
   let accountEmail: string | null = null;
   if (transfer.account_type === "developer" && transfer.developer_id) {
@@ -69,20 +85,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (transfer.account_type === "developer" && transfer.developer_id) {
       const { error } = await admin
         .from("developers")
-        .update({ plan_tier: transfer.plan_key, subscription_status: "active", payment_type: "bank_transfer" })
+        .update({
+          plan_tier: transfer.plan_key,
+          subscription_status: "active",
+          subscription_expires_at: expiresAt,
+          last_reminder_sent_days: null,
+          payment_type: "bank_transfer",
+        })
         .eq("id", transfer.developer_id);
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     } else if (transfer.account_type === "broker" && transfer.broker_id) {
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 30);
       const { error } = await admin
         .from("brokers")
         .update({
           plan_key: transfer.plan_key,
           subscription_status: "active",
-          subscription_expires_at: expires.toISOString().slice(0, 10),
+          subscription_expires_at: expiresAt,
+          last_reminder_sent_days: null,
           payment_type: "bank_transfer",
         })
         .eq("id", transfer.broker_id);
@@ -90,14 +111,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     } else if (transfer.account_type === "salesperson" && transfer.salesperson_id) {
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 30);
       const { error } = await admin
         .from("salespersons")
         .update({
           plan_key: transfer.plan_key,
           subscription_status: "active",
-          subscription_expires_at: expires.toISOString().slice(0, 10),
+          subscription_expires_at: expiresAt,
+          last_reminder_sent_days: null,
           payment_type: "bank_transfer",
         })
         .eq("id", transfer.salesperson_id);

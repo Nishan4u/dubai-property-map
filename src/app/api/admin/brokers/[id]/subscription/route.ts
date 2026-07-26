@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 
-type Action = "extend" | "complimentary" | "cancel";
+type Action = "extend" | "complimentary" | "cancel" | "suspend" | "reactivate";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,6 +51,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     case "cancel":
       updates.subscription_status = "cancelled";
+      break;
+    case "suspend":
+      updates.subscription_status = "suspended";
+      break;
+    case "reactivate":
+      updates.subscription_status = "active";
       break;
     default:
       return NextResponse.json({ error: "Unknown action." }, { status: 400 });

@@ -30,6 +30,7 @@ const brokerStatusTone: Record<DbBrokerSubscriptionStatus, "green" | "gold" | "r
   expired: "red",
   cancelled: "neutral",
   payment_failed: "red",
+  suspended: "red",
 };
 
 const developerStatusTone: Record<DbDeveloperSubscriptionStatus, "green" | "gold" | "red" | "neutral"> = {
@@ -38,6 +39,7 @@ const developerStatusTone: Record<DbDeveloperSubscriptionStatus, "green" | "gold
   past_due: "red",
   expired: "red",
   cancelled: "neutral",
+  suspended: "red",
 };
 
 const paymentTypeLabel: Record<DbPaymentType, string> = {
@@ -107,7 +109,12 @@ export default async function AdminSubscriptionsPage() {
               ),
             },
             { header: "Expires", render: (d) => (d.subscription_expires_at ? new Date(d.subscription_expires_at).toLocaleDateString() : "—") },
-            { header: "", render: (d) => <AccountSubscriptionActions accountType="developer" accountId={d.id} /> },
+            {
+              header: "",
+              render: (d) => (
+                <AccountSubscriptionActions accountType="developer" accountId={d.id} currentStatus={d.subscription_status} />
+              ),
+            },
           ]}
           rows={developers}
         />
@@ -136,7 +143,10 @@ export default async function AdminSubscriptionsPage() {
               ),
             },
             { header: "Expires", render: (b) => (b.subscription_expires_at ? new Date(b.subscription_expires_at).toLocaleDateString() : "—") },
-            { header: "", render: (b) => <BrokerSubscriptionActions brokerId={b.id} /> },
+            {
+              header: "",
+              render: (b) => <BrokerSubscriptionActions brokerId={b.id} currentStatus={b.subscription_status} />,
+            },
           ]}
           rows={brokers}
         />
@@ -165,7 +175,12 @@ export default async function AdminSubscriptionsPage() {
               ),
             },
             { header: "Expires", render: (s) => (s.subscription_expires_at ? new Date(s.subscription_expires_at).toLocaleDateString() : "—") },
-            { header: "", render: (s) => <AccountSubscriptionActions accountType="salesperson" accountId={s.id} /> },
+            {
+              header: "",
+              render: (s) => (
+                <AccountSubscriptionActions accountType="salesperson" accountId={s.id} currentStatus={s.subscription_status} />
+              ),
+            },
           ]}
           rows={salespersons}
         />

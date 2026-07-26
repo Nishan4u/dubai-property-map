@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
             plan_key: plan ?? "salesperson-monthly",
             subscription_status: "active",
             subscription_expires_at: expiresAt,
+            last_reminder_sent_days: null,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
             payment_type: "stripe",

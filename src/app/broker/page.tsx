@@ -21,6 +21,7 @@ const subscriptionTone: Record<DbBrokerSubscriptionStatus, "green" | "gold" | "r
   expired: "red",
   cancelled: "neutral",
   payment_failed: "red",
+  suspended: "red",
 };
 
 const OPEN_STATUSES = [

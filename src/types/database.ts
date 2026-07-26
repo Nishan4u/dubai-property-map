@@ -11,8 +11,15 @@ export type DbBrokerSubscriptionStatus =
   | "active"
   | "expired"
   | "cancelled"
-  | "payment_failed";
-export type DbDeveloperSubscriptionStatus = "inactive" | "active" | "past_due" | "cancelled" | "expired";
+  | "payment_failed"
+  | "suspended";
+export type DbDeveloperSubscriptionStatus =
+  | "inactive"
+  | "active"
+  | "past_due"
+  | "cancelled"
+  | "expired"
+  | "suspended";
 export type DbSalespersonStatus = "active" | "inactive";
 export type DbBankTransferAccountType = "developer" | "broker" | "salesperson";
 export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";

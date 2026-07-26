@@ -6,15 +6,18 @@ import { useRouter } from "next/navigation";
 export function AccountSubscriptionActions({
   accountType,
   accountId,
+  currentStatus,
 }: {
   accountType: "developer" | "salesperson";
   accountId: string;
+  currentStatus?: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function runAction(action: "extend" | "complimentary" | "cancel") {
+  async function runAction(action: "extend" | "complimentary" | "cancel" | "suspend" | "reactivate") {
     if (action === "cancel" && !window.confirm("Cancel this subscription?")) return;
+    if (action === "suspend" && !window.confirm("Suspend this subscription? The account will lose paid-plan access until reactivated.")) return;
     setLoading(true);
     await fetch(`/api/admin/subscriptions/${accountType}/${accountId}`, {
       method: "POST",
@@ -33,6 +36,15 @@ export function AccountSubscriptionActions({
       <button disabled={loading} onClick={() => runAction("complimentary")} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
         Give Complimentary
       </button>
+      {currentStatus === "suspended" ? (
+        <button disabled={loading} onClick={() => runAction("reactivate")} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
+          Reactivate
+        </button>
+      ) : (
+        <button disabled={loading} onClick={() => runAction("suspend")} className="text-xs font-medium text-amber-400 hover:text-amber-300 disabled:opacity-50">
+          Suspend
+        </button>
+      )}
       <button disabled={loading} onClick={() => runAction("cancel")} className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50">
         Cancel
       </button>
