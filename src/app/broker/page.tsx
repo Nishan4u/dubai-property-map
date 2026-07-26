@@ -23,6 +23,17 @@ const subscriptionTone: Record<DbBrokerSubscriptionStatus, "green" | "gold" | "r
   payment_failed: "red",
 };
 
+const OPEN_STATUSES = [
+  "new",
+  "broker_contacted",
+  "requirement_confirmed",
+  "units_shared",
+  "viewing_scheduled",
+  "negotiation",
+  "booking",
+  "on_hold",
+];
+
 export default async function BrokerDashboardPage() {
   const profile = await requireBrokerProfile();
   const supabase = await createClient();
@@ -33,6 +44,15 @@ export default async function BrokerDashboardPage() {
     .single();
 
   if (!broker) return null;
+
+  const { data: requests } = await supabase
+    .from("property_requests")
+    .select("status")
+    .eq("broker_id", profile.broker_id);
+
+  const totalRequests = requests?.length ?? 0;
+  const openRequests = requests?.filter((r) => OPEN_STATUSES.includes(r.status)).length ?? 0;
+  const wonRequests = requests?.filter((r) => r.status === "closed_won").length ?? 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -69,9 +89,24 @@ export default async function BrokerDashboardPage() {
           <Briefcase className="h-4 w-4 text-gold-400" /> You&apos;re approved to browse the Property Map.
         </p>
         <p className="mt-2">
-          Subscription checkout and property requests are rolling out next — this
-          dashboard will show your request stats here once that&apos;s live.
+          Submit a property request directly from any project page — look for
+          &quot;Request Property&quot; and pick the developer&apos;s salesperson.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-navy-700 bg-navy-850 p-4 text-center">
+          <p className="text-2xl font-bold text-ink-100">{totalRequests}</p>
+          <p className="text-xs text-ink-500">Total Requests</p>
+        </div>
+        <div className="rounded-xl border border-navy-700 bg-navy-850 p-4 text-center">
+          <p className="text-2xl font-bold text-gold-400">{openRequests}</p>
+          <p className="text-xs text-ink-500">Open Requests</p>
+        </div>
+        <div className="rounded-xl border border-navy-700 bg-navy-850 p-4 text-center">
+          <p className="text-2xl font-bold text-emerald-400">{wonRequests}</p>
+          <p className="text-xs text-ink-500">Closed Won</p>
+        </div>
       </div>
     </div>
   );
