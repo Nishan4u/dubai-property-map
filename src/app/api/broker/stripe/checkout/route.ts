@@ -8,12 +8,12 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("stripe_price_id, status, online_payment_enabled")
+    .select("stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive")
     .eq("key", plan)
     .eq("plan_type", "broker")
     .maybeSingle();
 
-  if (!planRow || planRow.status !== "active") {
+  if (!planRow) {
     return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
   }
   if (!planRow.online_payment_enabled) {
@@ -42,12 +42,23 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("broker_id, brokers!profiles_broker_id_fkey(stripe_customer_id)")
+    .select("broker_id, brokers!profiles_broker_id_fkey(stripe_customer_id, plan_key, subscription_status)")
     .eq("id", user.id)
     .single();
 
   if (!profile?.broker_id) {
     return NextResponse.json({ error: "No broker account found." }, { status: 400 });
+  }
+
+  if (planRow.status !== "active") {
+    const brokerCheck = Array.isArray(profile.brokers) ? profile.brokers[0] : profile.brokers;
+    const isExistingRenewal =
+      planRow.renewal_allowed_when_inactive &&
+      brokerCheck?.plan_key === plan &&
+      brokerCheck?.subscription_status === "active";
+    if (!isExistingRenewal) {
+      return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
+    }
   }
 
   const brokerRel = profile.brokers as { stripe_customer_id: string | null } | { stripe_customer_id: string | null }[] | null;

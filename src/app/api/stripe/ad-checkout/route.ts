@@ -37,14 +37,22 @@ export async function POST(request: NextRequest) {
   if (placementType === "sponsored_pin" || placementType === "homepage_banner") {
     const { data: developerRow } = await supabase
       .from("developers")
-      .select("plan_tier")
+      .select("plan_tier, subscription_status, is_complimentary")
       .eq("id", profile.developer_id)
       .single();
+
+    // Same rule as the listing-limit trigger: an expired/cancelled
+    // subscription falls back to the free plan's limits rather than
+    // keeping whatever paid plan_tier it was last on.
+    const effectivePlanKey =
+      developerRow?.subscription_status === "active" || developerRow?.is_complimentary
+        ? developerRow.plan_tier
+        : "free";
 
     const { data: planRow } = await supabase
       .from("subscription_plans")
       .select("feature_limits")
-      .eq("key", developerRow?.plan_tier ?? "free")
+      .eq("key", effectivePlanKey ?? "free")
       .maybeSingle();
 
     const limits = planRow?.feature_limits as

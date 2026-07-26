@@ -8,12 +8,12 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("stripe_price_id, status, online_payment_enabled")
+    .select("stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive")
     .eq("key", plan)
     .eq("plan_type", "salesperson")
     .maybeSingle();
 
-  if (!planRow || planRow.status !== "active") {
+  if (!planRow) {
     return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
   }
   if (!planRow.online_payment_enabled) {
@@ -42,12 +42,23 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("salesperson_id, salespersons!profiles_salesperson_id_fkey(stripe_customer_id)")
+    .select("salesperson_id, salespersons!profiles_salesperson_id_fkey(stripe_customer_id, plan_key, subscription_status)")
     .eq("id", user.id)
     .single();
 
   if (!profile?.salesperson_id) {
     return NextResponse.json({ error: "No salesperson account found." }, { status: 400 });
+  }
+
+  if (planRow.status !== "active") {
+    const spCheck = Array.isArray(profile.salespersons) ? profile.salespersons[0] : profile.salespersons;
+    const isExistingRenewal =
+      planRow.renewal_allowed_when_inactive &&
+      spCheck?.plan_key === plan &&
+      spCheck?.subscription_status === "active";
+    if (!isExistingRenewal) {
+      return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
+    }
   }
 
   const spRel = profile.salespersons as

@@ -42,6 +42,7 @@ export interface SubscriptionPlanRow {
   is_recommended: boolean;
   online_payment_enabled: boolean;
   bank_transfer_enabled: boolean;
+  renewal_allowed_when_inactive: boolean;
   feature_limits: SubscriptionPlanFeatureLimits;
   created_at: string;
 }

@@ -8,11 +8,11 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("stripe_price_id, status, online_payment_enabled")
+    .select("stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive")
     .eq("key", plan)
     .maybeSingle();
 
-  if (!planRow || planRow.status !== "active") {
+  if (!planRow) {
     return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
   }
   if (!planRow.online_payment_enabled) {
@@ -41,12 +41,26 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("developer_id, developers(stripe_customer_id)")
+    .select("developer_id, developers(stripe_customer_id, plan_tier, subscription_status)")
     .eq("id", user.id)
     .single();
 
   if (!profile?.developer_id) {
     return NextResponse.json({ error: "No developer account found." }, { status: 400 });
+  }
+
+  if (planRow.status !== "active") {
+    const developerRow = Array.isArray(profile.developers) ? profile.developers[0] : profile.developers;
+    // A disabled plan blocks new signups always. Whether an existing
+    // subscriber can still renew the exact same plan is a separate,
+    // admin-controlled decision.
+    const isExistingRenewal =
+      planRow.renewal_allowed_when_inactive &&
+      developerRow?.plan_tier === plan &&
+      developerRow?.subscription_status === "active";
+    if (!isExistingRenewal) {
+      return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
+    }
   }
 
   const existingCustomerId = Array.isArray(profile.developers)

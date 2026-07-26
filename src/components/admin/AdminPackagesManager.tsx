@@ -23,6 +23,7 @@ interface PlanRow {
   is_recommended: boolean;
   online_payment_enabled: boolean;
   bank_transfer_enabled: boolean;
+  renewal_allowed_when_inactive: boolean;
   feature_limits: SubscriptionPlanFeatureLimits;
 }
 
@@ -79,6 +80,7 @@ export function AdminPackagesManager({
         is_recommended: row.is_recommended,
         online_payment_enabled: row.online_payment_enabled,
         bank_transfer_enabled: row.bank_transfer_enabled,
+        renewal_allowed_when_inactive: row.renewal_allowed_when_inactive,
         feature_limits: row.feature_limits,
       })
       .eq("id", row.id);
@@ -335,6 +337,19 @@ export function AdminPackagesManager({
                   />
                   Active (visible for new subscriptions)
                 </label>
+                {row.status === "inactive" && (
+                  <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                    <input
+                      type="checkbox"
+                      checked={row.renewal_allowed_when_inactive}
+                      onChange={(e) =>
+                        updateField(row.id, "renewal_allowed_when_inactive", e.target.checked)
+                      }
+                      className="accent-emerald-500"
+                    />
+                    Existing subscribers can still renew
+                  </label>
+                )}
                 <label className="flex items-center gap-1.5 text-xs text-ink-300">
                   <input
                     type="checkbox"
