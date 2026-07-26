@@ -6,6 +6,7 @@ interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
   relatedEntityType?: string;
   relatedEntityId?: string;
 }
@@ -25,6 +26,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
       body_html: input.html,
       related_entity_type: input.relatedEntityType ?? null,
       related_entity_id: input.relatedEntityId ?? null,
+      reply_to: input.replyTo ?? null,
       status: "pending",
       attempt_count: 1,
     })
@@ -53,6 +55,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
       to: input.to,
       subject: input.subject,
       html: input.html,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     });
 
     if (error) throw new Error(error.message);
@@ -85,7 +88,7 @@ export async function resendLoggedEmail(logId: string): Promise<{ ok: boolean }>
   const supabase = createAdminClient();
   const { data: row } = await supabase
     .from("email_logs")
-    .select("to_email, subject, body_html, category, related_entity_type, related_entity_id")
+    .select("to_email, subject, body_html, category, reply_to, related_entity_type, related_entity_id")
     .eq("id", logId)
     .single();
 
@@ -96,6 +99,7 @@ export async function resendLoggedEmail(logId: string): Promise<{ ok: boolean }>
     to: row.to_email,
     subject: row.subject,
     html: row.body_html ?? "",
+    replyTo: row.reply_to ?? undefined,
     relatedEntityType: row.related_entity_type ?? undefined,
     relatedEntityId: row.related_entity_id ?? undefined,
   });

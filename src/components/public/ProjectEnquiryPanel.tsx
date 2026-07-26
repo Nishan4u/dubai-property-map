@@ -64,20 +64,24 @@ export function ProjectEnquiryPanel({
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { error: leadError } = await supabase.from("leads").insert({
-      project_id: projectId,
-      name,
-      email,
-      phone,
-      source: "Website",
-      notes:
-        mode === "viewing"
-          ? `Requested a viewing${date ? ` on ${date}` : ""}.`
-          : "General enquiry from project page.",
-      created_by: user?.id ?? null,
-    });
+    const { data: insertedLead, error: leadError } = await supabase
+      .from("leads")
+      .insert({
+        project_id: projectId,
+        name,
+        email,
+        phone,
+        source: "Website",
+        notes:
+          mode === "viewing"
+            ? `Requested a viewing${date ? ` on ${date}` : ""}.`
+            : "General enquiry from project page.",
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
 
-    if (leadError) {
+    if (leadError || !insertedLead) {
       setStatus("error");
       return;
     }
@@ -121,6 +125,15 @@ export function ProjectEnquiryPanel({
       email,
       phone,
       date: mode === "viewing" ? date : undefined,
+    });
+
+    fetch("/api/leads/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ leadId: insertedLead.id, isViewing: mode === "viewing" && !!date }),
+    }).catch(() => {
+      // Best-effort — the lead itself is already saved and visible to the
+      // developer's dashboard regardless of whether the email goes out.
     });
 
     setStatus("done");

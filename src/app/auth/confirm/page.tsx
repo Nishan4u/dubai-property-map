@@ -51,10 +51,15 @@ function ConfirmInner() {
           type: type as "email" | "signup" | "recovery" | "invite",
           token_hash: tokenHash,
         });
-        if (!error) {
-          router.replace(next);
-          return;
-        }
+        // Conclusive either way — do NOT fall through to the "any session
+        // already exists" check below. A user who happens to already be
+        // logged in (e.g. clicking a stale/invalid recovery link while
+        // signed in elsewhere) would otherwise have that unrelated session
+        // mistaken for proof this token succeeded, silently admitting them
+        // to /reset-password on an invalid or expired link.
+        setStatus(error ? "error" : "working");
+        if (!error) router.replace(next);
+        return;
       }
 
       // Default Supabase templates redirect with the session in the URL

@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginFormClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justReset = searchParams.get("reset") === "success";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,11 @@ export function LoginFormClient() {
         <p className="mt-1 text-sm text-ink-400">
           Log in to manage favorites, saved searches and viewing requests.
         </p>
+        {justReset && (
+          <p className="mt-4 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-3 text-xs font-medium text-emerald-300">
+            Password changed successfully. Please log in with your new password.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">
@@ -77,9 +84,14 @@ export function LoginFormClient() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">
-              Password
-            </label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-xs font-medium text-ink-400">
+                Password
+              </label>
+              <Link href="/forgot-password" className="text-xs text-gold-400 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               required
               type="password"

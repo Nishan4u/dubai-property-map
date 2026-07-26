@@ -65,6 +65,7 @@ export default async function AdminEmailLogsPage({
           { header: "Category", render: (l) => l.category },
           { header: "To", render: (l) => l.to_email },
           { header: "Subject", render: (l) => <span className="max-w-xs truncate">{l.subject}</span> },
+          { header: "Reply-To", render: (l) => l.reply_to ?? "—" },
           { header: "Status", render: (l) => <Badge tone={statusTone[l.status] ?? "neutral"}>{l.status}</Badge> },
           { header: "Error", render: (l) => l.last_error ? <span className="text-xs text-rose-400">{l.last_error}</span> : "—" },
           { header: "Date", render: (l) => new Date(l.created_at).toLocaleString() },

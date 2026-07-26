@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const admin = createAdminClient();
-  const { data: salesperson } = await admin.from("salespersons").select("developer_id").eq("id", id).single();
+  const { data: salesperson } = await admin.from("salespersons").select("developer_id, full_name, email").eq("id", id).single();
   if (!salesperson || salesperson.developer_id !== profile.developer_id) {
     return NextResponse.json({ error: "Salesperson not found." }, { status: 404 });
   }
@@ -39,6 +40,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { error } = await admin.auth.admin.updateUserById(spProfile.id, { password });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (salesperson.email) {
+    await sendEmail({
+      category: "password_changed",
+      to: salesperson.email,
+      subject: "Your Dubai Property Map password was changed",
+      html: `
+        <p>Hi ${salesperson.full_name},</p>
+        <p>Your account password was just reset by your developer admin. If you didn't expect this, contact your developer admin or support.</p>
+      `,
+    });
   }
 
   return NextResponse.json({ ok: true });

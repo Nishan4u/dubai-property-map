@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
     to: salesperson.email,
     subject: `New Broker Property Request – ${project.name} – ${requestId}`,
     html: salespersonHtml,
+    replyTo: broker.email,
     relatedEntityType: "property_request",
     relatedEntityId: insertedRequest.id,
   });
