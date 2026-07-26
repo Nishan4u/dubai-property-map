@@ -30,6 +30,53 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No developer account found." }, { status: 400 });
   }
 
+  // Feature-limit enforcement (not just pricing-card text): a plan's
+  // max_featured_pins / homepage_banner_allowed actually gate whether this
+  // checkout is even created, so a paid slot can't be bought past the
+  // limit — checked here (server-side) rather than trusting the client.
+  if (placementType === "sponsored_pin" || placementType === "homepage_banner") {
+    const { data: developerRow } = await supabase
+      .from("developers")
+      .select("plan_tier")
+      .eq("id", profile.developer_id)
+      .single();
+
+    const { data: planRow } = await supabase
+      .from("subscription_plans")
+      .select("feature_limits")
+      .eq("key", developerRow?.plan_tier ?? "free")
+      .maybeSingle();
+
+    const limits = planRow?.feature_limits as
+      | { max_featured_pins?: number | null; homepage_banner_allowed?: boolean }
+      | undefined;
+
+    if (placementType === "homepage_banner" && !limits?.homepage_banner_allowed) {
+      return NextResponse.json(
+        { error: "Your current plan doesn't include the homepage banner placement. Upgrade your plan to unlock it." },
+        { status: 403 }
+      );
+    }
+
+    if (placementType === "sponsored_pin" && typeof limits?.max_featured_pins === "number") {
+      const { count } = await supabase
+        .from("ad_placements")
+        .select("id", { count: "exact", head: true })
+        .eq("developer_id", profile.developer_id)
+        .eq("placement_type", "sponsored_pin")
+        .in("status", ["pending", "active"]);
+
+      if ((count ?? 0) >= limits.max_featured_pins) {
+        return NextResponse.json(
+          {
+            error: `Featured pin limit reached: your current plan allows ${limits.max_featured_pins} sponsored pin(s). Upgrade your plan or wait for an existing one to expire.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   const existingCustomerId = Array.isArray(profile.developers)
     ? profile.developers[0]?.stripe_customer_id
     : (profile.developers as { stripe_customer_id: string | null } | null)?.stripe_customer_id;

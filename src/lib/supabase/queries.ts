@@ -499,6 +499,19 @@ export async function getBrokerPlanSubscriberCounts() {
   return counts;
 }
 
+export async function getSalespersonPlanSubscriberCounts() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("salespersons").select("plan_key").not("plan_key", "is", null);
+
+  if (error) throw error;
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    if (!row.plan_key) continue;
+    counts.set(row.plan_key, (counts.get(row.plan_key) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function getPublishedBlogPosts() {
   const supabase = await createClient();
   const { data, error } = await supabase

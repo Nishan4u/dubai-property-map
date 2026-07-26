@@ -13,14 +13,60 @@ export type DbBrokerSubscriptionStatus =
   | "cancelled"
   | "payment_failed";
 export type DbSalespersonStatus = "active" | "inactive";
-export type DbBankTransferAccountType = "developer" | "broker";
+export type DbBankTransferAccountType = "developer" | "broker" | "salesperson";
 export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";
+export type DbPaymentType = "stripe" | "bank_transfer" | "admin_free";
+export type DbSubscriptionPlanStatus = "active" | "inactive";
+export type DbSubscriptionPlanType = "developer" | "broker" | "salesperson";
+
+export interface SubscriptionPlanFeatureLimits {
+  max_active_listings?: number | null;
+  max_featured_pins?: number | null;
+  homepage_banner_allowed?: boolean;
+}
+
+export interface SubscriptionPlanRow {
+  id: string;
+  key: string;
+  name: string;
+  price_label: string;
+  features: string[];
+  stripe_price_id: string | null;
+  sort_order: number;
+  plan_type: DbSubscriptionPlanType;
+  description: string | null;
+  duration_days: number | null;
+  status: DbSubscriptionPlanStatus;
+  is_popular: boolean;
+  is_recommended: boolean;
+  online_payment_enabled: boolean;
+  bank_transfer_enabled: boolean;
+  feature_limits: SubscriptionPlanFeatureLimits;
+  created_at: string;
+}
+
+export interface SubscriptionGrantRow {
+  id: string;
+  account_type: DbBankTransferAccountType;
+  developer_id: string | null;
+  broker_id: string | null;
+  salesperson_id: string | null;
+  plan_key: string;
+  granted_by: string;
+  start_date: string;
+  expiry_date: string | null;
+  reason: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  created_at: string;
+}
 
 export interface SubscriptionBankTransferRow {
   id: string;
   account_type: DbBankTransferAccountType;
   developer_id: string | null;
   broker_id: string | null;
+  salesperson_id: string | null;
   plan_key: string;
   amount_aed: number;
   receipt_url: string;
@@ -300,6 +346,7 @@ export interface BrokerRow {
   last_reminder_sent_days: number | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  payment_type: DbPaymentType | null;
   approved_at: string | null;
   approved_by: string | null;
   created_at: string;
@@ -321,6 +368,13 @@ export interface SalespersonRow {
   whatsapp: string | null;
   photo_url: string | null;
   status: DbSalespersonStatus;
+  plan_key: string | null;
+  subscription_status: DbBrokerSubscriptionStatus;
+  is_complimentary: boolean;
+  subscription_expires_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  payment_type: DbPaymentType | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

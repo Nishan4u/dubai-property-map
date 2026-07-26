@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { Badge } from "@/components/ui/Badge";
+import type { SubscriptionPlanFeatureLimits } from "@/types/database";
 
 interface PlanRow {
   id: string;
@@ -14,8 +15,18 @@ interface PlanRow {
   features: string[];
   stripe_price_id: string | null;
   sort_order: number;
-  plan_type: "developer" | "broker";
+  plan_type: "developer" | "broker" | "salesperson";
+  description: string | null;
+  duration_days: number | null;
+  status: "active" | "inactive";
+  is_popular: boolean;
+  is_recommended: boolean;
+  online_payment_enabled: boolean;
+  bank_transfer_enabled: boolean;
+  feature_limits: SubscriptionPlanFeatureLimits;
 }
+
+const planTypeTone = { developer: "gold", broker: "purple", salesperson: "blue" } as const;
 
 export function AdminPackagesManager({
   plans,
@@ -28,12 +39,26 @@ export function AdminPackagesManager({
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [newName, setNewName] = useState("");
-  const [newPlanType, setNewPlanType] = useState<"developer" | "broker">("developer");
+  const [newPlanType, setNewPlanType] = useState<"developer" | "broker" | "salesperson">(
+    "developer"
+  );
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   function updateField<K extends keyof PlanRow>(id: string, key: K, value: PlanRow[K]) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [key]: value } : r)));
+  }
+
+  function updateLimit<K extends keyof SubscriptionPlanFeatureLimits>(
+    id: string,
+    key: K,
+    value: SubscriptionPlanFeatureLimits[K]
+  ) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, feature_limits: { ...r.feature_limits, [key]: value } } : r
+      )
+    );
   }
 
   async function handleSave(row: PlanRow) {
@@ -47,6 +72,14 @@ export function AdminPackagesManager({
         features: row.features,
         stripe_price_id: row.stripe_price_id || null,
         sort_order: row.sort_order,
+        description: row.description || null,
+        duration_days: row.duration_days,
+        status: row.status,
+        is_popular: row.is_popular,
+        is_recommended: row.is_recommended,
+        online_payment_enabled: row.online_payment_enabled,
+        bank_transfer_enabled: row.bank_transfer_enabled,
+        feature_limits: row.feature_limits,
       })
       .eq("id", row.id);
     await logAudit("subscription_plan.updated", "subscription_plan", row.id, { key: row.key });
@@ -100,7 +133,10 @@ export function AdminPackagesManager({
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-ink-100">{row.name}</h3>
                 <Badge tone="neutral">{row.key}</Badge>
-                <Badge tone={row.plan_type === "broker" ? "purple" : "gold"}>{row.plan_type}</Badge>
+                <Badge tone={planTypeTone[row.plan_type]}>{row.plan_type}</Badge>
+                <Badge tone={row.status === "active" ? "green" : "neutral"}>{row.status}</Badge>
+                {row.is_popular && <Badge tone="gold">Popular</Badge>}
+                {row.is_recommended && <Badge tone="blue">Recommended</Badge>}
               </div>
               <Badge tone="blue">
                 {subscriberCounts[row.key] ?? 0} subscriber
@@ -151,6 +187,46 @@ export function AdminPackagesManager({
                   className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Duration (days, blank = custom/no fixed term)
+                </label>
+                <input
+                  type="number"
+                  value={row.duration_days ?? ""}
+                  onChange={(e) =>
+                    updateField(
+                      row.id,
+                      "duration_days",
+                      e.target.value === "" ? null : Number(e.target.value)
+                    )
+                  }
+                  placeholder="e.g. 30"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  value={row.sort_order}
+                  onChange={(e) => updateField(row.id, "sort_order", Number(e.target.value))}
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Description
+                </label>
+                <input
+                  value={row.description ?? ""}
+                  onChange={(e) => updateField(row.id, "description", e.target.value)}
+                  placeholder="Shown under the plan name where applicable"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+              </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-ink-400">
                   Features (one per line)
@@ -168,6 +244,66 @@ export function AdminPackagesManager({
                   className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
                 />
               </div>
+
+              {row.plan_type === "developer" && (
+                <div className="sm:col-span-2 rounded-lg border border-navy-700 bg-navy-900 p-3">
+                  <p className="mb-2 text-xs font-semibold text-ink-300">
+                    Feature Limits — actually enforced, not just card text
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-ink-400">
+                        Max Active Listings (blank = unlimited)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={row.feature_limits.max_active_listings ?? ""}
+                        onChange={(e) =>
+                          updateLimit(
+                            row.id,
+                            "max_active_listings",
+                            e.target.value === "" ? null : Number(e.target.value)
+                          )
+                        }
+                        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-ink-400">
+                        Max Featured Pins (blank = unlimited)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={row.feature_limits.max_featured_pins ?? ""}
+                        onChange={(e) =>
+                          updateLimit(
+                            row.id,
+                            "max_featured_pins",
+                            e.target.value === "" ? null : Number(e.target.value)
+                          )
+                        }
+                        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-end pb-1.5">
+                      <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                        <input
+                          type="checkbox"
+                          checked={!!row.feature_limits.homepage_banner_allowed}
+                          onChange={(e) =>
+                            updateLimit(row.id, "homepage_banner_allowed", e.target.checked)
+                          }
+                          className="accent-gold-500"
+                        />
+                        Homepage Banner Allowed
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-ink-400">
                   Stripe Price ID
@@ -182,9 +318,63 @@ export function AdminPackagesManager({
                   {row.key === "free"
                     ? "Free plan — no Stripe price needed."
                     : row.stripe_price_id
-                      ? "Developers can upgrade to this plan via Stripe."
+                      ? "Subscribers can upgrade to this plan via Stripe."
                       : "Empty — the Upgrade button will show a clear error until you paste a real Stripe Price ID here."}
                 </p>
+              </div>
+
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-4 border-t border-navy-800 pt-3">
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.status === "active"}
+                    onChange={(e) =>
+                      updateField(row.id, "status", e.target.checked ? "active" : "inactive")
+                    }
+                    className="accent-emerald-500"
+                  />
+                  Active (visible for new subscriptions)
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.is_popular}
+                    onChange={(e) => updateField(row.id, "is_popular", e.target.checked)}
+                    className="accent-gold-500"
+                  />
+                  Popular
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.is_recommended}
+                    onChange={(e) => updateField(row.id, "is_recommended", e.target.checked)}
+                    className="accent-sky-500"
+                  />
+                  Recommended
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.online_payment_enabled}
+                    onChange={(e) =>
+                      updateField(row.id, "online_payment_enabled", e.target.checked)
+                    }
+                    className="accent-emerald-500"
+                  />
+                  Online Payment
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.bank_transfer_enabled}
+                    onChange={(e) =>
+                      updateField(row.id, "bank_transfer_enabled", e.target.checked)
+                    }
+                    className="accent-emerald-500"
+                  />
+                  Bank Transfer
+                </label>
               </div>
             </div>
           </div>
@@ -217,14 +407,17 @@ export function AdminPackagesManager({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">For</label>
+            <label className="mb-1 block text-xs font-medium text-ink-400">Account Type</label>
             <select
               value={newPlanType}
-              onChange={(e) => setNewPlanType(e.target.value as "developer" | "broker")}
+              onChange={(e) =>
+                setNewPlanType(e.target.value as "developer" | "broker" | "salesperson")
+              }
               className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
             >
               <option value="developer">Developer</option>
               <option value="broker">Broker</option>
+              <option value="salesperson">Salesperson</option>
             </select>
           </div>
           <button
