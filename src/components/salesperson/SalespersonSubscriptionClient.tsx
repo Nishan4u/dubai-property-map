@@ -30,12 +30,12 @@ const bankTransferStatusTone: Record<
   rejected: "red",
 };
 
-export function BrokerSubscriptionClient({
+export function SalespersonSubscriptionClient({
   plans,
   currentPlanKey,
   subscriptionStatus,
   hasStripeCustomer,
-  brokerId,
+  salespersonId,
   bankDetails,
   latestBankTransfer,
 }: {
@@ -43,7 +43,7 @@ export function BrokerSubscriptionClient({
   currentPlanKey: string | null;
   subscriptionStatus: string;
   hasStripeCustomer: boolean;
-  brokerId: string;
+  salespersonId: string;
   bankDetails: BankDetails;
   latestBankTransfer?: SubscriptionBankTransferRow | null;
 }) {
@@ -56,7 +56,7 @@ export function BrokerSubscriptionClient({
     setLoadingPlan(plan);
     setError("");
     try {
-      const res = await fetch("/api/broker/stripe/checkout", {
+      const res = await fetch("/api/salesperson/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -74,7 +74,7 @@ export function BrokerSubscriptionClient({
     setPortalLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/broker/stripe/portal", { method: "POST" });
+      const res = await fetch("/api/salesperson/stripe/portal", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not open billing portal");
       window.location.href = data.url;
@@ -180,8 +180,8 @@ export function BrokerSubscriptionClient({
 
       {bankTransferPlan && (
         <BankTransferPayment
-          accountType="broker"
-          accountId={brokerId}
+          accountType="salesperson"
+          accountId={salespersonId}
           planKey={bankTransferPlan.key}
           planLabel={bankTransferPlan.name}
           bankDetails={bankDetails}

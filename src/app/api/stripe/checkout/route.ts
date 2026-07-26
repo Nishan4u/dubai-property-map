@@ -8,9 +8,19 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("stripe_price_id")
+    .select("stripe_price_id, status, online_payment_enabled")
     .eq("key", plan)
     .maybeSingle();
+
+  if (!planRow || planRow.status !== "active") {
+    return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
+  }
+  if (!planRow.online_payment_enabled) {
+    return NextResponse.json(
+      { error: "Online payment isn't enabled for this plan — use Bank Transfer instead." },
+      { status: 400 }
+    );
+  }
 
   const priceId = planRow?.stripe_price_id;
   if (!priceId) {

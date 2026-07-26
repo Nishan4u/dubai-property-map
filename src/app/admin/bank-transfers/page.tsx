@@ -22,6 +22,7 @@ const statusTone: Record<SubscriptionBankTransferRow["status"], "green" | "gold"
 type Row = SubscriptionBankTransferRow & {
   developers: { name: string } | null;
   brokers: { full_name: string } | null;
+  salespersons: { full_name: string } | null;
   receiptSignedUrl: string | null;
 };
 
@@ -63,7 +64,7 @@ export default async function AdminBankTransfersPage() {
             render: (r) => (
               <div>
                 <p className="font-medium text-ink-100">
-                  {r.developers?.name ?? r.brokers?.full_name ?? "—"}
+                  {r.developers?.name ?? r.brokers?.full_name ?? r.salespersons?.full_name ?? "—"}
                 </p>
                 <p className="text-xs text-ink-500 capitalize">{r.account_type}</p>
               </div>

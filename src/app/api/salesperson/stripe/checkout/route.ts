@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     .from("subscription_plans")
     .select("stripe_price_id, status, online_payment_enabled")
     .eq("key", plan)
-    .eq("plan_type", "broker")
+    .eq("plan_type", "salesperson")
     .maybeSingle();
 
   if (!planRow || planRow.status !== "active") {
@@ -42,16 +42,19 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("broker_id, brokers!profiles_broker_id_fkey(stripe_customer_id)")
+    .select("salesperson_id, salespersons!profiles_salesperson_id_fkey(stripe_customer_id)")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.broker_id) {
-    return NextResponse.json({ error: "No broker account found." }, { status: 400 });
+  if (!profile?.salesperson_id) {
+    return NextResponse.json({ error: "No salesperson account found." }, { status: 400 });
   }
 
-  const brokerRel = profile.brokers as { stripe_customer_id: string | null } | { stripe_customer_id: string | null }[] | null;
-  const existingCustomerId = Array.isArray(brokerRel) ? brokerRel[0]?.stripe_customer_id : brokerRel?.stripe_customer_id;
+  const spRel = profile.salespersons as
+    | { stripe_customer_id: string | null }
+    | { stripe_customer_id: string | null }[]
+    | null;
+  const existingCustomerId = Array.isArray(spRel) ? spRel[0]?.stripe_customer_id : spRel?.stripe_customer_id;
 
   try {
     const stripe = getStripe();
@@ -62,10 +65,10 @@ export async function POST(request: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       customer: existingCustomerId ?? undefined,
       customer_email: existingCustomerId ? undefined : user.email,
-      client_reference_id: profile.broker_id,
-      metadata: { kind: "broker_subscription", broker_id: profile.broker_id, plan },
-      success_url: `${origin}/broker/subscription?checkout=success`,
-      cancel_url: `${origin}/broker/subscription?checkout=cancelled`,
+      client_reference_id: profile.salesperson_id,
+      metadata: { kind: "salesperson_subscription", salesperson_id: profile.salesperson_id, plan },
+      success_url: `${origin}/salesperson/subscription?checkout=success`,
+      cancel_url: `${origin}/salesperson/subscription?checkout=cancelled`,
     });
 
     return NextResponse.json({ url: session.url });

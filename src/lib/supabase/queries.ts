@@ -370,6 +370,7 @@ export async function getSubscriptionPlans() {
     .from("subscription_plans")
     .select("*")
     .eq("plan_type", "developer")
+    .eq("status", "active")
     .order("sort_order");
 
   if (error) throw error;
@@ -382,6 +383,20 @@ export async function getBrokerSubscriptionPlans() {
     .from("subscription_plans")
     .select("*")
     .eq("plan_type", "broker")
+    .eq("status", "active")
+    .order("sort_order");
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getSalespersonSubscriptionPlans() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_plans")
+    .select("*")
+    .eq("plan_type", "salesperson")
+    .eq("status", "active")
     .order("sort_order");
 
   if (error) throw error;
@@ -448,11 +463,26 @@ export async function getBankTransfersForBroker(brokerId: string) {
   return data ?? [];
 }
 
+export async function getBankTransfersForSalesperson(salespersonId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_bank_transfers")
+    .select("*")
+    .eq("salesperson_id", salespersonId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getAllBankTransfersAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("subscription_bank_transfers")
-    .select("*, developers(name), brokers(full_name)")
+    .select("*, developers(name), brokers(full_name), salespersons(full_name)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -796,6 +826,17 @@ export async function getAllBrokerPaymentsAdmin() {
   const { data, error } = await supabase
     .from("broker_payments")
     .select("*, brokers(full_name, email)")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getSubscriptionGrantsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_grants")
+    .select("*, developers(name), brokers(full_name), salespersons(full_name)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;

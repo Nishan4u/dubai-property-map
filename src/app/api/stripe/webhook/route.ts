@@ -68,8 +68,36 @@ export async function POST(request: NextRequest) {
             last_reminder_sent_days: null,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
+            payment_type: "stripe",
           })
           .eq("id", brokerId);
+        break;
+      }
+
+      if (session.metadata?.kind === "salesperson_subscription") {
+        const salespersonId = session.metadata.salesperson_id;
+        const plan = session.metadata.plan;
+        if (!salespersonId) break;
+
+        let expiresAt: string | null = null;
+        if (typeof session.subscription === "string") {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
+            .toISOString()
+            .slice(0, 10);
+        }
+
+        await supabase
+          .from("salespersons")
+          .update({
+            plan_key: plan ?? "salesperson-monthly",
+            subscription_status: "active",
+            subscription_expires_at: expiresAt,
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+            payment_type: "stripe",
+          })
+          .eq("id", salespersonId);
         break;
       }
 
@@ -82,6 +110,7 @@ export async function POST(request: NextRequest) {
             subscription_status: "active",
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
+            payment_type: "stripe",
           })
           .eq("id", developerId);
       }
@@ -102,6 +131,10 @@ export async function POST(request: NextRequest) {
         .slice(0, 10);
       await supabase
         .from("brokers")
+        .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
+        .eq("stripe_subscription_id", subscription.id);
+      await supabase
+        .from("salespersons")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
         .eq("stripe_subscription_id", subscription.id);
       break;

@@ -30,7 +30,7 @@ export function BankTransferPayment({
   planLabel,
   bankDetails,
 }: {
-  accountType: "developer" | "broker";
+  accountType: "developer" | "broker" | "salesperson";
   accountId: string;
   planKey: string;
   planLabel: string;
@@ -82,6 +82,7 @@ export function BankTransferPayment({
       account_type: accountType,
       developer_id: accountType === "developer" ? accountId : null,
       broker_id: accountType === "broker" ? accountId : null,
+      salesperson_id: accountType === "salesperson" ? accountId : null,
       plan_key: planKey,
       amount_aed: Number(amount) || 0,
       receipt_url: path,

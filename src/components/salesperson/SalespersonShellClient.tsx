@@ -1,12 +1,13 @@
 "use client";
 
-import { LayoutDashboard, UserRound, Users } from "lucide-react";
+import { CreditCard, LayoutDashboard, UserRound, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "My Leads", href: "/leads", icon: UserRound },
   { label: "My Brokers", href: "/brokers", icon: Users },
+  { label: "Subscription", href: "/subscription", icon: CreditCard },
 ];
 
 export function SalespersonShellClient({

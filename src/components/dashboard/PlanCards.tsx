@@ -10,6 +10,8 @@ interface Plan {
   name: string;
   price_label: string;
   features: string[];
+  online_payment_enabled?: boolean;
+  bank_transfer_enabled?: boolean;
 }
 
 export function PlanCards({
@@ -72,25 +74,27 @@ export function PlanCards({
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={() => handleUpgrade(plan.key)}
-                disabled={isCurrent || plan.key === "free" || loadingPlan !== null}
-                className={clsx(
-                  "mt-5 w-full rounded-lg py-2 text-sm font-semibold",
-                  isCurrent
-                    ? "bg-navy-700 text-ink-400"
-                    : "bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60"
-                )}
-              >
-                {isCurrent
-                  ? "Current Plan"
-                  : loadingPlan === plan.key
-                    ? "Redirecting…"
-                    : plan.key === "free"
-                      ? "Downgrade in Billing"
-                      : "Upgrade"}
-              </button>
-              {!isCurrent && plan.key !== "free" && (
+              {(plan.key === "free" || plan.online_payment_enabled !== false) && (
+                <button
+                  onClick={() => handleUpgrade(plan.key)}
+                  disabled={isCurrent || plan.key === "free" || loadingPlan !== null}
+                  className={clsx(
+                    "mt-5 w-full rounded-lg py-2 text-sm font-semibold",
+                    isCurrent
+                      ? "bg-navy-700 text-ink-400"
+                      : "bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-60"
+                  )}
+                >
+                  {isCurrent
+                    ? "Current Plan"
+                    : loadingPlan === plan.key
+                      ? "Redirecting…"
+                      : plan.key === "free"
+                        ? "Downgrade in Billing"
+                        : "Upgrade"}
+                </button>
+              )}
+              {!isCurrent && plan.key !== "free" && plan.bank_transfer_enabled !== false && (
                 <button
                   onClick={() =>
                     setBankTransferPlan((cur) => (cur?.key === plan.key ? null : plan))
