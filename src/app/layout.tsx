@@ -4,6 +4,7 @@ import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
 import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
 import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
 import { InstallAppPrompt } from "@/components/public/InstallAppPrompt";
+import { ServiceWorkerRegister } from "@/components/public/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,6 +59,7 @@ export default async function RootLayout({
           <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
         </FavoritesProvider>
         <InstallAppPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

@@ -34,12 +34,20 @@ export function InstallAppPrompt() {
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
 
+    // Covers installs triggered from the browser's own UI (e.g. the address
+    // bar install icon) rather than our button — without this, a regular
+    // browser tab has no way to know the app is already installed and would
+    // keep showing the prompt.
+    const onAppInstalled = () => dismiss();
+    window.addEventListener("appinstalled", onAppInstalled);
+
     // Show shortly after load rather than instantly, so it doesn't compete
     // with the initial page render.
     const timer = setTimeout(() => setVisible(true), 1500);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
       clearTimeout(timer);
     };
   }, []);
@@ -70,7 +78,7 @@ export function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4 sm:justify-end sm:px-6 sm:pb-6">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-40 lg:justify-end lg:px-6 lg:pb-6">
       <div className="w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <Image
