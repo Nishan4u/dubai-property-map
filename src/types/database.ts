@@ -12,7 +12,7 @@ export type DbBrokerSubscriptionStatus =
   | "expired"
   | "cancelled"
   | "payment_failed";
-export type DbDeveloperSubscriptionStatus = "inactive" | "active" | "past_due" | "cancelled";
+export type DbDeveloperSubscriptionStatus = "inactive" | "active" | "past_due" | "cancelled" | "expired";
 export type DbSalespersonStatus = "active" | "inactive";
 export type DbBankTransferAccountType = "developer" | "broker" | "salesperson";
 export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";
@@ -127,6 +127,7 @@ export interface DeveloperRow {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   payment_type: DbPaymentType | null;
+  last_reminder_sent_days: number | null;
   created_at: string;
 }
 
@@ -383,6 +384,7 @@ export interface SalespersonRow {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   payment_type: DbPaymentType | null;
+  last_reminder_sent_days: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

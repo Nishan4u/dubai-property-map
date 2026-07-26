@@ -34,6 +34,7 @@ const developerStatusTone: Record<DbDeveloperSubscriptionStatus, "green" | "gold
   inactive: "neutral",
   active: "green",
   past_due: "red",
+  expired: "red",
   cancelled: "neutral",
 };
 

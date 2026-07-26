@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
 
     if (daysLeft < 0) {
       await supabase.from("brokers").update({ subscription_status: "expired" }).eq("id", broker.id);
+      await sendEmail({
+        category: "subscription_expired",
+        to: broker.email,
+        subject: "Your Dubai Property Map subscription has expired",
+        html: `<p>Hi ${broker.full_name},</p><p>Your broker membership has expired. Renew from your Dubai Property Map dashboard to regain access to submitting property requests.</p>`,
+        relatedEntityType: "broker",
+        relatedEntityId: broker.id,
+      });
       expired++;
       continue;
     }
