@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -71,6 +72,16 @@ export async function POST(request: NextRequest) {
             payment_type: "stripe",
           })
           .eq("id", brokerId);
+
+        const { data: broker } = await supabase.from("brokers").select("full_name, email").eq("id", brokerId).single();
+        if (broker?.email) {
+          await sendEmail({
+            category: "subscription_activated",
+            to: broker.email,
+            subject: "Your Dubai Property Map subscription is active",
+            html: `<p>Hi ${broker.full_name},</p><p>Your <strong>${plan ?? "broker-monthly"}</strong> subscription is now active${expiresAt ? ` and renews on ${expiresAt}` : ""}.</p>`,
+          });
+        }
         break;
       }
 
@@ -98,6 +109,16 @@ export async function POST(request: NextRequest) {
             payment_type: "stripe",
           })
           .eq("id", salespersonId);
+
+        const { data: salesperson } = await supabase.from("salespersons").select("full_name, email").eq("id", salespersonId).single();
+        if (salesperson?.email) {
+          await sendEmail({
+            category: "subscription_activated",
+            to: salesperson.email,
+            subject: "Your Dubai Property Map subscription is active",
+            html: `<p>Hi ${salesperson.full_name},</p><p>Your <strong>${plan ?? "salesperson-monthly"}</strong> subscription is now active${expiresAt ? ` and renews on ${expiresAt}` : ""}.</p>`,
+          });
+        }
         break;
       }
 
@@ -113,6 +134,16 @@ export async function POST(request: NextRequest) {
             payment_type: "stripe",
           })
           .eq("id", developerId);
+
+        const { data: developer } = await supabase.from("developers").select("name, email").eq("id", developerId).single();
+        if (developer?.email) {
+          await sendEmail({
+            category: "subscription_activated",
+            to: developer.email,
+            subject: "Your Dubai Property Map subscription is active",
+            html: `<p>Hi ${developer.name},</p><p>Your <strong>${plan ?? "starter"}</strong> subscription is now active.</p>`,
+          });
+        }
       }
       break;
     }
@@ -144,21 +175,69 @@ export async function POST(request: NextRequest) {
       const subscriptionId = invoiceSubscriptionId(invoice);
       if (!subscriptionId) break;
 
+      // Only the recurring-cycle invoice counts as a "renewal" — the very
+      // first invoice on a new subscription already gets the Activation
+      // email from checkout.session.completed, so skip it here to avoid
+      // sending both for the same payment.
+      const isRenewal = invoice.billing_reason === "subscription_cycle";
+
       const { data: broker } = await supabase
         .from("brokers")
-        .select("id")
+        .select("id, full_name, email")
         .eq("stripe_subscription_id", subscriptionId)
         .maybeSingle();
-      if (!broker) break;
+      if (broker) {
+        await supabase.from("broker_payments").insert({
+          broker_id: broker.id,
+          stripe_invoice_id: invoice.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency,
+          status: "paid",
+          paid_at: new Date().toISOString(),
+        });
+        if (isRenewal && broker.email) {
+          await sendEmail({
+            category: "subscription_renewed",
+            to: broker.email,
+            subject: "Your Dubai Property Map subscription has renewed",
+            html: `<p>Hi ${broker.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+          });
+        }
+        break;
+      }
 
-      await supabase.from("broker_payments").insert({
-        broker_id: broker.id,
-        stripe_invoice_id: invoice.id,
-        amount: invoice.amount_paid / 100,
-        currency: invoice.currency,
-        status: "paid",
-        paid_at: new Date().toISOString(),
-      });
+      const { data: salesperson } = await supabase
+        .from("salespersons")
+        .select("id, full_name, email")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (salesperson) {
+        if (isRenewal && salesperson.email) {
+          await sendEmail({
+            category: "subscription_renewed",
+            to: salesperson.email,
+            subject: "Your Dubai Property Map subscription has renewed",
+            html: `<p>Hi ${salesperson.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+          });
+        }
+        break;
+      }
+
+      if (isRenewal) {
+        const { data: developer } = await supabase
+          .from("developers")
+          .select("id, name, email")
+          .eq("stripe_subscription_id", subscriptionId)
+          .maybeSingle();
+        if (developer?.email) {
+          await sendEmail({
+            category: "subscription_renewed",
+            to: developer.email,
+            subject: "Your Dubai Property Map subscription has renewed",
+            html: `<p>Hi ${developer.name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+          });
+        }
+      }
       break;
     }
     case "invoice.payment_failed": {
@@ -168,19 +247,63 @@ export async function POST(request: NextRequest) {
 
       const { data: broker } = await supabase
         .from("brokers")
-        .select("id")
+        .select("id, full_name, email")
         .eq("stripe_subscription_id", subscriptionId)
         .maybeSingle();
-      if (!broker) break;
+      if (broker) {
+        await supabase.from("brokers").update({ subscription_status: "payment_failed" }).eq("id", broker.id);
+        await supabase.from("broker_payments").insert({
+          broker_id: broker.id,
+          stripe_invoice_id: invoice.id,
+          amount: invoice.amount_due / 100,
+          currency: invoice.currency,
+          status: "failed",
+        });
+        if (broker.email) {
+          await sendEmail({
+            category: "payment_failed",
+            to: broker.email,
+            subject: "Payment failed for your Dubai Property Map subscription",
+            html: `<p>Hi ${broker.full_name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
+          });
+        }
+        break;
+      }
 
-      await supabase.from("brokers").update({ subscription_status: "payment_failed" }).eq("id", broker.id);
-      await supabase.from("broker_payments").insert({
-        broker_id: broker.id,
-        stripe_invoice_id: invoice.id,
-        amount: invoice.amount_due / 100,
-        currency: invoice.currency,
-        status: "failed",
-      });
+      const { data: salesperson } = await supabase
+        .from("salespersons")
+        .select("id, full_name, email")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (salesperson) {
+        await supabase.from("salespersons").update({ subscription_status: "payment_failed" }).eq("id", salesperson.id);
+        if (salesperson.email) {
+          await sendEmail({
+            category: "payment_failed",
+            to: salesperson.email,
+            subject: "Payment failed for your Dubai Property Map subscription",
+            html: `<p>Hi ${salesperson.full_name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
+          });
+        }
+        break;
+      }
+
+      const { data: developer } = await supabase
+        .from("developers")
+        .select("id, name, email")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (developer) {
+        await supabase.from("developers").update({ subscription_status: "past_due" }).eq("id", developer.id);
+        if (developer.email) {
+          await sendEmail({
+            category: "payment_failed",
+            to: developer.email,
+            subject: "Payment failed for your Dubai Property Map subscription",
+            html: `<p>Hi ${developer.name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
+          });
+        }
+      }
       break;
     }
   }

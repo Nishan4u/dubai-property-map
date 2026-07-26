@@ -78,25 +78,37 @@ export function BankTransferPayment({
       return;
     }
 
-    const { error: insertError } = await supabase.from("subscription_bank_transfers").insert({
-      account_type: accountType,
-      developer_id: accountType === "developer" ? accountId : null,
-      broker_id: accountType === "broker" ? accountId : null,
-      salesperson_id: accountType === "salesperson" ? accountId : null,
-      plan_key: planKey,
-      amount_aed: Number(amount) || 0,
-      receipt_url: path,
-      transaction_reference: reference.trim() || null,
-      transfer_date: transferDate || null,
-      note: note.trim() || null,
-      submitted_by: user.id,
-    });
+    const { data: insertedTransfer, error: insertError } = await supabase
+      .from("subscription_bank_transfers")
+      .insert({
+        account_type: accountType,
+        developer_id: accountType === "developer" ? accountId : null,
+        broker_id: accountType === "broker" ? accountId : null,
+        salesperson_id: accountType === "salesperson" ? accountId : null,
+        plan_key: planKey,
+        amount_aed: Number(amount) || 0,
+        receipt_url: path,
+        transaction_reference: reference.trim() || null,
+        transfer_date: transferDate || null,
+        note: note.trim() || null,
+        submitted_by: user.id,
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      setError(insertError.message);
+    if (insertError || !insertedTransfer) {
+      setError(insertError?.message ?? "Could not submit payment.");
       setStatus("error");
       return;
     }
+
+    fetch("/api/subscriptions/bank-transfer-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transferId: insertedTransfer.id }),
+    }).catch(() => {
+      // Best-effort — the submission itself is already saved.
+    });
 
     setStatus("submitted");
     router.refresh();

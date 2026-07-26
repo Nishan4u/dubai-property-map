@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
+import { sendEmail } from "@/lib/email";
 
 type AccountType = "developer" | "broker" | "salesperson";
 
@@ -15,6 +16,12 @@ const PLAN_KEY_COLUMN: Record<AccountType, "plan_tier" | "plan_key"> = {
   developer: "plan_tier",
   broker: "plan_key",
   salesperson: "plan_key",
+};
+
+const NAME_COLUMN: Record<AccountType, "name" | "full_name"> = {
+  developer: "name",
+  broker: "full_name",
+  salesperson: "full_name",
 };
 
 export async function POST(request: NextRequest) {
@@ -63,10 +70,13 @@ export async function POST(request: NextRequest) {
   const table = TABLE[accountType];
   const planKeyColumn = PLAN_KEY_COLUMN[accountType];
 
-  const { data: account } = await admin.from(table).select("id").eq("id", accountId).single();
+  const nameColumn = NAME_COLUMN[accountType];
+  const { data: account } = await admin.from(table).select(`id, email, ${nameColumn}`).eq("id", accountId).single();
   if (!account) {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
   }
+  const accountName = (account as unknown as Record<string, string>)[nameColumn] ?? "";
+  const accountEmail = (account as unknown as { email: string | null }).email;
 
   const startDate = new Date();
   const expiryDate = new Date(startDate);
@@ -109,6 +119,17 @@ export async function POST(request: NextRequest) {
     { planKey, durationDays: days, reason },
     { client: admin, actorId: user.id, actorEmail: user.email }
   );
+
+  if (accountEmail) {
+    await sendEmail({
+      category: "free_subscription_granted",
+      to: accountEmail,
+      subject: "You've been granted a free Dubai Property Map subscription",
+      html: `<p>Hi ${accountName},</p><p>An admin has granted you free access to the <strong>${planKey}</strong> plan, active until ${expiryDateStr}.</p><p><strong>Subscription Status:</strong> Active<br/><strong>Payment Type:</strong> Admin Granted / Free</p>${reason ? `<p>Note: ${reason}</p>` : ""}`,
+      relatedEntityType: accountType,
+      relatedEntityId: accountId,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

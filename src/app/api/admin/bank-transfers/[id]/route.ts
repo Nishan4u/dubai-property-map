@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
+import { sendEmail } from "@/lib/email";
 
 type Action = "approve" | "reject";
 
@@ -33,6 +34,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   if (transfer.status !== "verification_pending") {
     return NextResponse.json({ error: "This submission has already been reviewed." }, { status: 400 });
+  }
+
+  let accountName = "";
+  let accountEmail: string | null = null;
+  if (transfer.account_type === "developer" && transfer.developer_id) {
+    const { data } = await admin.from("developers").select("name, email").eq("id", transfer.developer_id).single();
+    accountName = data?.name ?? "";
+    accountEmail = data?.email ?? null;
+  } else if (transfer.account_type === "broker" && transfer.broker_id) {
+    const { data } = await admin.from("brokers").select("full_name, email").eq("id", transfer.broker_id).single();
+    accountName = data?.full_name ?? "";
+    accountEmail = data?.email ?? null;
+  } else if (transfer.account_type === "salesperson" && transfer.salesperson_id) {
+    const { data } = await admin.from("salespersons").select("full_name, email").eq("id", transfer.salesperson_id).single();
+    accountName = data?.full_name ?? "";
+    accountEmail = data?.email ?? null;
   }
 
   const reviewFields = {
@@ -88,6 +105,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
+
+    if (accountEmail) {
+      await sendEmail({
+        category: "bank_transfer_approved",
+        to: accountEmail,
+        subject: "Your bank transfer payment has been approved",
+        html: `<p>Hi ${accountName},</p><p>Your bank transfer for <strong>${transfer.plan_key}</strong> has been approved and your subscription is now active.</p>`,
+        relatedEntityType: "subscription_bank_transfer",
+        relatedEntityId: id,
+      });
+    }
   } else if (action === "reject") {
     const { error } = await admin
       .from("subscription_bank_transfers")
@@ -95,6 +123,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .eq("id", id);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (accountEmail) {
+      await sendEmail({
+        category: "bank_transfer_rejected",
+        to: accountEmail,
+        subject: "Your bank transfer payment could not be verified",
+        html: `<p>Hi ${accountName},</p><p>Your bank transfer submission for <strong>${transfer.plan_key}</strong> could not be verified${reason ? `: ${reason}` : "."}</p><p>Please double-check your receipt and submit again, or contact support.</p>`,
+        relatedEntityType: "subscription_bank_transfer",
+        relatedEntityId: id,
+      });
     }
   } else {
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
