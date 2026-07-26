@@ -78,7 +78,7 @@ export function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-40 lg:justify-end lg:px-6 lg:pb-6">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-40 lg:justify-end lg:px-6 lg:pb-28">
       <div className="w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <Image
