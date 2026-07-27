@@ -182,6 +182,34 @@ async function resolveSubscriptionMapAccess(
   return "ok";
 }
 
+// A salesperson's own subscription and their assigned developer's
+// subscription are two separate permission checks (spec: Section 12) — this
+// is the second one. Only applies to salespersons; developers viewing their
+// own dashboard/projects are never gated by this (that's the entitlement
+// trigger's job, not a visibility block).
+export async function getSalespersonDeveloperAccess(): Promise<{ developerId: string | null; blocked: boolean }> {
+  const profile = await getCurrentProfile();
+  if (!profile?.salesperson_id) return { developerId: null, blocked: false };
+
+  const supabase = await createClient();
+  const { data: salesperson } = await supabase
+    .from("salespersons")
+    .select("developer_id")
+    .eq("id", profile.salesperson_id)
+    .maybeSingle();
+  if (!salesperson?.developer_id) return { developerId: null, blocked: false };
+
+  const { data: developer } = await supabase
+    .from("developers")
+    .select("status, subscription_status, is_complimentary")
+    .eq("id", salesperson.developer_id)
+    .maybeSingle();
+  if (!developer) return { developerId: salesperson.developer_id, blocked: true };
+
+  const active = developer.status === "active" && (developer.subscription_status === "active" || developer.is_complimentary);
+  return { developerId: salesperson.developer_id, blocked: !active };
+}
+
 export async function getProjectBySlug(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

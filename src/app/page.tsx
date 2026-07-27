@@ -8,6 +8,7 @@ import {
   getMapAccessStatus,
   getNavLinks,
   getPublishedProjects,
+  getSalespersonDeveloperAccess,
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
@@ -25,6 +26,10 @@ export default async function Home() {
   // Resolved up front since getPublishedProjects needs it for its query.
   const viewerDeveloperId = await getViewerProjectScope();
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
+  // Separate from mapAccessStatus: a salesperson can have full Map access
+  // via their own subscription while their specific developer's projects
+  // are unavailable because THAT developer's account/subscription lapsed.
+  const { blocked: developerInactiveForSalesperson } = await getSalespersonDeveloperAccess();
 
   const [
     communityRows,
@@ -41,7 +46,9 @@ export default async function Home() {
     // unauthorized viewer's page payload never contains it at all, so
     // there's nothing for devtools (or "view source") to recover once the
     // blur overlay is removed client-side.
-    mapAccessStatus === "ok" ? getPublishedProjects(viewerDeveloperId ?? undefined) : Promise.resolve([]),
+    mapAccessStatus === "ok" && !developerInactiveForSalesperson
+      ? getPublishedProjects(viewerDeveloperId ?? undefined)
+      : Promise.resolve([]),
     getActiveHomepageBanner(),
     getActiveSidebarBanner(),
     getActiveSponsoredPinProjectIds(),
@@ -59,6 +66,7 @@ export default async function Home() {
       projects={projects}
       mapAccessStatus={mapAccessStatus}
       subscriptionHref={subscriptionHref}
+      developerInactiveForSalesperson={developerInactiveForSalesperson}
       banner={
         banner
           ? { title: banner.title, targetUrl: banner.target_url, developerName: banner.developers?.name }

@@ -40,6 +40,7 @@ export function HomeClient({
   viewerDeveloperId = null,
   mapAccessStatus = "ok",
   subscriptionHref = "",
+  developerInactiveForSalesperson = false,
 }: {
   communities: Community[];
   developers: Developer[];
@@ -59,6 +60,11 @@ export function HomeClient({
    * this isn't "ok" (the real dataset was never fetched server-side). */
   mapAccessStatus?: MapAccessStatus;
   subscriptionHref?: string;
+  /** Set when the viewer is a salesperson whose assigned developer's own
+   * account/subscription has lapsed — `projects` is already empty in this
+   * case too, but the Map itself stays usable (this is a separate check
+   * from mapAccessStatus, which covers the salesperson's own subscription). */
+  developerInactiveForSalesperson?: boolean;
 }) {
   const validTags: (ProjectTag | "all")[] = [
     "new-launch",
@@ -324,6 +330,14 @@ export function HomeClient({
           >
             <X className="h-3.5 w-3.5" />
           </button>
+        </div>
+      )}
+      {developerInactiveForSalesperson && (
+        <div className="border-b border-amber-600/30 bg-amber-500/10 px-6 py-3 text-center text-sm">
+          <p className="font-semibold text-amber-300">Developer Account Inactive</p>
+          <p className="mt-0.5 text-xs text-amber-200/80">
+            Your developer&apos;s subscription has expired. Project access is temporarily unavailable. Please contact your developer.
+          </p>
         </div>
       )}
       {!isFullscreen && !viewerDeveloperId && (
