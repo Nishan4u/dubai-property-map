@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/authError";
 
 interface DeveloperOption {
   id: string;
@@ -103,7 +104,7 @@ export function RegisterFormClient() {
 
     if (error) {
       setStatus("error");
-      setErrorMsg(error.message);
+      setErrorMsg(authErrorMessage(error));
       return;
     }
 

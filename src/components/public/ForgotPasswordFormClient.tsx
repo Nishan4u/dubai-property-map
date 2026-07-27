@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/authError";
 
 export function ForgotPasswordFormClient() {
   const [email, setEmail] = useState("");
@@ -24,7 +25,7 @@ export function ForgotPasswordFormClient() {
     // Show the same confirmation regardless of outcome — don't reveal
     // whether an account exists for this email.
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(authErrorMessage(error));
       return;
     }
     setSent(true);

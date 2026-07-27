@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/authError";
 
 export function ResetPasswordFormClient() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export function ResetPasswordFormClient() {
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(authErrorMessage(error));
       setLoading(false);
       return;
     }

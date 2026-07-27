@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/authError";
 
 export function LoginFormClient() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export function LoginFormClient() {
     });
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(authErrorMessage(error));
       setUnconfirmed(error.code === "email_not_confirmed");
       setLoading(false);
       return;
