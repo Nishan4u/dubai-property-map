@@ -61,6 +61,7 @@ export function LoginFormClient() {
     if (profile?.role === "admin") router.push("/admin");
     else if (profile?.role === "developer") router.push("/dashboard");
     else if (profile?.role === "salesperson") router.push("/salesperson");
+    else if (profile?.role === "broker_agency") router.push("/broker-agency");
     else router.push("/");
   }
 

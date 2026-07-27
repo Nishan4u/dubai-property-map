@@ -130,7 +130,7 @@ export async function getMapAccessStatus(): Promise<MapAccessResult> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, broker_id, salesperson_id, suspended")
+    .select("role, broker_id, broker_agency_id, salesperson_id, suspended")
     .eq("id", user.id)
     .single();
   if (!profile || profile.suspended) {
@@ -153,6 +153,18 @@ export async function getMapAccessStatus(): Promise<MapAccessResult> {
     };
   }
 
+  if (profile.role === "broker_agency" && profile.broker_agency_id) {
+    const { data: agency } = await supabase
+      .from("brokerages")
+      .select("subscription_status, plan_key")
+      .eq("id", profile.broker_agency_id)
+      .single();
+    return {
+      status: await resolveSubscriptionMapAccess(agency?.subscription_status, agency?.plan_key, "broker_agency"),
+      subscriptionHref: "/broker-agency/subscription",
+    };
+  }
+
   if (profile.role === "salesperson" && profile.salesperson_id) {
     const { data: salesperson } = await supabase
       .from("salespersons")
@@ -171,7 +183,7 @@ export async function getMapAccessStatus(): Promise<MapAccessResult> {
 async function resolveSubscriptionMapAccess(
   subscriptionStatus: string | null | undefined,
   planKey: string | null | undefined,
-  planType: "broker" | "salesperson"
+  planType: "broker" | "broker_agency" | "salesperson"
 ): Promise<MapAccessStatus> {
   if (subscriptionStatus === "expired") return "subscription_expired";
   if (subscriptionStatus !== "active") return "no_subscription";
