@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Check, Landmark } from "lucide-react";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
+import { getReferralCookie } from "@/lib/referralCookie";
 
 interface Plan {
   key: string;
@@ -29,6 +30,11 @@ export function PlanCards({
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
   const [referralCode, setReferralCode] = useState("");
+
+  useEffect(() => {
+    const cookieCode = getReferralCookie();
+    if (cookieCode) setReferralCode(cookieCode);
+  }, []);
 
   async function handleUpgrade(plan: string) {
     setLoadingPlan(plan);

@@ -1025,6 +1025,45 @@ export async function getStaffPerformanceAdmin(fromISO: string, toISO: string) {
   });
 }
 
+export async function getStaffSharedLinks() {
+  const profile = await requireStaffProfile();
+  const supabase = await createClient();
+
+  const { data: links } = await supabase
+    .from("staff_shared_links")
+    .select("id, target_type, target_id, share_code, created_at")
+    .eq("staff_id", profile.staff_id)
+    .order("created_at", { ascending: false });
+  if (!links || links.length === 0) return [];
+
+  const [{ data: clicks }, { data: projects }, { data: developers }] = await Promise.all([
+    supabase.from("staff_link_clicks").select("shared_link_id").in("shared_link_id", links.map((l) => l.id)),
+    supabase
+      .from("projects")
+      .select("id, name, slug")
+      .in(
+        "id",
+        links.filter((l) => l.target_type === "project").map((l) => l.target_id)
+      ),
+    supabase
+      .from("developers")
+      .select("id, name, slug")
+      .in(
+        "id",
+        links.filter((l) => l.target_type === "developer").map((l) => l.target_id)
+      ),
+  ]);
+
+  return links.map((link) => {
+    const clickCount = (clicks ?? []).filter((c) => c.shared_link_id === link.id).length;
+    const target =
+      link.target_type === "project"
+        ? projects?.find((p) => p.id === link.target_id)
+        : developers?.find((d) => d.id === link.target_id);
+    return { ...link, clickCount, targetName: target?.name ?? "—" };
+  });
+}
+
 export async function getStaffByIdAdmin(id: string) {
   const supabase = await createClient();
   const { data: staff, error } = await supabase.from("staff").select("*").eq("id", id).maybeSingle();

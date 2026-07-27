@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, IdCard, LayoutDashboard, Target, UserRound, Users, Wallet } from "lucide-react";
+import { Award, IdCard, LayoutDashboard, Link2, Target, UserRound, Users, Wallet } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { label: "My Monthly Target", href: "/target", icon: Target },
   { label: "My Commission", href: "/commission", icon: Wallet },
   { label: "My Performance", href: "/performance", icon: Award },
+  { label: "My Shared Links", href: "/shared-links", icon: Link2 },
   { label: "My Profile", href: "/profile", icon: UserRound },
 ];
 

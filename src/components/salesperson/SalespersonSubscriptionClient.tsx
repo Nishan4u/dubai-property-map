@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Check, Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
 import { isExpiringSoon } from "@/lib/subscriptionStatus";
+import { getReferralCookie } from "@/lib/referralCookie";
 import type { SubscriptionBankTransferRow } from "@/types/database";
 
 interface Plan {
@@ -42,6 +43,11 @@ export function SalespersonSubscriptionClient({
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
   const [referralCode, setReferralCode] = useState("");
+
+  useEffect(() => {
+    const cookieCode = getReferralCookie();
+    if (cookieCode) setReferralCode(cookieCode);
+  }, []);
 
   async function handleSubscribe(plan: string) {
     setLoadingPlan(plan);

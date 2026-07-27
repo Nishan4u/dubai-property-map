@@ -5,6 +5,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { DeveloperReviews } from "@/components/public/DeveloperReviews";
 import { DeveloperContactForm } from "@/components/public/DeveloperContactForm";
+import { ShareButton } from "@/components/public/ShareButton";
 import {
   getActiveDeveloperBanner,
   getDeveloperAwards,
@@ -113,6 +114,7 @@ export default async function DeveloperProfilePage({
             <Stat label="Completed" value={completedCount} />
             <Stat label="Under Construction" value={underConstructionCount} />
           </div>
+          <ShareButton targetType="developer" targetId={developer.id} title={developer.name} />
         </div>
 
         <p className="mt-6 max-w-3xl text-sm leading-relaxed text-ink-300">

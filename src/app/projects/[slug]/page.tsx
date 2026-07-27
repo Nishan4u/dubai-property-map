@@ -5,6 +5,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { MortgageCalculator } from "@/components/public/MortgageCalculator";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
+import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
@@ -151,7 +152,10 @@ export default async function ProjectDetailsPage({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-ink-500">Starting From</p>
+              <div className="flex justify-end">
+                <ShareButton targetType="project" targetId={project.id} title={project.name} />
+              </div>
+              <p className="mt-2 text-xs text-ink-500">Starting From</p>
               <p className="text-2xl font-bold text-gold-400">
                 {formatAed(project.priceFromAed)}
               </p>
