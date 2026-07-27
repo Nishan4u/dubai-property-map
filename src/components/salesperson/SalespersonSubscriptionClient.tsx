@@ -41,6 +41,7 @@ export function SalespersonSubscriptionClient({
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
+  const [referralCode, setReferralCode] = useState("");
 
   async function handleSubscribe(plan: string) {
     setLoadingPlan(plan);
@@ -49,7 +50,7 @@ export function SalespersonSubscriptionClient({
       const res = await fetch("/api/salesperson/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, referralCode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
@@ -83,6 +84,16 @@ export function SalespersonSubscriptionClient({
           {error}
         </p>
       )}
+
+      <div className="max-w-xs">
+        <label className="mb-1 block text-xs font-medium text-ink-400">Referral Code (Optional)</label>
+        <input
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value)}
+          placeholder="Enter a referral code if you have one"
+          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+        />
+      </div>
 
       <BankTransferHistory transfers={bankTransfers} />
 
@@ -164,6 +175,7 @@ export function SalespersonSubscriptionClient({
           planKey={bankTransferPlan.key}
           planLabel={bankTransferPlan.name}
           bankDetails={bankDetails}
+          initialReferralCode={referralCode}
         />
       )}
     </div>

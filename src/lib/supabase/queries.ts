@@ -47,6 +47,14 @@ export async function requireSalespersonProfile() {
   return profile as NonNullable<typeof profile> & { salesperson_id: string };
 }
 
+export async function requireStaffProfile() {
+  const profile = await getCurrentProfile();
+  if (!profile?.staff_id) {
+    redirect("/staff/login");
+  }
+  return profile as NonNullable<typeof profile> & { staff_id: string };
+}
+
 // Admin gating has always been done inline in src/app/admin/layout.tsx —
 // this is the first shared helper for it, needed by new API routes (e.g.
 // admin broker-approval actions) that aren't a page layout and so can't
@@ -910,6 +918,46 @@ export async function getSalespersonsForDeveloper(developerId: string) {
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getAllStaffAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("staff").select("*").order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
+export async function getStaffByIdAdmin(id: string) {
+  const supabase = await createClient();
+  const { data: staff, error } = await supabase.from("staff").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!staff) return null;
+
+  const [{ data: referrals }, { data: commissions }, { data: targets }] = await Promise.all([
+    supabase
+      .from("staff_referrals")
+      .select("*, developers(name), brokers(full_name), salespersons(full_name)")
+      .eq("staff_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("staff_commissions").select("*").eq("staff_id", id).order("created_at", { ascending: false }),
+    supabase
+      .from("staff_monthly_targets")
+      .select("*")
+      .eq("staff_id", id)
+      .order("year", { ascending: false })
+      .order("month", { ascending: false }),
+  ]);
+
+  return {
+    staff,
+    referrals: referrals ?? [],
+    commissions: commissions ?? [],
+    targets: targets ?? [],
+  };
 }
 
 export async function getAllSalespersonsAdmin() {

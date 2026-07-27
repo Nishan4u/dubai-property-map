@@ -31,12 +31,14 @@ export function BankTransferPayment({
   planKey,
   planLabel,
   bankDetails,
+  initialReferralCode = "",
 }: {
   accountType: "developer" | "broker" | "salesperson";
   accountId: string;
   planKey: string;
   planLabel: string;
   bankDetails: BankDetails;
+  initialReferralCode?: string;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -44,6 +46,7 @@ export function BankTransferPayment({
   const [transferDate, setTransferDate] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [status, setStatus] = useState<"idle" | "submitting" | "submitted" | "error">(
     "idle"
   );
@@ -94,6 +97,7 @@ export function BankTransferPayment({
         transaction_reference: reference.trim() || null,
         transfer_date: transferDate || null,
         note: note.trim() || null,
+        referral_code: referralCode.trim() || null,
         submitted_by: user.id,
       })
       .select("id")
@@ -219,6 +223,18 @@ export function BankTransferPayment({
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-ink-400">
+            Referral Code (optional)
+          </label>
+          <input
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value)}
+            placeholder="Enter a referral code if you have one"
+            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
           />
         </div>
 

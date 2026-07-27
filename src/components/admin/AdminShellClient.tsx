@@ -23,6 +23,7 @@ import {
   ClipboardList,
   UserCog,
   CalendarCheck,
+  IdCard,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
@@ -32,6 +33,7 @@ const navItems = [
   { label: "Brokers", href: "/brokers", icon: Briefcase },
   { label: "Brokerages", href: "/brokerages", icon: Building2 },
   { label: "Salespersons", href: "/salespersons", icon: Users },
+  { label: "Staff", href: "/staff", icon: IdCard },
   { label: "Projects", href: "/projects", icon: ClipboardList },
   { label: "Communities", href: "/communities", icon: Landmark },
   { label: "Catalog", href: "/catalog", icon: Tags },

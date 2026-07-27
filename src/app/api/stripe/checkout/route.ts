@@ -3,7 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const { plan } = await request.json();
+  const { plan, referralCode } = await request.json();
 
   const supabase = await createClient();
   const { data: planRow } = await supabase
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       customer: existingCustomerId ?? undefined,
       customer_email: existingCustomerId ? undefined : user.email,
       client_reference_id: profile.developer_id,
-      metadata: { developer_id: profile.developer_id, plan },
+      metadata: { developer_id: profile.developer_id, plan, referral_code: referralCode?.trim() || "" },
       success_url: `${origin}/dashboard/packages?checkout=success`,
       cancel_url: `${origin}/dashboard/packages?checkout=cancelled`,
     });

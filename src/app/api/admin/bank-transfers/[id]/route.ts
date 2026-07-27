@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { sendEmail } from "@/lib/email";
+import { attributeReferral, recordCommission } from "@/lib/referrals";
 
 type Action = "approve" | "reject";
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const admin = createAdminClient();
   const { data: transfer } = await admin
     .from("subscription_bank_transfers")
-    .select("account_type, developer_id, broker_id, salesperson_id, plan_key, status")
+    .select("account_type, developer_id, broker_id, salesperson_id, plan_key, status, referral_code, amount_aed")
     .eq("id", id)
     .single();
   if (!transfer) {
@@ -96,6 +97,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+      await attributeReferral(transfer.referral_code, "developer", transfer.developer_id);
+      await recordCommission({
+        accountType: "developer",
+        accountId: transfer.developer_id,
+        paymentId: id,
+        paymentSource: "bank_transfer",
+        subscriptionAmount: Number(transfer.amount_aed),
+      });
     } else if (transfer.account_type === "broker" && transfer.broker_id) {
       const { error } = await admin
         .from("brokers")
@@ -110,6 +119,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+      await attributeReferral(transfer.referral_code, "broker", transfer.broker_id);
+      await recordCommission({
+        accountType: "broker",
+        accountId: transfer.broker_id,
+        paymentId: id,
+        paymentSource: "bank_transfer",
+        subscriptionAmount: Number(transfer.amount_aed),
+      });
     } else if (transfer.account_type === "salesperson" && transfer.salesperson_id) {
       const { error } = await admin
         .from("salespersons")
@@ -124,6 +141,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+      await attributeReferral(transfer.referral_code, "salesperson", transfer.salesperson_id);
+      await recordCommission({
+        accountType: "salesperson",
+        accountId: transfer.salesperson_id,
+        paymentId: id,
+        paymentSource: "bank_transfer",
+        subscriptionAmount: Number(transfer.amount_aed),
+      });
     }
 
     if (accountEmail) {

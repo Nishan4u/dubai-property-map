@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { attributeReferral, recordCommission } from "@/lib/referrals";
 
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -73,6 +74,17 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", brokerId);
 
+        await attributeReferral(session.metadata?.referral_code, "broker", brokerId);
+        if (session.amount_total) {
+          await recordCommission({
+            accountType: "broker",
+            accountId: brokerId,
+            paymentId: (session.invoice as string) || session.id,
+            paymentSource: "stripe",
+            subscriptionAmount: session.amount_total / 100,
+          });
+        }
+
         const { data: broker } = await supabase.from("brokers").select("full_name, email").eq("id", brokerId).single();
         if (broker?.email) {
           await sendEmail({
@@ -111,6 +123,17 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", salespersonId);
 
+        await attributeReferral(session.metadata?.referral_code, "salesperson", salespersonId);
+        if (session.amount_total) {
+          await recordCommission({
+            accountType: "salesperson",
+            accountId: salespersonId,
+            paymentId: (session.invoice as string) || session.id,
+            paymentSource: "stripe",
+            subscriptionAmount: session.amount_total / 100,
+          });
+        }
+
         const { data: salesperson } = await supabase.from("salespersons").select("full_name, email").eq("id", salespersonId).single();
         if (salesperson?.email) {
           await sendEmail({
@@ -145,6 +168,17 @@ export async function POST(request: NextRequest) {
             payment_type: "stripe",
           })
           .eq("id", developerId);
+
+        await attributeReferral(session.metadata?.referral_code, "developer", developerId);
+        if (session.amount_total) {
+          await recordCommission({
+            accountType: "developer",
+            accountId: developerId,
+            paymentId: (session.invoice as string) || session.id,
+            paymentSource: "stripe",
+            subscriptionAmount: session.amount_total / 100,
+          });
+        }
 
         const { data: developer } = await supabase.from("developers").select("name, email").eq("id", developerId).single();
         if (developer?.email) {
@@ -207,13 +241,22 @@ export async function POST(request: NextRequest) {
           status: "paid",
           paid_at: new Date().toISOString(),
         });
-        if (isRenewal && broker.email) {
-          await sendEmail({
-            category: "subscription_renewed",
-            to: broker.email,
-            subject: "Your Dubai Property Map subscription has renewed",
-            html: `<p>Hi ${broker.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+        if (isRenewal) {
+          await recordCommission({
+            accountType: "broker",
+            accountId: broker.id,
+            paymentId: invoice.id ?? `${subscriptionId}-${invoice.created}`,
+            paymentSource: "stripe",
+            subscriptionAmount: invoice.amount_paid / 100,
           });
+          if (broker.email) {
+            await sendEmail({
+              category: "subscription_renewed",
+              to: broker.email,
+              subject: "Your Dubai Property Map subscription has renewed",
+              html: `<p>Hi ${broker.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+            });
+          }
         }
         break;
       }
@@ -224,13 +267,22 @@ export async function POST(request: NextRequest) {
         .eq("stripe_subscription_id", subscriptionId)
         .maybeSingle();
       if (salesperson) {
-        if (isRenewal && salesperson.email) {
-          await sendEmail({
-            category: "subscription_renewed",
-            to: salesperson.email,
-            subject: "Your Dubai Property Map subscription has renewed",
-            html: `<p>Hi ${salesperson.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+        if (isRenewal) {
+          await recordCommission({
+            accountType: "salesperson",
+            accountId: salesperson.id,
+            paymentId: invoice.id ?? `${subscriptionId}-${invoice.created}`,
+            paymentSource: "stripe",
+            subscriptionAmount: invoice.amount_paid / 100,
           });
+          if (salesperson.email) {
+            await sendEmail({
+              category: "subscription_renewed",
+              to: salesperson.email,
+              subject: "Your Dubai Property Map subscription has renewed",
+              html: `<p>Hi ${salesperson.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+            });
+          }
         }
         break;
       }
@@ -241,13 +293,22 @@ export async function POST(request: NextRequest) {
           .select("id, name, email")
           .eq("stripe_subscription_id", subscriptionId)
           .maybeSingle();
-        if (developer?.email) {
-          await sendEmail({
-            category: "subscription_renewed",
-            to: developer.email,
-            subject: "Your Dubai Property Map subscription has renewed",
-            html: `<p>Hi ${developer.name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+        if (developer) {
+          await recordCommission({
+            accountType: "developer",
+            accountId: developer.id,
+            paymentId: invoice.id ?? `${subscriptionId}-${invoice.created}`,
+            paymentSource: "stripe",
+            subscriptionAmount: invoice.amount_paid / 100,
           });
+          if (developer.email) {
+            await sendEmail({
+              category: "subscription_renewed",
+              to: developer.email,
+              subject: "Your Dubai Property Map subscription has renewed",
+              html: `<p>Hi ${developer.name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+            });
+          }
         }
       }
       break;
