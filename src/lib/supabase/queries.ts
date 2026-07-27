@@ -962,6 +962,69 @@ export async function getStaffSelfData() {
   };
 }
 
+export async function getStaffPerformanceAdmin(fromISO: string, toISO: string) {
+  const supabase = await createClient();
+
+  const [{ data: staffRows }, { data: commissions }, { data: referrals }] = await Promise.all([
+    supabase.from("staff").select("*").order("full_name"),
+    supabase.from("staff_commissions").select("*").gte("created_at", fromISO).lte("created_at", toISO),
+    supabase
+      .from("staff_referrals")
+      .select(
+        "id, staff_id, account_type, first_subscribed_at, developer_id, broker_id, salesperson_id, developers(subscription_status), brokers(subscription_status), salespersons(subscription_status)"
+      ),
+  ]);
+
+  const staff = staffRows ?? [];
+  const allCommissions = commissions ?? [];
+  const allReferrals = referrals ?? [];
+
+  return staff.map((s) => {
+    const staffCommissions = allCommissions.filter((c) => c.staff_id === s.id);
+    const staffReferrals = allReferrals.filter((r) => r.staff_id === s.id);
+    const newSubsInRange = staffReferrals.filter((r) => {
+      const d = new Date(r.first_subscribed_at).getTime();
+      return d >= new Date(fromISO).getTime() && d <= new Date(toISO).getTime();
+    }).length;
+    const renewals = Math.max(staffCommissions.length - newSubsInRange, 0);
+    const revenue = staffCommissions.reduce((sum, c) => sum + Number(c.subscription_amount), 0);
+    const commissionEarned = staffCommissions.reduce((sum, c) => sum + Number(c.commission_amount), 0);
+    const pending = staffCommissions.filter((c) => c.status === "pending").reduce((sum, c) => sum + Number(c.commission_amount), 0);
+    const approved = staffCommissions.filter((c) => c.status === "approved").reduce((sum, c) => sum + Number(c.commission_amount), 0);
+    const paid = staffCommissions.filter((c) => c.status === "paid").reduce((sum, c) => sum + Number(c.commission_amount), 0);
+
+    const statusOf = (r: (typeof staffReferrals)[number]) => {
+      const account = r.developers ?? r.brokers ?? r.salespersons;
+      const row = Array.isArray(account) ? account[0] : account;
+      return (row as { subscription_status?: string } | undefined)?.subscription_status;
+    };
+    const activeSubscribers = staffReferrals.filter((r) => statusOf(r) === "active").length;
+    const expiredSubscribers = staffReferrals.filter((r) => statusOf(r) === "expired").length;
+
+    const target = s.new_subscription_target || 0;
+    const achieved = newSubsInRange;
+    const remaining = Math.max(target - achieved, 0);
+    const targetPct = target > 0 ? Math.round((achieved / target) * 100) : 0;
+
+    return {
+      staff: s,
+      target,
+      achieved,
+      remaining,
+      targetPct,
+      newSubscriptions: newSubsInRange,
+      renewals,
+      activeSubscribers,
+      expiredSubscribers,
+      revenue,
+      commissionEarned,
+      pending,
+      approved,
+      paid,
+    };
+  });
+}
+
 export async function getStaffByIdAdmin(id: string) {
   const supabase = await createClient();
   const { data: staff, error } = await supabase.from("staff").select("*").eq("id", id).maybeSingle();

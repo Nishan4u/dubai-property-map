@@ -17,12 +17,17 @@ export default async function AdminStaffPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-ink-100">Staff Management</h1>
-        <p className="text-sm text-ink-400">
-          {staff.length} internal staff account{staff.length === 1 ? "" : "s"}. No public registration —
-          share the login path privately at <span className="font-mono text-ink-300">/staff/login</span>.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-ink-100">Staff Management</h1>
+          <p className="text-sm text-ink-400">
+            {staff.length} internal staff account{staff.length === 1 ? "" : "s"}. No public registration —
+            share the login path privately at <span className="font-mono text-ink-300">/staff/login</span>.
+          </p>
+        </div>
+        <Link href="/admin/staff/performance" className="rounded-lg border border-navy-600 px-4 py-2 text-sm font-medium text-ink-300 hover:text-ink-100">
+          Performance & Leaderboard
+        </Link>
       </div>
 
       <CreateStaffForm />
