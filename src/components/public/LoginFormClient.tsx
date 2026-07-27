@@ -65,13 +65,12 @@ export function LoginFormClient() {
 
   async function handleResend() {
     setResendStatus("loading");
-    const supabase = createClient();
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    const res = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
-    setResendStatus(error ? "error" : "sent");
+    setResendStatus(res.ok ? "sent" : "error");
   }
 
   return (

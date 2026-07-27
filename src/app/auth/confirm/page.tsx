@@ -12,13 +12,12 @@ function ResendForm() {
   async function handleResend(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
-    const supabase = createClient();
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    const res = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
-    setStatus(error ? "error" : "sent");
+    setStatus(res.ok ? "sent" : "error");
   }
 
   if (status === "sent") {
@@ -59,20 +58,33 @@ function ResendForm() {
   );
 }
 
-function ConfirmCard({
-  status,
-}: {
-  status: "working" | "error";
-}) {
+function ConfirmCard({ status }: { status: "working" | "error" | "verified" }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-navy-950 p-6">
       <div className="w-full max-w-sm rounded-2xl border border-navy-700 bg-navy-850 p-8 text-center">
-        {status === "working" ? (
+        {status === "working" && (
           <>
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
             <p className="text-sm text-ink-300">Confirming your account…</p>
           </>
-        ) : (
+        )}
+        {status === "verified" && (
+          <>
+            <h1 className="text-lg font-semibold text-ink-100">Email confirmed</h1>
+            <p className="mt-2 text-sm text-ink-400">
+              Your email address is verified. You can now log in — including
+              from a different browser or device than the one you registered
+              on.
+            </p>
+            <Link
+              href="/login"
+              className="mt-4 inline-block w-full rounded-lg bg-gold-500 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400"
+            >
+              Go to login
+            </Link>
+          </>
+        )}
+        {status === "error" && (
           <>
             <h1 className="text-lg font-semibold text-ink-100">
               Confirmation link expired or invalid
@@ -97,14 +109,28 @@ function ConfirmCard({
 function ConfirmInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"working" | "error">("working");
+  const [status, setStatus] = useState<"working" | "error" | "verified">("working");
 
   useEffect(() => {
     const supabase = createClient();
     const next = searchParams.get("next") ?? "/";
 
     async function confirm() {
-      // Newer-style Supabase templates put token_hash/type in the query string.
+      // Our own signup-confirmation flow (see /api/auth/verify-email) --
+      // Supabase's built-in confirmation email depends on their outbound
+      // SMTP, which is broken at the platform level, so account creation
+      // and confirmation now go through a self-issued token instead.
+      if (searchParams.get("verified") === "1") {
+        setStatus("verified");
+        return;
+      }
+      if (searchParams.get("verify_error")) {
+        setStatus("error");
+        return;
+      }
+
+      // Password recovery still goes through Supabase's native flow --
+      // newer-style templates put token_hash/type in the query string.
       const tokenHash = searchParams.get("token_hash");
       const type = searchParams.get("type");
       if (tokenHash && type) {

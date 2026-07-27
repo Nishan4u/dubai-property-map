@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { authErrorMessage } from "@/lib/authError";
 
 interface DeveloperOption {
   id: string;
@@ -80,51 +79,40 @@ export function RegisterFormClient() {
 
     setStatus("loading");
 
-    const supabase = createClient();
-    const next = role === "developer" ? "/dashboard" : role === "broker" ? "/broker" : role === "salesperson" ? "/salesperson" : "/";
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data:
-          role === "salesperson"
-            ? {
-                full_name: fullName,
-                role,
-                developer_id: developerId,
-                job_title: jobTitle,
-                mobile,
-                whatsapp,
-              }
-            : { full_name: fullName, role },
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${next}`,
-      },
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullName,
+        email,
+        password,
+        role,
+        ...(role === "salesperson" ? { developerId, jobTitle, mobile, whatsapp } : {}),
+      }),
     });
+    const data = await res.json();
 
-    if (error) {
+    if (!res.ok) {
       setStatus("error");
-      setErrorMsg(authErrorMessage(error));
+      setErrorMsg(data.error ?? "Something went wrong — please try again.");
       return;
     }
 
     setStatus("sent");
-    // Supabase enforces its own short throttle per email address on auth
-    // emails, and signUp() just sent one — start the cooldown right away so
-    // the button isn't inviting an immediate click that's guaranteed to fail.
+    // Server-side backstop is also 60s -- keep the button's own cooldown in
+    // sync so it isn't inviting an immediate click that's guaranteed to be
+    // silently swallowed.
     setResendCooldown(60);
   }
 
   async function handleResend() {
     setResendStatus("loading");
-    const supabase = createClient();
-    const next = role === "developer" ? "/dashboard" : role === "broker" ? "/broker" : role === "salesperson" ? "/salesperson" : "/";
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${next}` },
+    const res = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
-    setResendStatus(error ? "error" : "sent");
+    setResendStatus(res.ok ? "sent" : "error");
     setResendCooldown(60);
   }
 
