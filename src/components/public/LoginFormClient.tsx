@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/authError";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export function LoginFormClient() {
   const router = useRouter();
@@ -108,14 +109,7 @@ export function LoginFormClient() {
                 Forgot password?
               </Link>
             </div>
-            <input
-              required
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-            />
+            <PasswordInput required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />
           </div>
 
           {errorMsg && (

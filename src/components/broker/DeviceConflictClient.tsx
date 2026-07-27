@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export function DeviceConflictClient() {
   const router = useRouter();
@@ -77,11 +78,11 @@ export function DeviceConflictClient() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-400">Password</label>
-              <input
+              <PasswordInput
                 required
-                type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
+                autoComplete="current-password"
                 className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 focus:outline-none"
               />
             </div>

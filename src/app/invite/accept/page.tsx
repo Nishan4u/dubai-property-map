@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 const kindLabel: Record<string, string> = {
   team_member: "team member",
@@ -102,24 +103,23 @@ function AcceptInner() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-400">Password</label>
-                <input
+                <PasswordInput
                   required
                   minLength={6}
-                  type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={setPassword}
                   placeholder="At least 6 characters"
-                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                  autoComplete="new-password"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-400">Confirm Password</label>
-                <input
+                <PasswordInput
                   required
                   minLength={6}
-                  type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={setConfirmPassword}
+                  autoComplete="new-password"
                   className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 focus:outline-none"
                 />
               </div>

@@ -1,17 +1,18 @@
 import { SettingsTable } from "@/components/admin/SettingsTable";
+import { RegistrationTypeSettingsPanel } from "@/components/admin/RegistrationTypeSettingsPanel";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
-  const { data: settings } = await supabase
-    .from("platform_settings")
-    .select("key, label, value")
-    .order("label");
+  const [{ data: settings }, { data: registrationTypes }] = await Promise.all([
+    supabase.from("platform_settings").select("key, label, value").order("label"),
+    supabase.from("registration_type_settings").select("account_type, enabled"),
+  ]);
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-8 p-6">
       <div>
         <h1 className="text-xl font-bold text-ink-100">Settings</h1>
         <p className="text-sm text-ink-400">
@@ -19,7 +20,11 @@ export default async function AdminSettingsPage() {
           here.
         </p>
       </div>
-      <SettingsTable settings={settings ?? []} />
+      <RegistrationTypeSettingsPanel settings={registrationTypes ?? []} />
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-ink-200">Integrations</h2>
+        <SettingsTable settings={settings ?? []} />
+      </div>
     </div>
   );
 }

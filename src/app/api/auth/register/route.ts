@@ -21,6 +21,15 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
 
+  const { data: typeSetting } = await admin
+    .from("registration_type_settings")
+    .select("enabled")
+    .eq("account_type", role)
+    .maybeSingle();
+  if (typeSetting && !typeSetting.enabled) {
+    return NextResponse.json({ error: "This account type isn't accepting new registrations right now." }, { status: 403 });
+  }
+
   const userMetadata: Record<string, unknown> = { full_name: fullName, role };
 
   if (role === "salesperson") {
