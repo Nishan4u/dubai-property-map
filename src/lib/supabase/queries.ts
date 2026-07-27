@@ -931,6 +931,37 @@ export async function getAllStaffAdmin() {
   return data ?? [];
 }
 
+// Self-service equivalent of getStaffByIdAdmin, scoped to the signed-in
+// staff member's own id via RLS (staff:self reads own on every staff_*
+// table) rather than an admin-only query.
+export async function getStaffSelfData() {
+  const profile = await requireStaffProfile();
+  const supabase = await createClient();
+
+  const [{ data: staff }, { data: referrals }, { data: commissions }, { data: targets }] = await Promise.all([
+    supabase.from("staff").select("*").eq("id", profile.staff_id).single(),
+    supabase
+      .from("staff_referrals")
+      .select("*, developers(name), brokers(full_name), salespersons(full_name)")
+      .eq("staff_id", profile.staff_id)
+      .order("created_at", { ascending: false }),
+    supabase.from("staff_commissions").select("*").eq("staff_id", profile.staff_id).order("created_at", { ascending: false }),
+    supabase
+      .from("staff_monthly_targets")
+      .select("*")
+      .eq("staff_id", profile.staff_id)
+      .order("year", { ascending: false })
+      .order("month", { ascending: false }),
+  ]);
+
+  return {
+    staff,
+    referrals: referrals ?? [],
+    commissions: commissions ?? [],
+    targets: targets ?? [],
+  };
+}
+
 export async function getStaffByIdAdmin(id: string) {
   const supabase = await createClient();
   const { data: staff, error } = await supabase.from("staff").select("*").eq("id", id).maybeSingle();

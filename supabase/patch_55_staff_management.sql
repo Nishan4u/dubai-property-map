@@ -4,9 +4,9 @@
 -- privately shares the login path (/staff/login, not linked from any
 -- public nav).
 
-alter table profiles drop constraint if exists profiles_role_check;
-alter table profiles add constraint profiles_role_check
-  check (role in ('buyer', 'developer', 'admin', 'broker', 'salesperson', 'staff'));
+-- role is a native Postgres enum (user_role), not a check constraint —
+-- extended the same way patch_29 added 'broker'/'salesperson'.
+alter type user_role add value if not exists 'staff';
 
 alter table profiles add column if not exists staff_id uuid;
 
