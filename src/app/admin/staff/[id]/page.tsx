@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { StaffManagementPanel } from "@/components/admin/StaffManagementPanel";
-import { getStaffByIdAdmin } from "@/lib/supabase/queries";
+import { ReassignReferralButton } from "@/components/admin/ReassignReferralButton";
+import { getAllStaffAdmin, getStaffByIdAdmin } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +18,10 @@ const statusTone: Record<string, "green" | "gold" | "neutral" | "red"> = {
 
 export default async function AdminStaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const result = await getStaffByIdAdmin(id);
+  const [result, allStaff] = await Promise.all([getStaffByIdAdmin(id), getAllStaffAdmin()]);
   if (!result) notFound();
   const { staff, referrals, commissions, targets } = result;
+  const staffOptions = allStaff.map((s) => ({ id: s.id, full_name: s.full_name }));
 
   const totalCommission = commissions.reduce((sum, c) => sum + Number(c.commission_amount), 0);
   const pendingCommission = commissions.filter((c) => c.status === "pending").reduce((sum, c) => sum + Number(c.commission_amount), 0);
@@ -81,6 +83,10 @@ export default async function AdminStaffDetailPage({ params }: { params: Promise
             { header: "Account Type", render: (r) => <span className="capitalize">{r.account_type}</span> },
             { header: "Referral Code Used", render: (r) => <span className="font-mono text-xs">{r.referral_code}</span> },
             { header: "First Subscribed", render: (r) => new Date(r.first_subscribed_at).toLocaleDateString() },
+            {
+              header: "Action",
+              render: (r) => <ReassignReferralButton referralId={r.id} currentStaffId={staff.id} staffOptions={staffOptions} />,
+            },
           ]}
           rows={referrals}
         />

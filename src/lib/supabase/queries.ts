@@ -942,7 +942,9 @@ export async function getStaffSelfData() {
     supabase.from("staff").select("*").eq("id", profile.staff_id).single(),
     supabase
       .from("staff_referrals")
-      .select("*, developers(name), brokers(full_name), salespersons(full_name)")
+      .select(
+        "*, developers(name, subscription_status), brokers(full_name, subscription_status), salespersons(full_name, subscription_status)"
+      )
       .eq("staff_id", profile.staff_id)
       .order("created_at", { ascending: false }),
     supabase.from("staff_commissions").select("*").eq("staff_id", profile.staff_id).order("created_at", { ascending: false }),

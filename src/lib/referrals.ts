@@ -1,6 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyUser } from "@/lib/notify";
 
 type AccountType = "developer" | "broker" | "salesperson";
+
+async function notifyStaff(staffId: string, message: string) {
+  const admin = createAdminClient();
+  const { data: staffProfile } = await admin.from("profiles").select("id").eq("staff_id", staffId).maybeSingle();
+  if (staffProfile) {
+    await notifyUser(staffProfile.id, message, undefined, admin);
+  }
+}
 
 // Idempotent: the first successful paid subscription creates the
 // attribution row; every later renewal for the same account reuses it
@@ -40,6 +49,10 @@ export async function attributeReferral(
     .select("id, staff_id")
     .maybeSingle();
 
+  if (created) {
+    await notifyStaff(created.staff_id, `New referral! A ${accountType} account just subscribed using your referral code.`);
+  }
+
   return created?.staff_id ?? null;
 }
 
@@ -72,7 +85,7 @@ export async function recordCommission(input: {
 
   const paidAt = input.paidAt ?? new Date();
 
-  await admin
+  const { data: inserted } = await admin
     .from("staff_commissions")
     .upsert(
       {
@@ -87,5 +100,11 @@ export async function recordCommission(input: {
         period_month: paidAt.getUTCMonth() + 1,
       },
       { onConflict: "payment_id", ignoreDuplicates: true }
-    );
+    )
+    .select("id")
+    .maybeSingle();
+
+  if (inserted) {
+    await notifyStaff(referral.staff_id, `You earned AED ${commissionAmount.toLocaleString()} commission from a referred ${input.accountType}.`);
+  }
 }
