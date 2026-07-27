@@ -99,6 +99,89 @@ export async function getViewerProjectScope(): Promise<string | null> {
   return null;
 }
 
+export type MapAccessStatus = "ok" | "guest" | "no_subscription" | "subscription_expired";
+export interface MapAccessResult {
+  status: MapAccessStatus;
+  subscriptionHref: string;
+}
+
+// Mirrors is_verified_active_user() (patch_40) for the "logged in, verified,
+// active account" gate, then layers on the broker/salesperson-only
+// subscription + map_access_included check from the plan itself. Used
+// server-side (page.tsx) so the real project/map data is simply never
+// fetched or sent to an unauthorized viewer — the blur overlay is a UI
+// affordance on top of that, not the actual protection.
+export async function getMapAccessStatus(): Promise<MapAccessResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || !user.email_confirmed_at) {
+    return { status: "guest", subscriptionHref: "/register" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, broker_id, salesperson_id, suspended")
+    .eq("id", user.id)
+    .single();
+  if (!profile || profile.suspended) {
+    return { status: "guest", subscriptionHref: "/register" };
+  }
+
+  if (profile.role === "buyer" || profile.role === "admin" || profile.role === "developer") {
+    return { status: "ok", subscriptionHref: "" };
+  }
+
+  if (profile.role === "broker" && profile.broker_id) {
+    const { data: broker } = await supabase
+      .from("brokers")
+      .select("subscription_status, plan_key")
+      .eq("id", profile.broker_id)
+      .single();
+    return {
+      status: await resolveSubscriptionMapAccess(broker?.subscription_status, broker?.plan_key, "broker"),
+      subscriptionHref: "/broker/subscription",
+    };
+  }
+
+  if (profile.role === "salesperson" && profile.salesperson_id) {
+    const { data: salesperson } = await supabase
+      .from("salespersons")
+      .select("subscription_status, plan_key")
+      .eq("id", profile.salesperson_id)
+      .single();
+    return {
+      status: await resolveSubscriptionMapAccess(salesperson?.subscription_status, salesperson?.plan_key, "salesperson"),
+      subscriptionHref: "/salesperson/subscription",
+    };
+  }
+
+  return { status: "guest", subscriptionHref: "/register" };
+}
+
+async function resolveSubscriptionMapAccess(
+  subscriptionStatus: string | null | undefined,
+  planKey: string | null | undefined,
+  planType: "broker" | "salesperson"
+): Promise<MapAccessStatus> {
+  if (subscriptionStatus === "expired") return "subscription_expired";
+  if (subscriptionStatus !== "active") return "no_subscription";
+
+  if (planKey) {
+    const supabase = await createClient();
+    const { data: plan } = await supabase
+      .from("subscription_plans")
+      .select("map_access_included")
+      .eq("key", planKey)
+      .eq("plan_type", planType)
+      .maybeSingle();
+    if (plan && plan.map_access_included === false) return "no_subscription";
+  }
+
+  return "ok";
+}
+
 export async function getProjectBySlug(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -26,6 +26,7 @@ export function SiteHeader({
   navLinks = defaultSecondaryLinks,
   searchResults,
   onSelectResult,
+  searchDisabled = false,
 }: {
   activeTab: ListingType;
   onTabChange: (v: ListingType) => void;
@@ -36,8 +37,12 @@ export function SiteHeader({
   navLinks?: { label: string; url: string }[];
   searchResults?: Project[];
   onSelectResult?: (project: Project) => void;
+  /** Set when the viewer doesn't have Map access — the search box is shown
+   * (so the layout doesn't jump) but visually locked and inert, since
+   * search is one of the "protected" interactive Map features. */
+  searchDisabled?: boolean;
 }) {
-  const showResults = !!searchQuery?.trim() && !!searchResults;
+  const showResults = !searchDisabled && !!searchQuery?.trim() && !!searchResults;
 
   return (
     <div className="border-b border-navy-700 bg-navy-900">
@@ -54,15 +59,21 @@ export function SiteHeader({
       </Link>
 
       <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
-        <div className="flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2">
+        <div
+          className={clsx(
+            "flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2",
+            searchDisabled && "pointer-events-none select-none opacity-40 blur-[1px]"
+          )}
+        >
           <Search className="h-4 w-4 shrink-0 text-ink-500" />
           <input
-            value={searchQuery ?? ""}
+            value={searchDisabled ? "" : (searchQuery ?? "")}
             onChange={(e) => onSearchChange?.(e.target.value)}
+            disabled={searchDisabled}
             className="w-full bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
             placeholder="Search projects, communities or developers..."
           />
-          {searchQuery && (
+          {!searchDisabled && searchQuery && (
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}

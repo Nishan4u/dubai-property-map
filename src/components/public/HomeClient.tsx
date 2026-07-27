@@ -17,8 +17,10 @@ import { MapFilterChips } from "@/components/public/MapFilterChips";
 import { MapAmenityBar } from "@/components/public/MapAmenityBar";
 import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
 import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSlider";
+import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
 import { getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
 import { createClient } from "@/lib/supabase/client";
+import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
 
 interface HomepageBanner {
@@ -36,6 +38,8 @@ export function HomeClient({
   sponsoredPinIds,
   navLinks,
   viewerDeveloperId = null,
+  mapAccessStatus = "ok",
+  subscriptionHref = "",
 }: {
   communities: Community[];
   developers: Developer[];
@@ -49,6 +53,12 @@ export function HomeClient({
    * just tells the UI to lock/hide the Developer filter and other-developer
    * directory bits instead of offering choices that would be a no-op. */
   viewerDeveloperId?: string | null;
+  /** Server-determined Map access — "ok" for everyone except a guest, an
+   * unverified/inactive account, or a broker/salesperson without an
+   * eligible active subscription. `projects` is already empty whenever
+   * this isn't "ok" (the real dataset was never fetched server-side). */
+  mapAccessStatus?: MapAccessStatus;
+  subscriptionHref?: string;
 }) {
   const validTags: (ProjectTag | "all")[] = [
     "new-launch",
@@ -296,6 +306,7 @@ export function HomeClient({
         navLinks={navLinks}
         searchResults={isFullscreen ? filteredProjects : undefined}
         onSelectResult={handleSelectSearchResult}
+        searchDisabled={mapAccessStatus !== "ok"}
       />
       {banner && bannerOpen && (
         <div className="flex items-center justify-between gap-3 bg-gold-500/15 px-6 py-2 text-xs">
@@ -318,7 +329,13 @@ export function HomeClient({
       {!isFullscreen && !viewerDeveloperId && (
         <PartnerDevelopersSlider developers={developers} />
       )}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
+        <div
+          className={clsx(
+            "flex min-h-0 flex-1",
+            mapAccessStatus !== "ok" && "pointer-events-none select-none blur-sm"
+          )}
+        >
         {!isFullscreen && (
           <div className="hidden lg:block">
             <FilterSidebar
@@ -380,6 +397,10 @@ export function HomeClient({
             <MapAmenityBar active={activeLayers} onToggle={toggleLayer} />
           </div>
         </div>
+        </div>
+        {mapAccessStatus !== "ok" && (
+          <MapAccessOverlay status={mapAccessStatus} subscriptionHref={subscriptionHref} />
+        )}
       </div>
 
       {!isFullscreen && !selectedCommunityId && (

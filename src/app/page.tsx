@@ -5,6 +5,7 @@ import {
   getActiveSponsoredPinProjectIds,
   getCommunities,
   getDevelopers,
+  getMapAccessStatus,
   getNavLinks,
   getPublishedProjects,
   getViewerProjectScope,
@@ -23,6 +24,7 @@ export default async function Home() {
   // developer's projects on this page — areas/communities stay unrestricted.
   // Resolved up front since getPublishedProjects needs it for its query.
   const viewerDeveloperId = await getViewerProjectScope();
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
 
   const [
     communityRows,
@@ -35,7 +37,11 @@ export default async function Home() {
   ] = await Promise.all([
     getCommunities(),
     getDevelopers(),
-    getPublishedProjects(viewerDeveloperId ?? undefined),
+    // The real project/pin dataset is the thing being protected — an
+    // unauthorized viewer's page payload never contains it at all, so
+    // there's nothing for devtools (or "view source") to recover once the
+    // blur overlay is removed client-side.
+    mapAccessStatus === "ok" ? getPublishedProjects(viewerDeveloperId ?? undefined) : Promise.resolve([]),
     getActiveHomepageBanner(),
     getActiveSidebarBanner(),
     getActiveSponsoredPinProjectIds(),
@@ -51,6 +57,8 @@ export default async function Home() {
       communities={communities}
       developers={developers}
       projects={projects}
+      mapAccessStatus={mapAccessStatus}
+      subscriptionHref={subscriptionHref}
       banner={
         banner
           ? { title: banner.title, targetUrl: banner.target_url, developerName: banner.developers?.name }
