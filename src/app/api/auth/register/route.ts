@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAndSendVerificationToken } from "@/lib/emailVerification";
 
-type Role = "buyer" | "developer" | "broker" | "salesperson";
+type Role = "buyer" | "developer" | "broker" | "broker_agency" | "salesperson";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -14,6 +14,9 @@ export async function POST(request: NextRequest) {
   const jobTitle = body.jobTitle as string | undefined;
   const mobile = body.mobile as string | undefined;
   const whatsapp = body.whatsapp as string | undefined;
+  const agencyPhone = body.agencyPhone as string | undefined;
+  const contactPerson = body.contactPerson as string | undefined;
+  const officeDetails = body.officeDetails as string | undefined;
 
   if (!fullName || !email || password.length < 6) {
     return NextResponse.json({ error: "Full name, email and a password (6+ characters) are required." }, { status: 400 });
@@ -60,6 +63,16 @@ export async function POST(request: NextRequest) {
     userMetadata.whatsapp = whatsapp ?? "";
   }
 
+  if (role === "broker_agency") {
+    if (!agencyPhone || !contactPerson || !officeDetails) {
+      return NextResponse.json({ error: "Phone, contact person and office details are required." }, { status: 400 });
+    }
+    userMetadata.agency_name = fullName;
+    userMetadata.agency_phone = agencyPhone;
+    userMetadata.contact_person = contactPerson;
+    userMetadata.office_details = officeDetails;
+  }
+
   const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password,
@@ -72,7 +85,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message.includes("already been registered") ? "An account with this email already exists." : message }, { status: 400 });
   }
 
-  const next = role === "developer" ? "/dashboard" : role === "broker" ? "/broker" : role === "salesperson" ? "/salesperson" : "/";
+  const next =
+    role === "developer"
+      ? "/dashboard"
+      : role === "broker"
+        ? "/broker"
+        : role === "broker_agency"
+          ? "/broker-agency"
+          : role === "salesperson"
+            ? "/salesperson"
+            : "/";
   // The account exists either way at this point -- a failed send (logged in
   // email_logs) is recoverable via the "Resend confirmation email" button,
   // so it isn't treated as a request failure here.

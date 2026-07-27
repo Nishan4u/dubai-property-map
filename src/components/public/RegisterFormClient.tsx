@@ -13,9 +13,9 @@ interface DeveloperOption {
 }
 
 export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: string[] }) {
-  const allTypes = ["buyer", "developer", "broker", "salesperson"] as const;
+  const allTypes = ["buyer", "developer", "broker", "broker_agency", "salesperson"] as const;
   const enabledTypes = allTypes.filter((t) => !disabledTypes.includes(t));
-  const [role, setRole] = useState<"buyer" | "developer" | "broker" | "salesperson">(
+  const [role, setRole] = useState<"buyer" | "developer" | "broker" | "broker_agency" | "salesperson">(
     enabledTypes[0] ?? "buyer"
   );
   const [fullName, setFullName] = useState("");
@@ -33,6 +33,10 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
   const [whatsapp, setWhatsapp] = useState("");
   const [developers, setDevelopers] = useState<DeveloperOption[]>([]);
   const [developerId, setDeveloperId] = useState("");
+
+  const [agencyPhone, setAgencyPhone] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [officeDetails, setOfficeDetails] = useState("");
 
   useEffect(() => {
     if (role !== "salesperson" || developers.length > 0) return;
@@ -93,6 +97,7 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
         password,
         role,
         ...(role === "salesperson" ? { developerId, jobTitle, mobile, whatsapp } : {}),
+        ...(role === "broker_agency" ? { agencyPhone, contactPerson, officeDetails } : {}),
       }),
     });
     const data = await res.json();
@@ -187,23 +192,69 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
                       : "border border-navy-600 text-ink-300"
                   )}
                 >
-                  {r === "buyer" ? "Buyer / Investor" : r === "developer" ? "Developer" : r === "broker" ? "Broker" : "Salesperson"}
+                  {r === "buyer"
+                    ? "Buyer / Investor"
+                    : r === "developer"
+                      ? "Developer"
+                      : r === "broker"
+                        ? "Broker"
+                        : r === "broker_agency"
+                          ? "Broker Agency"
+                          : "Salesperson"}
                 </button>
               ))}
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-400">
-                Full Name
+                {role === "broker_agency" ? "Agency Name" : "Full Name"}
               </label>
               <input
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
+                placeholder={role === "broker_agency" ? "e.g. ABC Real Estate" : "Your name"}
                 className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
               />
             </div>
+
+            {role === "broker_agency" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-400">Contact Person</label>
+                  <input
+                    required
+                    value={contactPerson}
+                    onChange={(e) => setContactPerson(e.target.value)}
+                    placeholder="Name of the person we should contact"
+                    className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-400">Phone</label>
+                  <input
+                    required
+                    value={agencyPhone}
+                    onChange={(e) => setAgencyPhone(e.target.value)}
+                    placeholder="+971…"
+                    className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-400">Office Details</label>
+                  <input
+                    required
+                    value={officeDetails}
+                    onChange={(e) => setOfficeDetails(e.target.value)}
+                    placeholder="Office address"
+                    className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-ink-500">
+                  You&apos;ll upload your agency license after your email is verified and you log in.
+                </p>
+              </>
+            )}
 
             {role === "salesperson" && (
               <>
@@ -258,7 +309,7 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
 
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-400">
-                {role === "salesperson" ? "Official Developer Email" : "Email"}
+                {role === "salesperson" ? "Official Developer Email" : role === "broker_agency" ? "Company Email" : "Email"}
               </label>
               <input
                 required
