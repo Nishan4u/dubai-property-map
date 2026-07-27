@@ -50,7 +50,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
 
   try {
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from,
       to: input.to,
       subject: input.subject,
@@ -63,7 +63,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
     if (logId) {
       await supabase
         .from("email_logs")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .update({ status: "sent", sent_at: new Date().toISOString(), resend_message_id: data?.id ?? null })
         .eq("id", logId);
     }
     return { ok: true };

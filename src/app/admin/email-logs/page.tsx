@@ -5,10 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const statusTone: Record<string, "gold" | "green" | "red"> = {
+const statusTone: Record<string, "gold" | "green" | "red" | "neutral"> = {
   pending: "gold",
   sent: "green",
+  delivered: "green",
   failed: "red",
+  bounced: "red",
+  complained: "red",
 };
 
 export default async function AdminEmailLogsPage({
@@ -51,7 +54,10 @@ export default async function AdminEmailLogsPage({
           >
             <option value="">All</option>
             <option value="sent">Sent</option>
+            <option value="delivered">Delivered</option>
             <option value="failed">Failed</option>
+            <option value="bounced">Bounced</option>
+            <option value="complained">Complained</option>
             <option value="pending">Pending</option>
           </select>
         </div>

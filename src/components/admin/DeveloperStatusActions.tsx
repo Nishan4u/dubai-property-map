@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logAudit } from "@/lib/auditLog";
 import { notifyDeveloperTeam } from "@/lib/notify";
 import type { DeveloperStatus } from "@/types/database";
 
@@ -23,14 +21,13 @@ export function DeveloperStatusActions({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function updateStatus(next: DeveloperStatus, verified?: boolean) {
+  async function updateStatus(next: "active" | "suspended", verified?: boolean) {
     setLoading(true);
-    const supabase = createClient();
-    await supabase
-      .from("developers")
-      .update({ status: next, ...(verified !== undefined ? { verified } : {}) })
-      .eq("id", developerId);
-    await logAudit(`developer.${next}`, "developer", developerId);
+    await fetch(`/api/admin/developers/${developerId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: next, verified }),
+    });
     await notifyDeveloperTeam(developerId, statusMessage[next]);
     router.refresh();
     setLoading(false);
