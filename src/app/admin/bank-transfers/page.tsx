@@ -23,6 +23,7 @@ type Row = SubscriptionBankTransferRow & {
   developers: { name: string } | null;
   brokers: { full_name: string } | null;
   salespersons: { full_name: string } | null;
+  brokerages: { name: string } | null;
   receiptSignedUrl: string | null;
 };
 
@@ -48,9 +49,9 @@ export default async function AdminBankTransfersPage() {
           <Landmark className="h-5 w-5 text-gold-400" /> Bank Transfer Payments
         </h1>
         <p className="text-sm text-ink-400">
-          Review manual bank transfer receipts for developer and broker
-          subscriptions. Approving activates the subscription — rejecting
-          leaves it inactive.
+          Review manual bank transfer receipts for developer, broker,
+          salesperson, and broker agency subscriptions. Approving activates
+          the subscription — rejecting leaves it inactive.
           {pendingCount > 0 && (
             <> <span className="text-gold-400">{pendingCount} awaiting review.</span></>
           )}
@@ -64,7 +65,7 @@ export default async function AdminBankTransfersPage() {
             render: (r) => (
               <div>
                 <p className="font-medium text-ink-100">
-                  {r.developers?.name ?? r.brokers?.full_name ?? r.salespersons?.full_name ?? "—"}
+                  {r.developers?.name ?? r.brokers?.full_name ?? r.salespersons?.full_name ?? r.brokerages?.name ?? "—"}
                 </p>
                 <p className="text-xs text-ink-500 capitalize">{r.account_type}</p>
               </div>
