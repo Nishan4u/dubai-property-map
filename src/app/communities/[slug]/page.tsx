@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
+import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { CommunityFavoriteButton } from "@/components/public/CommunityFavoriteButton";
 import { formatAed } from "@/data/mock";
 import { poiLayers } from "@/data/poi";
@@ -18,6 +19,7 @@ import Link from "next/link";
 import {
   getActiveCommunityBanner,
   getCommunityBySlug,
+  getMapAccessStatus,
   getProjectsForCommunity,
 } from "@/lib/supabase/queries";
 import { mapProject } from "@/lib/supabase/mappers";
@@ -64,7 +66,8 @@ export default async function CommunityPage({
   if (!community) notFound();
 
   const communityBanner = await getActiveCommunityBanner(community.id);
-  const projectRows = await getProjectsForCommunity(community.id);
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
+  const projectRows = mapAccessStatus === "ok" ? await getProjectsForCommunity(community.id) : [];
   const communityProjects = projectRows.map((p) => mapProject(p));
   const prices = communityProjects.map((p) => p.priceFromAed).filter((p) => p > 0);
   const avgPrice = prices.length
@@ -199,6 +202,7 @@ export default async function CommunityPage({
           </div>
         )}
 
+        <ProjectAccessGate status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="this community's project listings">
         <div className="mt-6 rounded-xl border border-navy-700 bg-navy-850 p-4">
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-100">
             <TrendingUp className="h-4 w-4 text-gold-400" /> Price Overview
@@ -267,6 +271,7 @@ export default async function CommunityPage({
             </p>
           )}
         </div>
+        </ProjectAccessGate>
       </div>
     </PublicShell>
   );

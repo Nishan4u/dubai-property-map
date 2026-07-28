@@ -1,13 +1,15 @@
 import { PublicShell } from "@/components/public/PublicShell";
 import { CommunitiesPageClient } from "@/components/public/CommunitiesPageClient";
-import { getCommunities, getPublishedProjects } from "@/lib/supabase/queries";
+import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
+import { getCommunities, getMapAccessStatus, getPublishedProjects } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function CommunitiesPage() {
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const [communities, projects] = await Promise.all([
     getCommunities(),
-    getPublishedProjects(),
+    mapAccessStatus === "ok" ? getPublishedProjects() : Promise.resolve([]),
   ]);
 
   const stats = new Map<string, { count: number; totalPrice: number }>();
@@ -39,7 +41,9 @@ export default async function CommunitiesPage() {
           Explore {communities.length} master communities across Dubai.
         </p>
 
-        <CommunitiesPageClient communities={communitiesWithStats} />
+        <ProjectAccessGate status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="community project listings">
+          <CommunitiesPageClient communities={communitiesWithStats} />
+        </ProjectAccessGate>
       </div>
     </PublicShell>
   );

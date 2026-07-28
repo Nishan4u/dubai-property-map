@@ -4,15 +4,17 @@ import type { MapAccessStatus } from "@/lib/supabase/queries";
 export function MapAccessOverlay({
   status,
   subscriptionHref,
+  contentLabel = "the interactive Dubai Property Map",
 }: {
   status: Exclude<MapAccessStatus, "ok">;
   subscriptionHref: string;
+  contentLabel?: string;
 }) {
   const content =
     status === "guest"
       ? {
           title: "Unlock Dubai Property Map",
-          body: "Register or log in to access the interactive Dubai Property Map.",
+          body: `Register or log in to access ${contentLabel}.`,
           cta: [
             { label: "Login", href: "/login" },
             { label: "Register", href: "/register" },
@@ -21,12 +23,12 @@ export function MapAccessOverlay({
       : status === "no_subscription"
         ? {
             title: "Subscription Required",
-            body: "You need an active subscription to access the Dubai Property Map.",
+            body: `You need an active subscription to access ${contentLabel}.`,
             cta: [{ label: "View Subscription Plans", href: subscriptionHref }],
           }
         : {
             title: "Subscription Expired",
-            body: "Renew your subscription to continue accessing the Dubai Property Map.",
+            body: `Renew your subscription to continue accessing ${contentLabel}.`,
             cta: [{ label: "Renew Subscription", href: subscriptionHref }],
           };
 

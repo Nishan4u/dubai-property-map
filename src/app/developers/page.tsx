@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { DevelopersPageClient } from "@/components/public/DevelopersPageClient";
-import { getDevelopers, getPublishedProjects, getViewerProjectScope } from "@/lib/supabase/queries";
+import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
+import { getDevelopers, getMapAccessStatus, getPublishedProjects, getViewerProjectScope } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function DevelopersPage() {
     redirect("/");
   }
 
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const [developers, projects] = await Promise.all([
     getDevelopers(),
-    getPublishedProjects(),
+    mapAccessStatus === "ok" ? getPublishedProjects() : Promise.resolve([]),
   ]);
 
   const projectCounts = new Map<string, number>();
@@ -45,7 +47,9 @@ export default async function DevelopersPage() {
           {developers.length} verified developers building across Dubai.
         </p>
 
-        <DevelopersPageClient developers={developersWithCount} />
+        <ProjectAccessGate status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="developer project listings">
+          <DevelopersPageClient developers={developersWithCount} />
+        </ProjectAccessGate>
       </div>
     </PublicShell>
   );

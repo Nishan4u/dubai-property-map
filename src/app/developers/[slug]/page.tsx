@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Award, BadgeCheck } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
+import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { DeveloperReviews } from "@/components/public/DeveloperReviews";
 import { DeveloperContactForm } from "@/components/public/DeveloperContactForm";
 import { ShareButton } from "@/components/public/ShareButton";
@@ -11,6 +12,7 @@ import {
   getDeveloperAwards,
   getDeveloperBySlug,
   getDeveloperReviews,
+  getMapAccessStatus,
   getProjectsForDeveloper,
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
@@ -53,8 +55,9 @@ export default async function DeveloperProfilePage({
   const developer = await getDeveloperBySlug(slug);
   if (!developer) notFound();
 
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const [devProjectRows, awards, reviews, developerBanner] = await Promise.all([
-    getProjectsForDeveloper(developer.id),
+    mapAccessStatus === "ok" ? getProjectsForDeveloper(developer.id) : Promise.resolve([]),
     getDeveloperAwards(developer.id),
     getDeveloperReviews(developer.id),
     getActiveDeveloperBanner(developer.id),
@@ -127,16 +130,18 @@ export default async function DeveloperProfilePage({
               <h2 className="mb-3 text-lg font-semibold text-ink-100">
                 Projects by {developer.name}
               </h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {devProjects.map((p) => (
-                  <ProjectCard key={p.id} project={p} />
-                ))}
-                {devProjects.length === 0 && (
-                  <p className="text-sm text-ink-500">
-                    No active projects listed.
-                  </p>
-                )}
-              </div>
+              <ProjectAccessGate status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel={`${developer.name}'s project listings`}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {devProjects.map((p) => (
+                    <ProjectCard key={p.id} project={p} />
+                  ))}
+                  {devProjects.length === 0 && (
+                    <p className="text-sm text-ink-500">
+                      No active projects listed.
+                    </p>
+                  )}
+                </div>
+              </ProjectAccessGate>
             </section>
 
             <section>

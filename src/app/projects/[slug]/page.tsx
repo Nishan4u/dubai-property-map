@@ -14,6 +14,7 @@ import { formatAed } from "@/data/mock";
 import {
   getActiveProjectBanner,
   getConstructionMilestones,
+  getMapAccessStatus,
   getProjectBySlug,
   getProjectDocumentsByCategory,
   getProjectMediaFiles,
@@ -62,7 +63,12 @@ export default async function ProjectDetailsPage({
   const developer = row.developers;
   const community = row.communities;
   await incrementProjectViews(project.id);
-  const similarRows = await getProjectsForCommunity(row.community_id);
+  // The project's own details stay public (shared/SEO links must keep
+  // working), but "Similar Projects" is a browse/discovery feature like
+  // the community/developer listings, so it gets the same protection
+  // (spec section 20).
+  const { status: mapAccessStatus } = await getMapAccessStatus();
+  const similarRows = mapAccessStatus === "ok" ? await getProjectsForCommunity(row.community_id) : [];
   const similar = similarRows
     .filter((p) => p.id !== project.id)
     .slice(0, 3)

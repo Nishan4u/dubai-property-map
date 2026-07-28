@@ -7,6 +7,7 @@ import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSl
 import {
   getCommunities,
   getDevelopers,
+  getMapAccessStatus,
   getNavLinks,
   getPublishedProjects,
   getViewerProjectScope,
@@ -17,11 +18,15 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   // Keeps the header search consistent with the main map: a logged-in
   // Developer/Salesperson only finds their own developer's projects here too.
   const viewerDeveloperId = await getViewerProjectScope();
+  const { status: mapAccessStatus } = await getMapAccessStatus();
 
   const [headerLinks, footerLinks, projects, communities, developers] = await Promise.all([
     getNavLinks("header"),
     getNavLinks("footer"),
-    getPublishedProjects(viewerDeveloperId ?? undefined),
+    // Same protection as the map itself (spec section 20): a guest or
+    // unsubscribed broker/salesperson/agency never gets real project names
+    // in the search payload, not even to leak via the search dropdown.
+    mapAccessStatus === "ok" ? getPublishedProjects(viewerDeveloperId ?? undefined) : Promise.resolve([]),
     getCommunities(),
     getDevelopers(),
   ]);
