@@ -19,7 +19,7 @@ export function SalespersonActions({ salespersonId, fullName }: { salespersonId:
     }
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.from("salespersons").update({ developer_id: null }).eq("id", salespersonId);
+    const { error } = await supabase.rpc("disconnect_salesperson_from_developer", { p_salesperson_id: salespersonId });
     if (error) {
       alert(error.message);
       setLoading(false);
