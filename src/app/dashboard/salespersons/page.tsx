@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
-import { CreateSalespersonForm } from "@/components/dashboard/CreateSalespersonForm";
 import { SalespersonActions } from "@/components/dashboard/SalespersonActions";
 import { SalespersonInvitationActions } from "@/components/dashboard/SalespersonInvitationActions";
 import { getSalespersonsForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
@@ -30,8 +29,6 @@ export default async function DeveloperSalespersonsPage() {
           Brokers select from this roster when submitting a property request.
         </p>
       </div>
-
-      <CreateSalespersonForm />
 
       <DataTable
         columns={[
@@ -77,7 +74,7 @@ export default async function DeveloperSalespersonsPage() {
               s.status === "pending_invitation" ? (
                 <SalespersonInvitationActions invitationId={s.invitation_id} />
               ) : (
-                <SalespersonActions salespersonId={s.id} status={s.status as "active" | "inactive"} />
+                <SalespersonActions salespersonId={s.id} fullName={s.full_name} />
               ),
           },
         ]}
