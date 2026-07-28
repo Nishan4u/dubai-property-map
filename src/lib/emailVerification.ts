@@ -5,7 +5,13 @@ import { sendEmail } from "@/lib/email";
 // which is broken at the platform level (see patch_58 for the full
 // diagnosis) -- this issues our own token and sends it via the app's
 // already-working Resend HTTP API integration instead.
-export async function createAndSendVerificationToken(userId: string, email: string, fullName: string, next: string) {
+export async function createAndSendVerificationToken(
+  userId: string,
+  email: string,
+  fullName: string,
+  next: string,
+  origin?: string
+) {
   const admin = createAdminClient();
 
   const { data: existing } = await admin
@@ -31,8 +37,13 @@ export async function createAndSendVerificationToken(userId: string, email: stri
 
   if (error || !tokenRow) return { ok: false };
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://dubaipropertymap.ae";
-  const confirmUrl = `${origin}/api/auth/verify-email?token=${tokenRow.token}&next=${encodeURIComponent(next)}`;
+  // Prefer the actual incoming request's origin over NEXT_PUBLIC_SITE_URL --
+  // that env var is inlined at build time and silently wrong (e.g. still
+  // "localhost") if it was ever misconfigured on the server that built the
+  // production bundle. The request origin is always correct because it's
+  // literally the domain the visitor is on.
+  const resolvedOrigin = origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dubaipropertymap.ae";
+  const confirmUrl = `${resolvedOrigin}/api/auth/verify-email?token=${tokenRow.token}&next=${encodeURIComponent(next)}`;
 
   return sendEmail({
     category: "signup_verification",

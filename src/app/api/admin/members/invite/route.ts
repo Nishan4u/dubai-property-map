@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     payload: { fullName: fullName.trim() },
     invitedBy: user.id,
     inviterEmail: user.email,
+    origin: request.headers.get("origin") ?? request.nextUrl.origin,
   });
 
   if (error || !invitation) {

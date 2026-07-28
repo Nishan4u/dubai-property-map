@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
   // The account exists either way at this point -- a failed send (logged in
   // email_logs) is recoverable via the "Resend confirmation email" button,
   // so it isn't treated as a request failure here.
-  await createAndSendVerificationToken(created.user.id, email, fullName, next);
+  const origin = request.headers.get("origin") ?? request.nextUrl.origin;
+  await createAndSendVerificationToken(created.user.id, email, fullName, next, origin);
 
   return NextResponse.json({ ok: true });
 }

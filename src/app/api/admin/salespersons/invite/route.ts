@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     invitedBy: user.id,
     developerName: developer.name,
     inviterEmail: user.email,
+    origin: request.headers.get("origin") ?? request.nextUrl.origin,
   });
 
   if (inviteError || !invitation) {

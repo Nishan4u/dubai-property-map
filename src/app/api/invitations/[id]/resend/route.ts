@@ -40,7 +40,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq("id", id);
 
   const developer = Array.isArray(invitation.developers) ? invitation.developers[0] : invitation.developers;
-  const result = await sendInvitationEmailById(id, developer?.name, user.email);
+  const origin = request.headers.get("origin") ?? request.nextUrl.origin;
+  const result = await sendInvitationEmailById(id, developer?.name, user.email, origin);
 
   return NextResponse.json({ ok: result.ok });
 }

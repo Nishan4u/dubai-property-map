@@ -12,6 +12,7 @@ interface CreateInvitationInput {
   invitedBy: string;
   developerName?: string | null;
   inviterEmail?: string | null;
+  origin?: string;
 }
 
 function buildInvitationEmail(
@@ -64,21 +65,24 @@ export async function createInvitation(input: CreateInvitationInput) {
     return { invitation: null, error: error?.message ?? "Could not create invitation." };
   }
 
-  const result = await sendInvitationEmailById(invitation.id, input.developerName, input.inviterEmail);
+  const result = await sendInvitationEmailById(invitation.id, input.developerName, input.inviterEmail, input.origin);
   return { invitation: { ...invitation, status: result.ok ? "sent" : "failed" }, error: null };
 }
 
 export async function sendInvitationEmailById(
   invitationId: string,
   developerName?: string | null,
-  inviterEmail?: string | null
+  inviterEmail?: string | null,
+  origin?: string
 ) {
   const admin = createAdminClient();
   const { data: invitation } = await admin.from("invitations").select("*").eq("id", invitationId).single();
   if (!invitation) return { ok: false };
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://dubaipropertymap.ae";
-  const acceptUrl = `${origin}/invite/accept?token=${invitation.token}`;
+  // Same reasoning as createAndSendVerificationToken: prefer the actual
+  // request origin over the build-time-inlined env var.
+  const resolvedOrigin = origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dubaipropertymap.ae";
+  const acceptUrl = `${resolvedOrigin}/invite/accept?token=${invitation.token}`;
   const { subject, html } = buildInvitationEmail(
     invitation.kind as InvitationKind,
     acceptUrl,

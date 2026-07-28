@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       const meta = user.user_metadata ?? {};
       const role = (meta.role as string) ?? "buyer";
       const next = role === "developer" ? "/dashboard" : role === "broker" ? "/broker" : role === "salesperson" ? "/salesperson" : "/";
-      await createAndSendVerificationToken(user.id, normalized, (meta.full_name as string) ?? "", next);
+      const origin = request.headers.get("origin") ?? request.nextUrl.origin;
+      await createAndSendVerificationToken(user.id, normalized, (meta.full_name as string) ?? "", next, origin);
     }
   }
 
