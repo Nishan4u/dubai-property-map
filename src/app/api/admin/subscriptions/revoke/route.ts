@@ -7,6 +7,7 @@ const TABLE = {
   developer: "developers",
   broker: "brokers",
   salesperson: "salespersons",
+  broker_agency: "brokerages",
 } as const;
 
 export async function POST(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const { data: grant } = await admin
     .from("subscription_grants")
-    .select("id, account_type, developer_id, broker_id, salesperson_id, revoked_at")
+    .select("id, account_type, developer_id, broker_id, salesperson_id, brokerage_id, revoked_at")
     .eq("id", grantId)
     .single();
   if (!grant) {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
   }
 
   const accountType = grant.account_type as keyof typeof TABLE;
-  const accountId = grant.developer_id ?? grant.broker_id ?? grant.salesperson_id;
+  const accountId = grant.developer_id ?? grant.broker_id ?? grant.salesperson_id ?? grant.brokerage_id;
   const table = TABLE[accountType];
   if (!table || !accountId) {
     return NextResponse.json({ error: "Malformed grant record." }, { status: 500 });

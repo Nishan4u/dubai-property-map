@@ -7,6 +7,7 @@ import { ProjectCard } from "@/components/public/ProjectCard";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
+import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyRequestPropertyPanel";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
 import { formatAed } from "@/data/mock";
@@ -409,6 +410,7 @@ export default async function ProjectDetailsPage({
 
           <div className="space-y-6">
             <RequestPropertyPanel projectId={project.id} developerId={project.developerId} />
+            <AgencyRequestPropertyPanel projectId={project.id} developerId={project.developerId} />
 
             <ProjectEnquiryPanel
               projectId={project.id}

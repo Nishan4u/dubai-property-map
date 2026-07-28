@@ -6,6 +6,8 @@ import { GrantSubscriptionForm } from "@/components/admin/GrantSubscriptionForm"
 import { RevokeGrantButton } from "@/components/admin/RevokeGrantButton";
 import {
   getAllBankTransfersAdmin,
+  getAllBrokerAgencyPaymentsAdmin,
+  getAllBrokeragesAdmin,
   getAllBrokerPaymentsAdmin,
   getAllBrokersAdmin,
   getAllDevelopersAdmin,
@@ -52,14 +54,17 @@ type GrantRow = SubscriptionGrantRow & {
   developers: { name: string } | null;
   brokers: { full_name: string } | null;
   salespersons: { full_name: string } | null;
+  brokerages: { name: string } | null;
 };
 
 export default async function AdminSubscriptionsPage() {
-  const [developers, brokers, salespersons, payments, plans, grants, bankTransfers] = await Promise.all([
+  const [developers, brokers, salespersons, brokerAgencies, payments, agencyPayments, plans, grants, bankTransfers] = await Promise.all([
     getAllDevelopersAdmin(),
     getAllBrokersAdmin(),
     getAllSalespersonsAdmin(),
+    getAllBrokeragesAdmin(),
     getAllBrokerPaymentsAdmin(),
+    getAllBrokerAgencyPaymentsAdmin(),
     getAllSubscriptionPlansAdmin(),
     getSubscriptionGrantsAdmin(),
     getAllBankTransfersAdmin(),
@@ -69,13 +74,15 @@ export default async function AdminSubscriptionsPage() {
   const pendingDeveloperIds = new Set(pendingTransfers.map((t) => t.developer_id).filter(Boolean));
   const pendingBrokerIds = new Set(pendingTransfers.map((t) => t.broker_id).filter(Boolean));
   const pendingSalespersonIds = new Set(pendingTransfers.map((t) => t.salesperson_id).filter(Boolean));
+  const pendingBrokerAgencyIds = new Set(pendingTransfers.map((t) => t.brokerage_id).filter(Boolean));
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-xl font-bold text-ink-100">Subscriptions</h1>
         <p className="text-sm text-ink-400">
-          Manage membership status for developers, brokers, and salespersons. Plan pricing lives in Packages & Plans.
+          Manage membership status for developers, brokers, salespersons, and broker agencies. Plan pricing lives
+          in Packages & Plans.
         </p>
       </div>
 
@@ -83,6 +90,7 @@ export default async function AdminSubscriptionsPage() {
         developers={developers.map((d) => ({ id: d.id, label: d.name }))}
         brokers={brokers.map((b) => ({ id: b.id, label: b.full_name }))}
         salespersons={salespersons.map((s) => ({ id: s.id, label: s.full_name }))}
+        brokerAgencies={brokerAgencies.map((a) => ({ id: a.id, label: a.name }))}
         plans={plans.filter((p) => p.status === "active").map((p) => ({ key: p.key, name: p.name, plan_type: p.plan_type }))}
       />
 
@@ -187,6 +195,40 @@ export default async function AdminSubscriptionsPage() {
       </div>
 
       <div>
+        <h2 className="mb-3 text-lg font-semibold text-ink-100">Broker Agencies</h2>
+        <DataTable
+          columns={[
+            { header: "Agency", render: (a) => <span className="font-medium text-ink-100">{a.name}</span> },
+            { header: "Plan", render: (a) => a.plan_key ?? "—" },
+            {
+              header: "Status",
+              render: (a) => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={brokerStatusTone[a.subscription_status as DbBrokerSubscriptionStatus]}>
+                    {a.subscription_status.replace(/_/g, " ")}
+                  </Badge>
+                  {isExpiringSoon(a.subscription_status, a.subscription_expires_at) && (
+                    <Badge tone="gold">Expiring Soon</Badge>
+                  )}
+                  {pendingBrokerAgencyIds.has(a.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
+                  {a.is_complimentary && <Badge tone="blue">complimentary</Badge>}
+                  {a.payment_type && <Badge tone="purple">{paymentTypeLabel[a.payment_type as DbPaymentType]}</Badge>}
+                </div>
+              ),
+            },
+            { header: "Expires", render: (a) => (a.subscription_expires_at ? new Date(a.subscription_expires_at).toLocaleDateString() : "—") },
+            {
+              header: "",
+              render: (a) => (
+                <AccountSubscriptionActions accountType="broker_agency" accountId={a.id} currentStatus={a.subscription_status} />
+              ),
+            },
+          ]}
+          rows={brokerAgencies}
+        />
+      </div>
+
+      <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Free Grant History</h2>
         <DataTable<GrantRow>
           columns={[
@@ -195,7 +237,7 @@ export default async function AdminSubscriptionsPage() {
               render: (g) => (
                 <div>
                   <p className="font-medium text-ink-100">
-                    {g.developers?.name ?? g.brokers?.full_name ?? g.salespersons?.full_name ?? "—"}
+                    {g.developers?.name ?? g.brokers?.full_name ?? g.salespersons?.full_name ?? g.brokerages?.name ?? "—"}
                   </p>
                   <p className="text-xs text-ink-500 capitalize">{g.account_type}</p>
                 </div>
@@ -230,6 +272,19 @@ export default async function AdminSubscriptionsPage() {
             { header: "Date", render: (p) => new Date(p.created_at).toLocaleDateString() },
           ]}
           rows={payments}
+        />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-ink-100">Broker Agency Payments</h2>
+        <DataTable
+          columns={[
+            { header: "Agency", render: (p) => p.brokerages?.name ?? "—" },
+            { header: "Amount", render: (p) => `${p.currency.toUpperCase()} ${Number(p.amount).toLocaleString()}` },
+            { header: "Status", render: (p) => <Badge tone={p.status === "paid" ? "green" : "red"}>{p.status}</Badge> },
+            { header: "Date", render: (p) => new Date(p.created_at).toLocaleDateString() },
+          ]}
+          rows={agencyPayments}
         />
       </div>
     </div>

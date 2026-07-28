@@ -4,24 +4,34 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { sendEmail } from "@/lib/email";
 
-type AccountType = "developer" | "broker" | "salesperson";
+type AccountType = "developer" | "broker" | "salesperson" | "broker_agency";
 
-const TABLE: Record<AccountType, "developers" | "brokers" | "salespersons"> = {
+const TABLE: Record<AccountType, "developers" | "brokers" | "salespersons" | "brokerages"> = {
   developer: "developers",
   broker: "brokers",
   salesperson: "salespersons",
+  broker_agency: "brokerages",
 };
 
 const PLAN_KEY_COLUMN: Record<AccountType, "plan_tier" | "plan_key"> = {
   developer: "plan_tier",
   broker: "plan_key",
   salesperson: "plan_key",
+  broker_agency: "plan_key",
 };
 
 const NAME_COLUMN: Record<AccountType, "name" | "full_name"> = {
   developer: "name",
   broker: "full_name",
   salesperson: "full_name",
+  broker_agency: "name",
+};
+
+const EMAIL_COLUMN: Record<AccountType, "email" | "company_email"> = {
+  developer: "email",
+  broker: "email",
+  salesperson: "email",
+  broker_agency: "company_email",
 };
 
 export async function POST(request: NextRequest) {
@@ -71,12 +81,13 @@ export async function POST(request: NextRequest) {
   const planKeyColumn = PLAN_KEY_COLUMN[accountType];
 
   const nameColumn = NAME_COLUMN[accountType];
-  const { data: account } = await admin.from(table).select(`id, email, ${nameColumn}`).eq("id", accountId).single();
+  const emailColumn = EMAIL_COLUMN[accountType];
+  const { data: account } = await admin.from(table).select(`id, ${emailColumn}, ${nameColumn}`).eq("id", accountId).single();
   if (!account) {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
   }
   const accountName = (account as unknown as Record<string, string>)[nameColumn] ?? "";
-  const accountEmail = (account as unknown as { email: string | null }).email;
+  const accountEmail = (account as unknown as Record<string, string | null>)[emailColumn];
 
   const startDate = new Date();
   const expiryDate = new Date(startDate);
@@ -102,6 +113,7 @@ export async function POST(request: NextRequest) {
     developer_id: accountType === "developer" ? accountId : null,
     broker_id: accountType === "broker" ? accountId : null,
     salesperson_id: accountType === "salesperson" ? accountId : null,
+    brokerage_id: accountType === "broker_agency" ? accountId : null,
     plan_key: planKey,
     granted_by: user.id,
     start_date: startDate.toISOString().slice(0, 10),

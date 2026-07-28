@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const admin = createAdminClient();
   const { data: transfer } = await admin
     .from("subscription_bank_transfers")
-    .select("account_type, developer_id, broker_id, salesperson_id, plan_key, status, referral_code, amount_aed")
+    .select("account_type, developer_id, broker_id, salesperson_id, brokerage_id, plan_key, status, referral_code, amount_aed")
     .eq("id", id)
     .single();
   if (!transfer) {
@@ -67,6 +67,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { data } = await admin.from("salespersons").select("full_name, email").eq("id", transfer.salesperson_id).single();
     accountName = data?.full_name ?? "";
     accountEmail = data?.email ?? null;
+  } else if (transfer.account_type === "broker_agency" && transfer.brokerage_id) {
+    const { data } = await admin.from("brokerages").select("name, company_email").eq("id", transfer.brokerage_id).single();
+    accountName = data?.name ?? "";
+    accountEmail = data?.company_email ?? null;
   }
 
   const reviewFields = {
@@ -149,6 +153,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         paymentSource: "bank_transfer",
         subscriptionAmount: Number(transfer.amount_aed),
       });
+    } else if (transfer.account_type === "broker_agency" && transfer.brokerage_id) {
+      const { error } = await admin
+        .from("brokerages")
+        .update({
+          plan_key: transfer.plan_key,
+          subscription_status: "active",
+          subscription_expires_at: expiresAt,
+          last_reminder_sent_days: null,
+          payment_type: "bank_transfer",
+        })
+        .eq("id", transfer.brokerage_id);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      // Referral/commission attribution is a staff-incentive feature scoped
+      // to developer/broker/salesperson accounts only -- not extended here.
     }
 
     if (accountEmail) {

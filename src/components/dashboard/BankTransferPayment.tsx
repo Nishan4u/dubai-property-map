@@ -33,7 +33,7 @@ export function BankTransferPayment({
   bankDetails,
   initialReferralCode = "",
 }: {
-  accountType: "developer" | "broker" | "salesperson";
+  accountType: "developer" | "broker" | "salesperson" | "broker_agency";
   accountId: string;
   planKey: string;
   planLabel: string;
@@ -91,6 +91,7 @@ export function BankTransferPayment({
         developer_id: accountType === "developer" ? accountId : null,
         broker_id: accountType === "broker" ? accountId : null,
         salesperson_id: accountType === "salesperson" ? accountId : null,
+        brokerage_id: accountType === "broker_agency" ? accountId : null,
         plan_key: planKey,
         amount_aed: Number(amount) || 0,
         receipt_url: path,

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gift } from "lucide-react";
 
-type AccountType = "developer" | "broker" | "salesperson";
+type AccountType = "developer" | "broker" | "salesperson" | "broker_agency";
 
 interface AccountOption {
   id: string;
@@ -21,11 +21,13 @@ export function GrantSubscriptionForm({
   developers,
   brokers,
   salespersons,
+  brokerAgencies,
   plans,
 }: {
   developers: AccountOption[];
   brokers: AccountOption[];
   salespersons: AccountOption[];
+  brokerAgencies: AccountOption[];
   plans: PlanOption[];
 }) {
   const router = useRouter();
@@ -38,7 +40,11 @@ export function GrantSubscriptionForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const accounts = accountType === "developer" ? developers : accountType === "broker" ? brokers : salespersons;
+  const accounts =
+    accountType === "developer" ? developers
+    : accountType === "broker" ? brokers
+    : accountType === "salesperson" ? salespersons
+    : brokerAgencies;
   const availablePlans = useMemo(() => plans.filter((p) => p.plan_type === accountType), [plans, accountType]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,6 +94,7 @@ export function GrantSubscriptionForm({
           <option value="developer">Developer</option>
           <option value="broker">Broker</option>
           <option value="salesperson">Salesperson</option>
+          <option value="broker_agency">Broker Agency</option>
         </select>
         <select
           value={accountId}

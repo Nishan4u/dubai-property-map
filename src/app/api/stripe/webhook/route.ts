@@ -146,6 +146,55 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      if (session.metadata?.kind === "broker_agency_subscription") {
+        const brokerageId = session.metadata.brokerage_id;
+        const plan = session.metadata.plan;
+        if (!brokerageId) break;
+
+        let expiresAt: string | null = null;
+        if (typeof session.subscription === "string") {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
+            .toISOString()
+            .slice(0, 10);
+        }
+
+        await supabase
+          .from("brokerages")
+          .update({
+            plan_key: plan ?? "broker-agency-yearly",
+            subscription_status: "active",
+            subscription_expires_at: expiresAt,
+            last_reminder_sent_days: null,
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+            payment_type: "stripe",
+          })
+          .eq("id", brokerageId);
+
+        if (session.amount_total) {
+          await supabase.from("broker_agency_payments").insert({
+            brokerage_id: brokerageId,
+            stripe_invoice_id: (session.invoice as string) || session.id,
+            amount: session.amount_total / 100,
+            currency: session.currency ?? "aed",
+            status: "paid",
+            paid_at: new Date().toISOString(),
+          });
+        }
+
+        const { data: agency } = await supabase.from("brokerages").select("name, company_email").eq("id", brokerageId).single();
+        if (agency?.company_email) {
+          await sendEmail({
+            category: "subscription_activated",
+            to: agency.company_email,
+            subject: "Your Dubai Property Map subscription is active",
+            html: `<p>Hi ${agency.name},</p><p>Your <strong>${plan ?? "broker-agency-yearly"}</strong> subscription is now active${expiresAt ? ` and renews on ${expiresAt}` : ""}.</p>`,
+          });
+        }
+        break;
+      }
+
       const plan = session.metadata?.plan;
       if (developerId) {
         let expiresAt: string | null = null;
@@ -212,6 +261,10 @@ export async function POST(request: NextRequest) {
         .eq("stripe_subscription_id", subscription.id);
       await supabase
         .from("salespersons")
+        .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
+        .eq("stripe_subscription_id", subscription.id);
+      await supabase
+        .from("brokerages")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
         .eq("stripe_subscription_id", subscription.id);
       break;
@@ -283,6 +336,31 @@ export async function POST(request: NextRequest) {
               html: `<p>Hi ${salesperson.full_name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
             });
           }
+        }
+        break;
+      }
+
+      const { data: agency } = await supabase
+        .from("brokerages")
+        .select("id, name, company_email")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (agency) {
+        await supabase.from("broker_agency_payments").insert({
+          brokerage_id: agency.id,
+          stripe_invoice_id: invoice.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency,
+          status: "paid",
+          paid_at: new Date().toISOString(),
+        });
+        if (isRenewal && agency.company_email) {
+          await sendEmail({
+            category: "subscription_renewed",
+            to: agency.company_email,
+            subject: "Your Dubai Property Map subscription has renewed",
+            html: `<p>Hi ${agency.name},</p><p>Your subscription has renewed successfully. Amount charged: ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)}.</p>`,
+          });
         }
         break;
       }
@@ -374,6 +452,31 @@ export async function POST(request: NextRequest) {
             to: developer.email,
             subject: "Payment failed for your Dubai Property Map subscription",
             html: `<p>Hi ${developer.name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
+          });
+        }
+        break;
+      }
+
+      const { data: agency } = await supabase
+        .from("brokerages")
+        .select("id, name, company_email")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (agency) {
+        await supabase.from("brokerages").update({ subscription_status: "payment_failed" }).eq("id", agency.id);
+        await supabase.from("broker_agency_payments").insert({
+          brokerage_id: agency.id,
+          stripe_invoice_id: invoice.id,
+          amount: invoice.amount_due / 100,
+          currency: invoice.currency,
+          status: "failed",
+        });
+        if (agency.company_email) {
+          await sendEmail({
+            category: "payment_failed",
+            to: agency.company_email,
+            subject: "Payment failed for your Dubai Property Map subscription",
+            html: `<p>Hi ${agency.name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
           });
         }
       }

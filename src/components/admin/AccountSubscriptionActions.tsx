@@ -8,7 +8,7 @@ export function AccountSubscriptionActions({
   accountId,
   currentStatus,
 }: {
-  accountType: "developer" | "salesperson";
+  accountType: "developer" | "salesperson" | "broker_agency";
   accountId: string;
   currentStatus?: string;
 }) {

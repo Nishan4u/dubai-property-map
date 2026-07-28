@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/Badge";
-import { DataTable } from "@/components/ui/DataTable";
+import { SearchableDataTable } from "@/components/ui/SearchableDataTable";
 import { SalespersonActions } from "@/components/dashboard/SalespersonActions";
 import { SalespersonInvitationActions } from "@/components/dashboard/SalespersonInvitationActions";
 import { getSalespersonsForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
@@ -30,7 +30,11 @@ export default async function DeveloperSalespersonsPage() {
         </p>
       </div>
 
-      <DataTable
+      <SearchableDataTable
+        searchPlaceholder="Search by name or job title…"
+        searchFn={(s, q) =>
+          s.full_name.toLowerCase().includes(q) || (s.job_title ?? "").toLowerCase().includes(q)
+        }
         columns={[
           {
             header: "Salesperson",

@@ -21,7 +21,7 @@ export type DbDeveloperSubscriptionStatus =
   | "expired"
   | "suspended";
 export type DbSalespersonStatus = "active" | "inactive";
-export type DbBankTransferAccountType = "developer" | "broker" | "salesperson";
+export type DbBankTransferAccountType = "developer" | "broker" | "salesperson" | "broker_agency";
 export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";
 export type DbPaymentType = "stripe" | "bank_transfer" | "admin_free";
 export type DbSubscriptionPlanStatus = "active" | "inactive";
@@ -60,6 +60,7 @@ export interface SubscriptionGrantRow {
   developer_id: string | null;
   broker_id: string | null;
   salesperson_id: string | null;
+  brokerage_id: string | null;
   plan_key: string;
   granted_by: string;
   start_date: string;
@@ -76,6 +77,7 @@ export interface SubscriptionBankTransferRow {
   developer_id: string | null;
   broker_id: string | null;
   salesperson_id: string | null;
+  brokerage_id: string | null;
   plan_key: string;
   amount_aed: number;
   receipt_url: string;

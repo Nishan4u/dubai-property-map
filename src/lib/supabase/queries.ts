@@ -534,6 +534,19 @@ export async function getSalespersonSubscriptionPlans() {
   return data ?? [];
 }
 
+export async function getBrokerAgencySubscriptionPlans() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_plans")
+    .select("*")
+    .eq("plan_type", "broker_agency")
+    .eq("status", "active")
+    .order("sort_order");
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getBankTransferSettings() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -609,11 +622,26 @@ export async function getBankTransfersForSalesperson(salespersonId: string) {
   return data ?? [];
 }
 
+export async function getBankTransfersForBrokerage(brokerageId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_bank_transfers")
+    .select("*")
+    .eq("brokerage_id", brokerageId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getAllBankTransfersAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("subscription_bank_transfers")
-    .select("*, developers(name), brokers(full_name), salespersons(full_name)")
+    .select("*, developers(name), brokers(full_name), salespersons(full_name), brokerages(name)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1152,11 +1180,25 @@ export async function getAllBrokerPaymentsAdmin() {
   return data ?? [];
 }
 
+export async function getAllBrokerAgencyPaymentsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_agency_payments")
+    .select("*, brokerages(name, company_email)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getSubscriptionGrantsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("subscription_grants")
-    .select("*, developers(name), brokers(full_name), salespersons(full_name)")
+    .select("*, developers(name), brokers(full_name), salespersons(full_name), brokerages(name)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
