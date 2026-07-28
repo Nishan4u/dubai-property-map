@@ -53,6 +53,15 @@ async function checkBrokerDevice(request: NextRequest, response: NextResponse) {
   } = await supabase.auth.getUser();
   if (!user) return response; // not signed in — let the layout's own check redirect to /login
 
+  // A broker who hasn't finished onboarding yet (still needs to claim
+  // their broker_id via BrokerOnboarding) can never have a device token
+  // -- that's only issued by /api/broker/session/claim, which itself
+  // requires broker_id to already exist. Without this check, no new
+  // broker could ever reach the onboarding form: visiting /broker to see
+  // it would always redirect to /broker-device-conflict first.
+  const { data: profile } = await supabase.from("profiles").select("broker_id").eq("id", user.id).maybeSingle();
+  if (!profile?.broker_id) return response;
+
   const deviceToken = request.cookies.get(DEVICE_TOKEN_COOKIE)?.value;
   if (!deviceToken) {
     return NextResponse.redirect(new URL("/broker-device-conflict", request.url));
