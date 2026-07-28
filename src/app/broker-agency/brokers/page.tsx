@@ -1,17 +1,7 @@
-import { Badge } from "@/components/ui/Badge";
-import { SearchableDataTable } from "@/components/ui/SearchableDataTable";
-import { BrokerAgencyBrokerActions } from "@/components/broker-agency/BrokerAgencyBrokerActions";
+import { BrokerAgencyRosterTable } from "@/components/broker-agency/BrokerAgencyRosterTable";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const statusTone: Record<string, "green" | "gold" | "red" | "neutral"> = {
-  approved: "green",
-  pending_verification: "gold",
-  rejected: "red",
-  suspended: "red",
-  blocked: "red",
-};
 
 export default async function BrokerAgencyBrokersPage() {
   const supabase = await createClient();
@@ -34,19 +24,7 @@ export default async function BrokerAgencyBrokersPage() {
         <p className="text-sm text-ink-400">Brokers connected to your agency.</p>
       </div>
 
-      <SearchableDataTable
-        searchPlaceholder="Search by name or email…"
-        searchFn={(b, q) => b.full_name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q)}
-        columns={[
-          { header: "Broker", render: (b) => b.full_name },
-          { header: "Email", render: (b) => b.email },
-          { header: "Mobile", render: (b) => b.mobile },
-          { header: "Status", render: (b) => <Badge tone={statusTone[b.account_status] ?? "neutral"}>{b.account_status.replace(/_/g, " ")}</Badge> },
-          { header: "Subscription", render: (b) => <span className="capitalize">{b.subscription_status.replace(/_/g, " ")}</span> },
-          { header: "", render: (b) => <BrokerAgencyBrokerActions brokerId={b.id} fullName={b.full_name} /> },
-        ]}
-        rows={brokers ?? []}
-      />
+      <BrokerAgencyRosterTable brokers={brokers ?? []} />
     </div>
   );
 }
