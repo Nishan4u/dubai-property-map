@@ -5,16 +5,24 @@ export function MapAccessOverlay({
   status,
   subscriptionHref,
   contentLabel = "the interactive Dubai Property Map",
+  titleOverride,
+  bodyOverride,
+  subscribeCtaLabel = "View Subscription Plans",
 }: {
   status: Exclude<MapAccessStatus, "ok">;
   subscriptionHref: string;
   contentLabel?: string;
+  /** Per-surface exact copy (e.g. All Projects' own specified wording),
+   * overriding the shared default without changing it for other callers. */
+  titleOverride?: Partial<Record<Exclude<MapAccessStatus, "ok">, string>>;
+  bodyOverride?: Partial<Record<Exclude<MapAccessStatus, "ok">, string>>;
+  subscribeCtaLabel?: string;
 }) {
   const content =
     status === "guest"
       ? {
-          title: "Unlock Dubai Property Map",
-          body: `Register or log in to access ${contentLabel}.`,
+          title: titleOverride?.guest ?? "Unlock Dubai Property Map",
+          body: bodyOverride?.guest ?? `Register or log in to access ${contentLabel}.`,
           cta: [
             { label: "Login", href: "/login" },
             { label: "Register", href: "/register" },
@@ -22,13 +30,13 @@ export function MapAccessOverlay({
         }
       : status === "no_subscription"
         ? {
-            title: "Subscription Required",
-            body: `You need an active subscription to access ${contentLabel}.`,
-            cta: [{ label: "View Subscription Plans", href: subscriptionHref }],
+            title: titleOverride?.no_subscription ?? "Subscription Required",
+            body: bodyOverride?.no_subscription ?? `You need an active subscription to access ${contentLabel}.`,
+            cta: [{ label: subscribeCtaLabel, href: subscriptionHref }],
           }
         : {
-            title: "Subscription Expired",
-            body: `Renew your subscription to continue accessing ${contentLabel}.`,
+            title: titleOverride?.subscription_expired ?? "Subscription Expired",
+            body: bodyOverride?.subscription_expired ?? `Renew your subscription to continue accessing ${contentLabel}.`,
             cta: [{ label: "Renew Subscription", href: subscriptionHref }],
           };
 

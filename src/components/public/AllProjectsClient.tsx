@@ -7,9 +7,10 @@ import { ProjectCard } from "@/components/public/ProjectCard";
 import { FilterSidebar, emptyFilters, type ProjectFilters } from "@/components/public/FilterSidebar";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { isNearMetro, getInvestmentScore } from "@/lib/investmentScore";
+import { getProjectStatusLabel } from "@/lib/projectStatus";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 
-const sortOptions = ["Featured", "Newest", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
+const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
 type SortOption = (typeof sortOptions)[number];
 
 function sortProjects(projects: Project[], sort: SortOption): Project[] {
@@ -20,6 +21,10 @@ function sortProjects(projects: Project[], sort: SortOption): Project[] {
     case "Newest":
       return sorted.sort(
         (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
+      );
+    case "Recently Updated":
+      return sorted.sort(
+        (a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
       );
     case "Lowest Price":
       return sorted.sort((a, b) => a.priceFromAed - b.priceFromAed);
@@ -100,6 +105,8 @@ export function AllProjectsClient({
       if (filters.nearMetro && !isNearMetro(p)) return false;
       if (filters.minInvestmentScore && getInvestmentScore(p) < Number(filters.minInvestmentScore)) return false;
       if (filters.escrowStatus && p.escrowStatus !== filters.escrowStatus) return false;
+      if (filters.furnishing && p.furnishing !== filters.furnishing) return false;
+      if (filters.completionStatus && getProjectStatusLabel(p) !== filters.completionStatus) return false;
       return true;
     });
   }, [projects, filters, searchQuery]);
@@ -171,7 +178,12 @@ export function AllProjectsClient({
           <ProjectAccessGate
             status={mapAccessStatus}
             subscriptionHref={subscriptionHref}
-            contentLabel="the full project catalogue"
+            titleOverride={{ guest: "Registration Required", no_subscription: "Subscription Required" }}
+            bodyOverride={{
+              guest: "Register or log in to explore Dubai projects.",
+              no_subscription: "An active subscription is required to access All Projects.",
+            }}
+            subscribeCtaLabel="Subscribe Now"
           >
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {sortedProjects.slice(0, visible).map((project) => (

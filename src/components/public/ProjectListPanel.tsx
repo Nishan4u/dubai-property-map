@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { Project } from "@/types";
 import { ProjectCard } from "./ProjectCard";
 
-const sortOptions = ["Featured", "Newest", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
+const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
 type SortOption = (typeof sortOptions)[number];
 
 function sortProjects(projects: Project[], sort: SortOption): Project[] {
@@ -15,6 +15,10 @@ function sortProjects(projects: Project[], sort: SortOption): Project[] {
     case "Newest":
       return sorted.sort(
         (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
+      );
+    case "Recently Updated":
+      return sorted.sort(
+        (a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
       );
     case "Lowest Price":
       return sorted.sort((a, b) => a.priceFromAed - b.priceFromAed);

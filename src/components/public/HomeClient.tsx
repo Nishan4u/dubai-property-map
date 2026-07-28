@@ -19,6 +19,7 @@ import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
 import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSlider";
 import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
 import { getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
+import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { createClient } from "@/lib/supabase/client";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
@@ -262,6 +263,8 @@ export function HomeClient({
       // Blank/unset escrow status only ever shows under "All" — never
       // matches a specific Available/Not Available selection.
       if (filters.escrowStatus && p.escrowStatus !== filters.escrowStatus) return false;
+      if (filters.furnishing && p.furnishing !== filters.furnishing) return false;
+      if (filters.completionStatus && getProjectStatusLabel(p) !== filters.completionStatus) return false;
       return true;
     });
   }, [allProjects, activeTab, activeTag, filters, searchQuery]);

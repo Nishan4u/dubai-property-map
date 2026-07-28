@@ -4,6 +4,7 @@ import { Building2, Download, FileText, MapPin, Play, Star } from "lucide-react"
 import { PublicShell } from "@/components/public/PublicShell";
 import { MortgageCalculator } from "@/components/public/MortgageCalculator";
 import { ProjectCard } from "@/components/public/ProjectCard";
+import { GatedDetailPlaceholder } from "@/components/public/GatedDetailPlaceholder";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
@@ -19,6 +20,7 @@ import {
   getProjectDocumentsByCategory,
   getProjectMediaFiles,
   getProjectsForCommunity,
+  getViewerProjectScope,
   incrementProjectViews,
 } from "@/lib/supabase/queries";
 import { mapProject } from "@/lib/supabase/mappers";
@@ -59,16 +61,34 @@ export default async function ProjectDetailsPage({
   const row = await getProjectBySlug(slug);
   if (!row) notFound();
 
+  // A Developer/Salesperson account is scoped to their own developer
+  // everywhere else on the platform (homepage, All Projects, search) --
+  // the same restriction applies to a direct project URL too (spec
+  // sections 17/20/22: "must NOT see projects belonging to" other
+  // developers, "even through ... Direct URL"). Returning notFound()
+  // rather than a permission message matches "must not see" -- it doesn't
+  // even confirm the project exists.
+  const viewerDeveloperId = await getViewerProjectScope();
+  if (viewerDeveloperId && row.developer_id !== viewerDeveloperId) notFound();
+
+  // Same protection as the map/homepage/communities/developer pages (spec
+  // sections 20-22): guests and unsubscribed brokers/salespersons/agencies
+  // get a generic placeholder shell, never the real project fields, so
+  // there's nothing for "view source" or disabling CSS to recover.
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
+  if (mapAccessStatus !== "ok") {
+    return (
+      <PublicShell>
+        <GatedDetailPlaceholder status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="this project's details" />
+      </PublicShell>
+    );
+  }
+
   const project = mapProject(row);
   const developer = row.developers;
   const community = row.communities;
   await incrementProjectViews(project.id);
-  // The project's own details stay public (shared/SEO links must keep
-  // working), but "Similar Projects" is a browse/discovery feature like
-  // the community/developer listings, so it gets the same protection
-  // (spec section 20).
-  const { status: mapAccessStatus } = await getMapAccessStatus();
-  const similarRows = mapAccessStatus === "ok" ? await getProjectsForCommunity(row.community_id) : [];
+  const similarRows = await getProjectsForCommunity(row.community_id);
   const similar = similarRows
     .filter((p) => p.id !== project.id)
     .slice(0, 3)

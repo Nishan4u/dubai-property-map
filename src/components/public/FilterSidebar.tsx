@@ -23,6 +23,8 @@ export interface ProjectFilters {
   nearMetro: boolean;
   minInvestmentScore: string;
   escrowStatus: string;
+  furnishing: string;
+  completionStatus: string;
 }
 
 export const emptyFilters: ProjectFilters = {
@@ -40,6 +42,8 @@ export const emptyFilters: ProjectFilters = {
   nearMetro: false,
   minInvestmentScore: "",
   escrowStatus: "",
+  furnishing: "",
+  completionStatus: "",
 };
 
 export function FilterSidebar({
@@ -281,6 +285,29 @@ export function FilterSidebar({
             options={[
               { label: "Available", value: "available" },
               { label: "Not Available", value: "not_available" },
+            ]}
+          />
+          <Select
+            label="Furnishing"
+            placeholder="Any"
+            value={draft.furnishing}
+            onChange={(v) => set("furnishing", v)}
+            options={[
+              { label: "Furnished", value: "furnished" },
+              { label: "Unfurnished", value: "unfurnished" },
+              { label: "Semi-Furnished", value: "semi_furnished" },
+            ]}
+          />
+          <Select
+            label="Completion Status"
+            placeholder="Any"
+            value={draft.completionStatus}
+            onChange={(v) => set("completionStatus", v)}
+            options={[
+              { label: "Ready to move in", value: "Ready to move in" },
+              { label: "Under construction", value: "Under construction" },
+              { label: "Off-plan", value: "Off-plan" },
+              { label: "Future project — not yet under construction", value: "Future project — not yet under construction" },
             ]}
           />
         </div>

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Award, BadgeCheck } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
-import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
+import { GatedDetailPlaceholder } from "@/components/public/GatedDetailPlaceholder";
 import { DeveloperReviews } from "@/components/public/DeveloperReviews";
 import { DeveloperContactForm } from "@/components/public/DeveloperContactForm";
 import { ShareButton } from "@/components/public/ShareButton";
@@ -55,9 +55,22 @@ export default async function DeveloperProfilePage({
   const developer = await getDeveloperBySlug(slug);
   if (!developer) notFound();
 
+  // Same protection as every other project-listing surface (spec sections
+  // 20-21: "Direct URL" must be protected too, not just the directory).
+  // Guests/unsubscribed viewers get a generic placeholder shell -- the
+  // real developer name/description/awards/reviews never reach the page
+  // payload at all.
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
+  if (mapAccessStatus !== "ok") {
+    return (
+      <PublicShell>
+        <GatedDetailPlaceholder status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="this developer's profile" />
+      </PublicShell>
+    );
+  }
+
   const [devProjectRows, awards, reviews, developerBanner] = await Promise.all([
-    mapAccessStatus === "ok" ? getProjectsForDeveloper(developer.id) : Promise.resolve([]),
+    getProjectsForDeveloper(developer.id),
     getDeveloperAwards(developer.id),
     getDeveloperReviews(developer.id),
     getActiveDeveloperBanner(developer.id),
@@ -130,18 +143,16 @@ export default async function DeveloperProfilePage({
               <h2 className="mb-3 text-lg font-semibold text-ink-100">
                 Projects by {developer.name}
               </h2>
-              <ProjectAccessGate status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel={`${developer.name}'s project listings`}>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {devProjects.map((p) => (
-                    <ProjectCard key={p.id} project={p} />
-                  ))}
-                  {devProjects.length === 0 && (
-                    <p className="text-sm text-ink-500">
-                      No active projects listed.
-                    </p>
-                  )}
-                </div>
-              </ProjectAccessGate>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {devProjects.map((p) => (
+                  <ProjectCard key={p.id} project={p} />
+                ))}
+                {devProjects.length === 0 && (
+                  <p className="text-sm text-ink-500">
+                    No active projects listed.
+                  </p>
+                )}
+              </div>
             </section>
 
             <section>

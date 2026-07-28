@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
@@ -53,7 +54,7 @@ export function SalespersonRosterTable({ salespersons }: { salespersons: Salespe
           {
             header: "Salesperson",
             render: (s) => (
-              <div className="flex items-center gap-2">
+              <Link href={`/dashboard/salespersons/${s.id}`} className="flex items-center gap-2 hover:opacity-80">
                 {s.photo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={s.photo_url} alt={s.full_name} className="h-6 w-6 shrink-0 rounded-full object-cover" />
@@ -62,8 +63,8 @@ export function SalespersonRosterTable({ salespersons }: { salespersons: Salespe
                     {s.full_name.charAt(0)}
                   </span>
                 )}
-                <span className="font-medium text-ink-100">{s.full_name}</span>
-              </div>
+                <span className="font-medium text-ink-100 underline-offset-2 hover:underline">{s.full_name}</span>
+              </Link>
             ),
           },
           { header: "Job Title", render: (s) => s.job_title ?? "—" },

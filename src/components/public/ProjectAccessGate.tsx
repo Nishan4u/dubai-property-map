@@ -11,11 +11,17 @@ export function ProjectAccessGate({
   status,
   subscriptionHref,
   contentLabel,
+  titleOverride,
+  bodyOverride,
+  subscribeCtaLabel,
   children,
 }: {
   status: MapAccessStatus;
   subscriptionHref: string;
   contentLabel?: string;
+  titleOverride?: Partial<Record<Exclude<MapAccessStatus, "ok">, string>>;
+  bodyOverride?: Partial<Record<Exclude<MapAccessStatus, "ok">, string>>;
+  subscribeCtaLabel?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -27,7 +33,16 @@ export function ProjectAccessGate({
       >
         {children}
       </div>
-      {status !== "ok" && <MapAccessOverlay status={status} subscriptionHref={subscriptionHref} contentLabel={contentLabel} />}
+      {status !== "ok" && (
+        <MapAccessOverlay
+          status={status}
+          subscriptionHref={subscriptionHref}
+          contentLabel={contentLabel}
+          titleOverride={titleOverride}
+          bodyOverride={bodyOverride}
+          subscribeCtaLabel={subscribeCtaLabel}
+        />
+      )}
     </div>
   );
 }

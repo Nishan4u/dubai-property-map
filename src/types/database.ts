@@ -256,6 +256,7 @@ export interface ProjectRow {
   payment_plan_details: { label: string; percent: number }[];
   construction_progress_percent: number;
   escrow_status: "available" | "not_available" | null;
+  furnishing: "furnished" | "unfurnished" | "semi_furnished" | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
