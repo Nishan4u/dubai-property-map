@@ -16,7 +16,7 @@ import { DubaiMap } from "@/components/public/DubaiMap";
 import { MapFilterChips } from "@/components/public/MapFilterChips";
 import { MapAmenityBar } from "@/components/public/MapAmenityBar";
 import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
-import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSlider";
+import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
 import { getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
@@ -42,6 +42,7 @@ export function HomeClient({
   mapAccessStatus = "ok",
   subscriptionHref = "",
   developerInactiveForSalesperson = false,
+  sliderClickBehavior = "guest",
 }: {
   communities: Community[];
   developers: Developer[];
@@ -66,6 +67,7 @@ export function HomeClient({
    * case too, but the Map itself stays usable (this is a separate check
    * from mapAccessStatus, which covers the salesperson's own subscription). */
   developerInactiveForSalesperson?: boolean;
+  sliderClickBehavior?: SliderClickBehavior;
 }) {
   const validTags: (ProjectTag | "all")[] = [
     "new-launch",
@@ -343,8 +345,8 @@ export function HomeClient({
           </p>
         </div>
       )}
-      {!isFullscreen && !viewerDeveloperId && (
-        <PartnerDevelopersSlider developers={developers} />
+      {!isFullscreen && (
+        <PartnerDevelopersSlider developers={developers} clickBehavior={sliderClickBehavior} />
       )}
       <div className="relative flex min-h-0 flex-1">
         <div

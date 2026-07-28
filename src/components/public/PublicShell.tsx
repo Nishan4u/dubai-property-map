@@ -3,9 +3,10 @@ import Image from "next/image";
 import { Heart } from "lucide-react";
 import { AuthStatus } from "@/components/auth/AuthStatus";
 import { GlobalSearchBox, type SearchItem } from "@/components/public/GlobalSearchBox";
-import { PartnerDevelopersSlider } from "@/components/public/PartnerDevelopersSlider";
+import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import {
   getCommunities,
+  getCurrentProfile,
   getDevelopers,
   getMapAccessStatus,
   getNavLinks,
@@ -19,6 +20,15 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   // Developer/Salesperson only finds their own developer's projects here too.
   const viewerDeveloperId = await getViewerProjectScope();
   const { status: mapAccessStatus } = await getMapAccessStatus();
+  const viewerProfile = await getCurrentProfile();
+  // Spec: guests get redirected to login on click; Developer/Salesperson
+  // see the slider but it's fully inert; everyone else (buyer, broker,
+  // broker agency, admin) gets the real developer-page link.
+  const sliderClickBehavior: SliderClickBehavior = !viewerProfile
+    ? "guest"
+    : viewerProfile.role === "developer" || viewerProfile.role === "salesperson"
+      ? "disabled"
+      : "link";
 
   const [headerLinks, footerLinks, projects, communities, developers] = await Promise.all([
     getNavLinks("header"),
@@ -96,9 +106,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             ))}
         </nav>
       </div>
-      {!viewerDeveloperId && (
-        <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} />
-      )}
+      <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} clickBehavior={sliderClickBehavior} />
       <main className="flex-1">{children}</main>
       <footer className="border-t border-navy-800 px-6 py-6 text-center text-xs text-ink-500">
         <div className="mb-2 flex flex-wrap justify-center gap-4">

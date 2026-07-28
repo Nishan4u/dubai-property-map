@@ -4,6 +4,7 @@ import {
   getActiveSidebarBanner,
   getActiveSponsoredPinProjectIds,
   getCommunities,
+  getCurrentProfile,
   getDevelopers,
   getMapAccessStatus,
   getNavLinks,
@@ -11,6 +12,7 @@ import {
   getSalespersonDeveloperAccess,
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
+import type { SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
 import { getCmsMetadata } from "@/components/public/CmsPage";
 
@@ -30,6 +32,12 @@ export default async function Home() {
   // via their own subscription while their specific developer's projects
   // are unavailable because THAT developer's account/subscription lapsed.
   const { blocked: developerInactiveForSalesperson } = await getSalespersonDeveloperAccess();
+  const viewerProfile = await getCurrentProfile();
+  const sliderClickBehavior: SliderClickBehavior = !viewerProfile
+    ? "guest"
+    : viewerProfile.role === "developer" || viewerProfile.role === "salesperson"
+      ? "disabled"
+      : "link";
 
   const [
     communityRows,
@@ -86,6 +94,7 @@ export default async function Home() {
         .filter((l) => !viewerDeveloperId || l.url !== "/developers")
         .map((l) => ({ label: l.label, url: l.url }))}
       viewerDeveloperId={viewerDeveloperId}
+      sliderClickBehavior={sliderClickBehavior}
     />
   );
 }

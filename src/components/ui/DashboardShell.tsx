@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import type { LucideIcon } from "lucide-react";
-import { Building2, Menu, X } from "lucide-react";
+import { ArrowLeft, Building2, Menu, X } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export interface NavItem {
@@ -122,6 +122,13 @@ export function DashboardShell({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Link
+              href="/"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-sm font-medium text-gold-400 hover:bg-gold-500/20"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Back to Public Website</span>
+            </Link>
             <div className="flex items-center gap-2 rounded-full border border-navy-700 bg-navy-850 py-1.5 pl-1.5 pr-3">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-navy-950">
                 {userLabel.charAt(0)}
