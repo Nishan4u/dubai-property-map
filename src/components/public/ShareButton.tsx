@@ -8,17 +8,26 @@ export function ShareButton({
   targetType,
   targetId,
   title,
+  path,
+  compact = false,
 }: {
   targetType: "project" | "developer";
   targetId: string;
   title: string;
+  /** Explicit path to share (e.g. a specific project card in a list, which
+   * may not be the page currently being viewed). Resolved against
+   * window.location.origin client-side to avoid an SSR/hydration mismatch.
+   * Defaults to the current page's URL, correct for detail pages. */
+  path?: string;
+  /** Icon-only trigger sized for a card, instead of the labeled button. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const directUrl = window.location.href;
+    const directUrl = path ? new URL(path, window.location.origin).toString() : window.location.href;
     setShareUrl(directUrl);
 
     // Only logged-in staff get a trackable link — everyone else (including
@@ -78,17 +87,45 @@ export function ShareButton({
     { label: "X", href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}` },
   ];
 
+  // On devices with the OS share sheet (mostly mobile), tapping the trigger
+  // goes straight there instead of opening the custom dropdown -- that sheet
+  // already surfaces WhatsApp/Mail/etc. natively. Desktop browsers without
+  // navigator.share fall back to the dropdown below.
+  async function handleTriggerClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title, url: shareUrl });
+        return;
+      } catch {
+        // User cancelled the native sheet, or it failed -- fall through to
+        // the dropdown so they still have a way to share.
+      }
+    }
+    setOpen((o) => !o);
+  }
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-lg border border-navy-600 px-3 py-2 text-sm font-medium text-ink-300 hover:text-ink-100"
+        onClick={handleTriggerClick}
+        title="Share"
+        className={
+          compact
+            ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-500 hover:text-gold-400"
+            : "flex items-center gap-2 rounded-lg border border-navy-600 px-3 py-2 text-sm font-medium text-ink-300 hover:text-ink-100"
+        }
       >
-        <Share2 className="h-4 w-4" /> Share
+        <Share2 className="h-4 w-4" />
+        {!compact && "Share"}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+        >
           <button
             onClick={handleCopy}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"

@@ -8,6 +8,7 @@ import type { Project } from "@/types";
 import { formatAed, getDeveloper, getCommunity } from "@/data/mock";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { useFavorites } from "@/components/auth/FavoritesProvider";
+import { ShareButton } from "@/components/public/ShareButton";
 
 export function ProjectCard({
   project,
@@ -42,19 +43,28 @@ export function ProjectCard({
           <h4 className="truncate text-sm font-semibold text-ink-100 group-hover:text-gold-400">
             {project.name}
           </h4>
-          <button
-            onClick={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const result = await toggle(project.id);
-              if (result === "needs-login") router.push("/login");
-            }}
-            className="shrink-0 text-ink-500 hover:text-rose-400"
-          >
-            <Heart
-              className={clsx("h-4 w-4", saved && "fill-rose-500 text-rose-500")}
+          <div className="flex shrink-0 items-center">
+            <ShareButton
+              targetType="project"
+              targetId={project.id}
+              title={project.name}
+              path={`/projects/${project.slug}`}
+              compact
             />
-          </button>
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const result = await toggle(project.id);
+                if (result === "needs-login") router.push("/login");
+              }}
+              className="text-ink-500 hover:text-rose-400"
+            >
+              <Heart
+                className={clsx("h-4 w-4", saved && "fill-rose-500 text-rose-500")}
+              />
+            </button>
+          </div>
         </div>
         <p className="truncate text-xs text-ink-500">by {developerName}</p>
         <p className="truncate text-xs text-ink-500">{communityName}</p>

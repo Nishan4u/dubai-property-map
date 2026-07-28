@@ -1,0 +1,52 @@
+import { PublicShell } from "@/components/public/PublicShell";
+import { AllProjectsClient } from "@/components/public/AllProjectsClient";
+import {
+  getCommunities,
+  getDevelopers,
+  getMapAccessStatus,
+  getPublishedProjects,
+  getSalespersonDeveloperAccess,
+  getViewerProjectScope,
+} from "@/lib/supabase/queries";
+import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return {
+    title: "All Projects | Dubai Property Map",
+    description: "Search and filter every off-plan and ready project on Dubai Property Map.",
+  };
+}
+
+export default async function AllProjectsPage() {
+  // Same rules as the map/homepage (spec sections 17-19): a logged-in
+  // Developer/Salesperson only ever sees their own developer's projects
+  // here, and the real project data is withheld server-side entirely for
+  // guests/unsubscribed brokers-salespersons-agencies rather than just
+  // visually blurred.
+  const viewerDeveloperId = await getViewerProjectScope();
+  const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
+  const { blocked: developerInactiveForSalesperson } = await getSalespersonDeveloperAccess();
+
+  const [communityRows, developerRows, projectRows] = await Promise.all([
+    getCommunities(),
+    getDevelopers(),
+    mapAccessStatus === "ok" && !developerInactiveForSalesperson
+      ? getPublishedProjects(viewerDeveloperId ?? undefined)
+      : Promise.resolve([]),
+  ]);
+
+  return (
+    <PublicShell>
+      <AllProjectsClient
+        projects={projectRows.map((p) => mapProject(p))}
+        developers={developerRows.map((d) => mapDeveloper(d))}
+        communities={communityRows.map((c) => mapCommunity(c))}
+        mapAccessStatus={mapAccessStatus}
+        subscriptionHref={subscriptionHref}
+        viewerDeveloperId={viewerDeveloperId}
+      />
+    </PublicShell>
+  );
+}
