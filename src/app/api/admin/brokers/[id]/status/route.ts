@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const admin = createAdminClient();
   const { data: broker } = await admin
     .from("brokers")
-    .select("full_name, email")
+    .select("full_name, email, brokerage_id, license_path")
     .eq("id", id)
     .single();
   if (!broker) {
@@ -48,12 +48,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       updates.approved_by = user.id;
       updates.rejection_reason = null;
       updates.suspension_reason = null;
+      // Independent brokers' license gets reviewed as part of the same
+      // overall approval -- no separate approval step.
+      if (!broker.brokerage_id && broker.license_path) updates.license_status = "approved";
       subject = "Your Dubai Property Map broker account is approved";
       html = `<p>Hi ${broker.full_name},</p><p>Your broker account has been approved. Log in to subscribe and start submitting property requests.</p>`;
       break;
     case "reject":
       updates.account_status = "rejected";
       updates.rejection_reason = reason ?? null;
+      if (!broker.brokerage_id) updates.license_status = "rejected";
       subject = "Your Dubai Property Map broker application";
       html = `<p>Hi ${broker.full_name},</p><p>We were unable to approve your broker application${reason ? `: ${reason}` : "."}</p>`;
       break;

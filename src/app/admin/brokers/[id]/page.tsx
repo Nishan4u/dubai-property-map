@@ -43,13 +43,18 @@ export default async function AdminBrokerDetailPage({ params }: { params: Promis
     const { data } = await supabase.storage.from("broker-documents").createSignedUrl(broker.rera_card_path, 3600);
     reraSignedUrl = data?.signedUrl ?? null;
   }
+  let licenseSignedUrl: string | null = null;
+  if (broker.license_path) {
+    const { data } = await supabase.storage.from("broker-documents").createSignedUrl(broker.license_path, 3600);
+    licenseSignedUrl = data?.signedUrl ?? null;
+  }
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <Link href="/admin/brokers" className="text-xs text-ink-500 hover:text-ink-300">← Back to Brokers</Link>
         <h1 className="mt-1 text-xl font-bold text-ink-100">{broker.full_name}</h1>
-        <p className="text-sm text-ink-400">{broker.brokerages?.name} · BRN {broker.brn} · ORN {broker.orn}</p>
+        <p className="text-sm text-ink-400">{broker.brokerages?.name ?? "Independent Broker"} · BRN {broker.brn} · ORN {broker.orn}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -77,6 +82,24 @@ export default async function AdminBrokerDetailPage({ params }: { params: Promis
           <p className="text-sm text-ink-500">No document uploaded.</p>
         )}
       </div>
+
+      {!broker.brokerage_id && (
+        <div>
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-100">
+            Broker License
+            <Badge tone={broker.license_status === "approved" ? "green" : broker.license_status === "rejected" ? "red" : "gold"}>
+              {broker.license_status.replace(/_/g, " ")}
+            </Badge>
+          </h2>
+          {licenseSignedUrl ? (
+            <a href={licenseSignedUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-gold-400 hover:underline">
+              View document (signed link, expires in 1 hour)
+            </a>
+          ) : (
+            <p className="text-sm text-ink-500">No document uploaded — required for independent brokers.</p>
+          )}
+        </div>
+      )}
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-ink-100">Device Sessions</h2>

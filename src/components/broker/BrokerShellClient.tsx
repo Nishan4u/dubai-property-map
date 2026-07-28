@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, Briefcase, CreditCard, LayoutDashboard, Map, ShieldCheck, User } from "lucide-react";
+import { Bell, Briefcase, Building2, CreditCard, LayoutDashboard, Map, ShieldCheck, User } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Property Map", href: "/", icon: Map, absolute: true },
+  { label: "My Agency", href: "/agency", icon: Building2 },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
