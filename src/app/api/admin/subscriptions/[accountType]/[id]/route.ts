@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
+import { getStripe } from "@/lib/stripe";
 
-// Extend/Give Complimentary/Cancel/Suspend/Reactivate for developers,
-// salespersons and broker agencies — mirrors the existing
+// Extend/Give Complimentary/Cancel/Suspend/Reactivate/Toggle Auto-Renew for
+// developers, salespersons and broker agencies — mirrors the existing
 // /api/admin/brokers/[id]/subscription route (kept as-is for brokers) so
 // every account type gets the same quick admin actions.
-type Action = "extend" | "complimentary" | "cancel" | "suspend" | "reactivate";
+type Action = "extend" | "complimentary" | "cancel" | "suspend" | "reactivate" | "toggle_auto_renew";
 
 const TABLE = {
   developer: "developers",
@@ -37,9 +38,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const admin = createAdminClient();
   const table = TABLE[accountType];
 
-  const { data: account } = await admin.from(table).select("subscription_expires_at").eq("id", id).single();
+  const { data: account } = await admin
+    .from(table)
+    .select("subscription_expires_at, auto_renew, stripe_subscription_id")
+    .eq("id", id)
+    .single();
   if (!account) {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
+  }
+
+  if (action === "toggle_auto_renew") {
+    const nextAutoRenew = !account.auto_renew;
+    if (account.stripe_subscription_id) {
+      try {
+        const stripe = getStripe();
+        await stripe.subscriptions.update(account.stripe_subscription_id, {
+          cancel_at_period_end: !nextAutoRenew,
+        });
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Stripe error updating auto-renewal." },
+          { status: 500 }
+        );
+      }
+    }
+    const { error } = await admin.from(table).update({ auto_renew: nextAutoRenew }).eq("id", id);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    await logAudit(`${accountType}.auto_renew_${nextAutoRenew ? "enabled" : "disabled"}`, accountType, id, {}, { client: admin, actorId: user.id, actorEmail: user.email });
+    return NextResponse.json({ ok: true, autoRenew: nextAutoRenew });
   }
 
   const updates: Record<string, unknown> = {};

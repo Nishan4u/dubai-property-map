@@ -180,11 +180,27 @@ export async function getMapAccessStatus(): Promise<MapAccessResult> {
   return { status: "guest", subscriptionHref: "/register" };
 }
 
+// Admin "Global Free Access" per account type (spec section 13) -- when
+// enabled, every account of that type gets treated as having an active
+// subscription for map/property-request access, independent of their own
+// actual subscription_status. Separate from the individual free grants in
+// subscription_grants.
+export async function isFreeAccessEnabled(accountType: "broker" | "broker_agency" | "salesperson"): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("free_access_settings")
+    .select("enabled")
+    .eq("account_type", accountType)
+    .maybeSingle();
+  return data?.enabled ?? false;
+}
+
 async function resolveSubscriptionMapAccess(
   subscriptionStatus: string | null | undefined,
   planKey: string | null | undefined,
   planType: "broker" | "broker_agency" | "salesperson"
 ): Promise<MapAccessStatus> {
+  if (await isFreeAccessEnabled(planType)) return "ok";
   if (subscriptionStatus === "expired") return "subscription_expired";
   if (subscriptionStatus !== "active") return "no_subscription";
 

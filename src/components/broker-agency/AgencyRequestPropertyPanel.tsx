@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveSalespersonsForDeveloper, getCurrentProfile } from "@/lib/supabase/queries";
+import { getActiveSalespersonsForDeveloper, getCurrentProfile, isFreeAccessEnabled } from "@/lib/supabase/queries";
 import { AgencyPropertyRequestForm } from "./AgencyPropertyRequestForm";
 
 // Agency counterpart to RequestPropertyPanel (broker). Renders nothing for
@@ -32,7 +32,7 @@ export async function AgencyRequestPropertyPanel({
     );
   }
 
-  if (agency.subscription_status !== "active") {
+  if (agency.subscription_status !== "active" && !(await isFreeAccessEnabled("broker_agency"))) {
     return (
       <div className="rounded-xl border border-navy-700 bg-navy-850 p-5 text-sm text-ink-400">
         <p>An active subscription is required to submit property requests.</p>

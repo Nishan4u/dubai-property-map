@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
+import { getStripe } from "@/lib/stripe";
 
-type Action = "extend" | "complimentary" | "cancel" | "suspend" | "reactivate";
+type Action = "extend" | "complimentary" | "cancel" | "suspend" | "reactivate" | "toggle_auto_renew";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,9 +24,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { action, days } = (await request.json()) as { action: Action; days?: number };
   const admin = createAdminClient();
 
-  const { data: broker } = await admin.from("brokers").select("subscription_expires_at").eq("id", id).single();
+  const { data: broker } = await admin
+    .from("brokers")
+    .select("subscription_expires_at, auto_renew, stripe_subscription_id")
+    .eq("id", id)
+    .single();
   if (!broker) {
     return NextResponse.json({ error: "Broker not found." }, { status: 404 });
+  }
+
+  if (action === "toggle_auto_renew") {
+    const nextAutoRenew = !broker.auto_renew;
+    if (broker.stripe_subscription_id) {
+      try {
+        const stripe = getStripe();
+        await stripe.subscriptions.update(broker.stripe_subscription_id, {
+          cancel_at_period_end: !nextAutoRenew,
+        });
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Stripe error updating auto-renewal." },
+          { status: 500 }
+        );
+      }
+    }
+    const { error } = await admin.from("brokers").update({ auto_renew: nextAutoRenew }).eq("id", id);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    await logAudit(`broker.auto_renew_${nextAutoRenew ? "enabled" : "disabled"}`, "broker", id, {}, { client: admin, actorId: user.id, actorEmail: user.email });
+    return NextResponse.json({ ok: true, autoRenew: nextAutoRenew });
   }
 
   const updates: Record<string, unknown> = {};

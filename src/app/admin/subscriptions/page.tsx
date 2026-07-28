@@ -120,7 +120,7 @@ export default async function AdminSubscriptionsPage() {
             {
               header: "",
               render: (d) => (
-                <AccountSubscriptionActions accountType="developer" accountId={d.id} currentStatus={d.subscription_status} />
+                <AccountSubscriptionActions accountType="developer" accountId={d.id} currentStatus={d.subscription_status} autoRenew={d.auto_renew} />
               ),
             },
           ]}
@@ -153,7 +153,7 @@ export default async function AdminSubscriptionsPage() {
             { header: "Expires", render: (b) => (b.subscription_expires_at ? new Date(b.subscription_expires_at).toLocaleDateString() : "—") },
             {
               header: "",
-              render: (b) => <BrokerSubscriptionActions brokerId={b.id} currentStatus={b.subscription_status} />,
+              render: (b) => <BrokerSubscriptionActions brokerId={b.id} currentStatus={b.subscription_status} autoRenew={b.auto_renew} />,
             },
           ]}
           rows={brokers}
@@ -186,7 +186,7 @@ export default async function AdminSubscriptionsPage() {
             {
               header: "",
               render: (s) => (
-                <AccountSubscriptionActions accountType="salesperson" accountId={s.id} currentStatus={s.subscription_status} />
+                <AccountSubscriptionActions accountType="salesperson" accountId={s.id} currentStatus={s.subscription_status} autoRenew={s.auto_renew} />
               ),
             },
           ]}
@@ -220,7 +220,7 @@ export default async function AdminSubscriptionsPage() {
             {
               header: "",
               render: (a) => (
-                <AccountSubscriptionActions accountType="broker_agency" accountId={a.id} currentStatus={a.subscription_status} />
+                <AccountSubscriptionActions accountType="broker_agency" accountId={a.id} currentStatus={a.subscription_status} autoRenew={a.auto_renew} />
               ),
             },
           ]}

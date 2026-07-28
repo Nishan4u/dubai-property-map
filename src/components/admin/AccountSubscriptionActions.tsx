@@ -7,15 +7,17 @@ export function AccountSubscriptionActions({
   accountType,
   accountId,
   currentStatus,
+  autoRenew,
 }: {
   accountType: "developer" | "salesperson" | "broker_agency";
   accountId: string;
   currentStatus?: string;
+  autoRenew?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function runAction(action: "extend" | "complimentary" | "cancel" | "suspend" | "reactivate") {
+  async function runAction(action: "extend" | "complimentary" | "cancel" | "suspend" | "reactivate" | "toggle_auto_renew") {
     if (action === "cancel" && !window.confirm("Cancel this subscription?")) return;
     if (action === "suspend" && !window.confirm("Suspend this subscription? The account will lose paid-plan access until reactivated.")) return;
     setLoading(true);
@@ -47,6 +49,13 @@ export function AccountSubscriptionActions({
       )}
       <button disabled={loading} onClick={() => runAction("cancel")} className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50">
         Cancel
+      </button>
+      <button
+        disabled={loading}
+        onClick={() => runAction("toggle_auto_renew")}
+        className={`text-xs font-medium disabled:opacity-50 ${autoRenew ? "text-sky-400 hover:text-sky-300" : "text-ink-500 hover:text-ink-300"}`}
+      >
+        Auto-Renew: {autoRenew ? "On" : "Off"}
       </button>
     </div>
   );

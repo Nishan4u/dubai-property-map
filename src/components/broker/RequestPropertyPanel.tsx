@@ -4,6 +4,7 @@ import {
   getActiveSalespersonsForDeveloper,
   getCurrentProfile,
   getRememberedSalesperson,
+  isFreeAccessEnabled,
 } from "@/lib/supabase/queries";
 import { PropertyRequestForm } from "./PropertyRequestForm";
 
@@ -36,7 +37,7 @@ export async function RequestPropertyPanel({
     );
   }
 
-  if (broker.subscription_status !== "active") {
+  if (broker.subscription_status !== "active" && !(await isFreeAccessEnabled("broker"))) {
     return (
       <div className="rounded-xl border border-navy-700 bg-navy-850 p-5 text-sm text-ink-400">
         <p>An active subscription is required to submit property requests.</p>

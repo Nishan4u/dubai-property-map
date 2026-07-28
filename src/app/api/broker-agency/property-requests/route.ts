@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { notifyDeveloperTeam, notifyUser } from "@/lib/notify";
+import { isFreeAccessEnabled } from "@/lib/supabase/queries";
 
 // Agency-level counterpart to /api/broker/property-requests. Deliberately
 // separate: an agency's own requests are never attached to a broker_id and
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
   if (!agency.verified) {
     return NextResponse.json({ error: "Your agency account is not yet approved." }, { status: 403 });
   }
-  if (agency.subscription_status !== "active") {
+  if (agency.subscription_status !== "active" && !(await isFreeAccessEnabled("broker_agency"))) {
     return NextResponse.json({ error: "An active subscription is required to submit requests." }, { status: 403 });
   }
 

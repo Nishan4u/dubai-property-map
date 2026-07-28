@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { notifyDeveloperTeam, notifyUser } from "@/lib/notify";
+import { isFreeAccessEnabled } from "@/lib/supabase/queries";
 
 // The single atomic route for submitting a property request. Runs
 // server-side only so RESEND_API_KEY never reaches the browser, and so the
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
   if (broker.account_status !== "approved") {
     return NextResponse.json({ error: "Your broker account is not yet approved." }, { status: 403 });
   }
-  if (broker.subscription_status !== "active") {
+  if (broker.subscription_status !== "active" && !(await isFreeAccessEnabled("broker"))) {
     return NextResponse.json({ error: "An active subscription is required to submit requests." }, { status: 403 });
   }
 

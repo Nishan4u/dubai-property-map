@@ -3,11 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function BrokerSubscriptionActions({ brokerId, currentStatus }: { brokerId: string; currentStatus?: string }) {
+export function BrokerSubscriptionActions({
+  brokerId,
+  currentStatus,
+  autoRenew,
+}: {
+  brokerId: string;
+  currentStatus?: string;
+  autoRenew?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function runAction(action: "extend" | "complimentary" | "cancel" | "suspend" | "reactivate") {
+  async function runAction(action: "extend" | "complimentary" | "cancel" | "suspend" | "reactivate" | "toggle_auto_renew") {
     if (action === "cancel" && !window.confirm("Cancel this broker's subscription?")) return;
     if (action === "suspend" && !window.confirm("Suspend this broker's subscription? They'll lose paid-plan access until reactivated.")) return;
     setLoading(true);
@@ -39,6 +47,13 @@ export function BrokerSubscriptionActions({ brokerId, currentStatus }: { brokerI
       )}
       <button disabled={loading} onClick={() => runAction("cancel")} className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50">
         Cancel
+      </button>
+      <button
+        disabled={loading}
+        onClick={() => runAction("toggle_auto_renew")}
+        className={`text-xs font-medium disabled:opacity-50 ${autoRenew ? "text-sky-400 hover:text-sky-300" : "text-ink-500 hover:text-ink-300"}`}
+      >
+        Auto-Renew: {autoRenew ? "On" : "Off"}
       </button>
     </div>
   );
