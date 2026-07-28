@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
@@ -51,7 +52,14 @@ export function BrokerAgencyRosterTable({ brokers }: { brokers: RosterBroker[] }
 
       <DataTable
         columns={[
-          { header: "Broker", render: (b) => b.full_name },
+          {
+            header: "Broker",
+            render: (b) => (
+              <Link href={`/broker-agency/brokers/${b.id}`} className="font-medium text-ink-100 underline-offset-2 hover:underline">
+                {b.full_name}
+              </Link>
+            ),
+          },
           { header: "Email", render: (b) => b.email },
           { header: "Mobile", render: (b) => b.mobile },
           { header: "Status", render: (b) => <Badge tone={statusTone[b.account_status] ?? "neutral"}>{b.account_status.replace(/_/g, " ")}</Badge> },
