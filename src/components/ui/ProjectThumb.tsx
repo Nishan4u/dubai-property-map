@@ -17,7 +17,7 @@ export function ProjectThumb({
   const logoBadge = logoUrl ? (
     <div
       className={clsx(
-        "absolute overflow-hidden rounded-md border border-navy-700 bg-white/95 shadow-md",
+        "absolute overflow-hidden rounded-md border-2 border-navy-900 bg-navy-900/40 shadow-md backdrop-blur-sm",
         logoSize === "sm" && "bottom-1 left-1 h-4 w-4 p-0.5",
         logoSize === "md" && "bottom-1.5 left-1.5 h-6 w-6 p-1",
         logoSize === "lg" && "bottom-3 left-3 h-12 w-12 rounded-lg p-1.5"

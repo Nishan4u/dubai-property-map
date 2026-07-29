@@ -1,20 +1,36 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin, Search } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { isShortGoogleMapsLink, parseGoogleMapsLink } from "@/lib/parseGoogleMapsLink";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+// Dubai bounding box, biases/limits place-name search results so "Marina"
+// resolves to Dubai Marina rather than a same-named place elsewhere.
+const DUBAI_BBOX = "54.8,24.7,55.65,25.45";
+
+interface PlaceSuggestion {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export function CoordinatesPicker({
   lat,
   lng,
   onChange,
+  communities = [],
 }: {
   lat: number;
   lng: number;
   onChange: (lat: number, lng: number) => void;
+  /** Searched locally first (instant, authoritative Dubai community names)
+   * before falling back to Mapbox geocoding for anything more specific
+   * like a building or street name. */
+  communities?: { name: string; lat: number; lng: number }[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
@@ -24,6 +40,10 @@ export function CoordinatesPicker({
   const [linkInput, setLinkInput] = useState("");
   const [linkStatus, setLinkStatus] = useState<"idle" | "loading" | "error">("idle");
   const [linkError, setLinkError] = useState("");
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const [placeLoading, setPlaceLoading] = useState(false);
 
   function applyCoords(next: { lat: number; lng: number }) {
     onChangeRef.current(next.lat, next.lng);
@@ -31,8 +51,8 @@ export function CoordinatesPicker({
     mapRef.current?.flyTo({ center: [next.lng, next.lat], zoom: 15 });
   }
 
-  async function handleUseLink(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleUseLink(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!linkInput.trim()) return;
     setLinkStatus("loading");
     setLinkError("");
@@ -65,6 +85,62 @@ export function CoordinatesPicker({
       setLinkError(err instanceof Error ? err.message : "Couldn't resolve that link.");
     }
   }
+
+  function handleSelectPlace(place: PlaceSuggestion) {
+    applyCoords(place);
+    setPlaceQuery(place.name);
+    setPlaceOpen(false);
+    setPlaceSuggestions([]);
+  }
+
+  const communityMatches: PlaceSuggestion[] = useMemo(() => {
+    const q = placeQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return communities
+      .filter((c) => c.name.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((c) => ({ id: `community:${c.name}`, name: c.name, lat: c.lat, lng: c.lng }));
+  }, [placeQuery, communities]);
+
+  const combinedSuggestions = useMemo(() => {
+    const seen = new Set(communityMatches.map((c) => c.name.toLowerCase()));
+    const mapboxOnly = placeSuggestions.filter((p) => !seen.has(p.name.toLowerCase()));
+    return [...communityMatches, ...mapboxOnly].slice(0, 7);
+  }, [communityMatches, placeSuggestions]);
+
+  useEffect(() => {
+    if (!MAPBOX_TOKEN || placeQuery.trim().length < 3) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setPlaceLoading(true);
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(placeQuery.trim())}.json?access_token=${MAPBOX_TOKEN}&bbox=${DUBAI_BBOX}&limit=5&country=ae`,
+          { signal: controller.signal }
+        );
+        const data = await res.json();
+        const results: PlaceSuggestion[] = (data.features ?? []).map(
+          (f: { id: string; place_name: string; center: [number, number] }) => ({
+            id: f.id,
+            name: f.place_name,
+            lng: f.center[0],
+            lat: f.center[1],
+          })
+        );
+        setPlaceSuggestions(results);
+        setPlaceOpen(true);
+      } catch {
+        // aborted or network hiccup -- next keystroke retries
+      } finally {
+        setPlaceLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [placeQuery]);
 
   useEffect(() => {
     if (!containerRef.current || !MAPBOX_TOKEN || mapRef.current) return;
@@ -123,22 +199,62 @@ export function CoordinatesPicker({
 
   return (
     <div>
-      <form onSubmit={handleUseLink} className="mb-2 flex gap-2">
+      <div className="relative mb-2">
+        <div className="flex items-center gap-2 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2">
+          <Search className="h-3.5 w-3.5 shrink-0 text-ink-500" />
+          <input
+            value={placeQuery}
+            onChange={(e) => {
+              setPlaceQuery(e.target.value);
+              setPlaceOpen(true);
+            }}
+            onFocus={() => setPlaceOpen(true)}
+            onBlur={() => setTimeout(() => setPlaceOpen(false), 150)}
+            placeholder="Type a location name (e.g. Downtown Dubai, Dubai Marina)"
+            className="min-w-0 flex-1 bg-transparent text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+          />
+          {placeLoading && <span className="text-[10px] text-ink-500">Searching…</span>}
+        </div>
+        {placeOpen && combinedSuggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-navy-600 bg-navy-800 shadow-lg">
+            {combinedSuggestions.map((place) => (
+              <li key={place.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelectPlace(place)}
+                  className="block w-full truncate px-3 py-2 text-left text-xs text-ink-200 hover:bg-navy-700 hover:text-gold-400"
+                >
+                  {place.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="mb-2 flex gap-2">
         <input
           value={linkInput}
           onChange={(e) => setLinkInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleUseLink();
+            }
+          }}
           placeholder="Paste a Google Maps link (or lat, lng) to jump to the exact location"
           className="min-w-0 flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
         />
         <button
-          type="submit"
+          type="button"
+          onClick={() => handleUseLink()}
           disabled={linkStatus === "loading" || !linkInput.trim()}
           className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gold-500 px-3 py-2 text-xs font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
         >
           <MapPin className="h-3.5 w-3.5" />
           {linkStatus === "loading" ? "Locating…" : "Set Location"}
         </button>
-      </form>
+      </div>
       {linkStatus === "error" && (
         <p className="mb-2 text-xs font-medium text-rose-400">{linkError}</p>
       )}

@@ -457,6 +457,7 @@ export function ProjectForm({
           lat={coords.lat}
           lng={coords.lng}
           onChange={(lat, lng) => setCoords({ lat, lng })}
+          communities={communities}
         />
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
