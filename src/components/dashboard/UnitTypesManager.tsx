@@ -86,6 +86,12 @@ export function UnitTypesManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftFields>(emptyDraft);
   const [saving, setSaving] = useState(false);
+  // Photo + floor plans can be picked right in the Add Unit Type form,
+  // before the row even exists -- staged here as plain File objects and
+  // uploaded to the new row's storage path as part of the same "Add Unit
+  // Type" click, so the developer never has to come back afterward.
+  const [draftImageFile, setDraftImageFile] = useState<File | null>(null);
+  const [draftFloorPlanFiles, setDraftFloorPlanFiles] = useState<File[]>([]);
   // Photo + floor plans live in one expandable panel per row, auto-opened
   // right after a unit type is created -- found during QA that the old
   // tiny icon-only upload button was too easy to miss, so a newly added
@@ -147,13 +153,44 @@ export function UnitTypesManager({
       })
       .select()
       .single();
-    setSaving(false);
 
-    if (!error && data) {
-      setUnitTypes((prev) => [...prev, data]);
-      setDraft(emptyDraft);
-      setMediaOpenId(data.id);
+    if (error || !data) {
+      setSaving(false);
+      return;
     }
+
+    let finalRow = data;
+
+    if (draftImageFile) {
+      const safeName = draftImageFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${projectId}/unit-types/${data.id}/image/${Date.now()}-${safeName}`;
+      const { promise } = uploadFileWithProgress("project-media", path, draftImageFile, () => {});
+      const { error: imgErr } = await promise;
+      if (!imgErr) {
+        const { data: pub } = supabase.storage.from("project-media").getPublicUrl(path);
+        const { data: updated } = await supabase
+          .from("project_unit_types")
+          .update({ image_url: pub.publicUrl })
+          .eq("id", data.id)
+          .select()
+          .single();
+        if (updated) finalRow = updated;
+      }
+    }
+
+    for (const file of draftFloorPlanFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${projectId}/floor-plans/${data.id}/${Date.now()}-${safeName}`;
+      const { promise } = uploadFileWithProgress("project-media", path, file, () => {});
+      await promise;
+    }
+
+    setUnitTypes((prev) => [...prev, finalRow]);
+    setDraft(emptyDraft);
+    setDraftImageFile(null);
+    setDraftFloorPlanFiles([]);
+    setMediaOpenId(finalRow.id);
+    setSaving(false);
   }
 
   function startEdit(row: ProjectUnitTypeRow) {
@@ -341,13 +378,42 @@ export function UnitTypesManager({
       <div className="rounded-lg border border-dashed border-navy-600 p-3">
         <p className="mb-2 text-xs font-semibold text-ink-300">Add Unit Type</p>
         <UnitTypeFields draft={draft} onChange={setDraft} />
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-3 py-2 text-xs text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
+              <ImageIcon className="h-3.5 w-3.5" />
+              {draftImageFile ? draftImageFile.name : "Photo (optional)"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => setDraftImageFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+          <div>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-3 py-2 text-xs text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
+              <Upload className="h-3.5 w-3.5" />
+              {draftFloorPlanFiles.length > 0
+                ? `${draftFloorPlanFiles.length} floor plan file${draftFloorPlanFiles.length === 1 ? "" : "s"}`
+                : "Floor Plans (optional)"}
+              <input
+                type="file"
+                multiple
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => setDraftFloorPlanFiles(Array.from(e.target.files ?? []))}
+              />
+            </label>
+          </div>
+        </div>
         <button
           type="button"
           onClick={addUnitType}
           disabled={saving || !draft.unitName.trim()}
           className="mt-3 flex items-center gap-1.5 rounded-lg bg-gold-500 px-3 py-2 text-xs font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
         >
-          <Plus className="h-3.5 w-3.5" /> {saving ? "Adding…" : "Add Unit Type"}
+          <Plus className="h-3.5 w-3.5" /> {saving ? "Adding & Uploading…" : "Add Unit Type"}
         </button>
       </div>
     </div>
