@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 import {
   getCommunities,
   getDevelopers,
+  getProjectSitemapEntries,
   getPublishedBlogPosts,
-  getPublishedProjects,
 } from "@/lib/supabase/queries";
 
 const BASE_URL = "https://dubaipropertymap.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [projects, communities, developers, posts] = await Promise.all([
-    getPublishedProjects(),
+    getProjectSitemapEntries(),
     getCommunities(),
     getDevelopers(),
     getPublishedBlogPosts(),

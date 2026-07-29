@@ -21,6 +21,7 @@ import {
   getProjectDocumentsByCategory,
   getProjectGallerySections,
   getProjectMediaFiles,
+  getProjectPreviewBySlug,
   getProjectsForCommunity,
   getProjectUnitTypes,
   getUnitTypeFloorPlans,
@@ -41,20 +42,23 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const row = await getProjectBySlug(slug);
-  if (!row) return {};
+  // Public-safe preview, not the full row -- generateMetadata runs for
+  // EVERY viewer including guests and crawlers (link unfurling needs a
+  // title/image/price even when the real detail page is gated), so this
+  // must never touch the RLS-protected full project fetch.
+  const project = await getProjectPreviewBySlug(slug);
+  if (!project) return {};
 
-  const project = mapProject(row);
-  const title = `${project.name} by ${project.developerName ?? row.developers?.name} | Dubai Property Map`;
+  const title = `${project.name} by ${project.developer_name} | Dubai Property Map`;
   const description =
     project.description ||
-    `${project.propertyType} in ${project.communityName ?? row.communities?.name}, starting from AED ${project.priceFromAed.toLocaleString()}.`;
+    `${project.property_type} in ${project.community_name}, starting from AED ${project.price_from_aed.toLocaleString()}.`;
 
   // Rich share-card image (spec: Share Feature) -- the project's own cover
   // photo first (what most platforms show), the Mapbox static map card as a
   // fallback/secondary image when there's no cover photo but coordinates exist.
   const mapImage = project.lat != null && project.lng != null ? getMapboxStaticImageUrl(project.lat, project.lng) : null;
-  const images = [project.coverImageUrl, mapImage].filter((url): url is string => Boolean(url));
+  const images = [project.cover_image_url, mapImage].filter((url): url is string => Boolean(url));
 
   return {
     title,
@@ -74,8 +78,13 @@ export default async function ProjectDetailsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const row = await getProjectBySlug(slug);
-  if (!row) notFound();
+  // Existence + ownership checks use the public-safe preview, not the full
+  // RLS-protected row -- since patch_83 locks the base `projects` table
+  // down to authorized viewers only, fetching the full row for a guest
+  // would return null indistinguishably from "doesn't exist", which would
+  // incorrectly 404 instead of showing the gate below.
+  const preview = await getProjectPreviewBySlug(slug);
+  if (!preview) notFound();
 
   // A Developer/Salesperson account is scoped to their own developer
   // everywhere else on the platform (homepage, All Projects, search) --
@@ -85,7 +94,7 @@ export default async function ProjectDetailsPage({
   // rather than a permission message matches "must not see" -- it doesn't
   // even confirm the project exists.
   const viewerDeveloperId = await getViewerProjectScope();
-  if (viewerDeveloperId && row.developer_id !== viewerDeveloperId) notFound();
+  if (viewerDeveloperId && preview.developer_id !== viewerDeveloperId) notFound();
 
   // Same protection as the map/homepage/communities/developer pages (spec
   // sections 20-22): guests and unsubscribed brokers/salespersons/agencies
@@ -99,6 +108,11 @@ export default async function ProjectDetailsPage({
       </PublicShell>
     );
   }
+
+  // Only reached once authorized -- the full row, now genuinely
+  // RLS-protected by patch_83, not just withheld by app-layer choice.
+  const row = await getProjectBySlug(slug);
+  if (!row) notFound();
 
   const project = mapProject(row);
   const developer = row.developers;

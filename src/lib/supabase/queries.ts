@@ -259,6 +259,51 @@ export async function getProjectBySlug(slug: string) {
   return data as ProjectWithRelations | null;
 }
 
+export interface ProjectPreview {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  property_type: string;
+  price_from_aed: number;
+  cover_image_url: string | null;
+  lat: number | null;
+  lng: number | null;
+  developer_id: string;
+  community_id: string;
+  updated_at: string;
+  developer_name: string | null;
+  developer_slug: string | null;
+  community_name: string | null;
+  community_slug: string | null;
+}
+
+// Public-safe subset of a project (see projects_public_meta in patch_82) --
+// readable without an authorized session. Used for existence/ownership
+// checks that must happen BEFORE the access gate, and for generateMetadata
+// (share-link previews need a title/image/price even when the real detail
+// page is gated). Never contains the fields the protected page shows
+// (payment plan, escrow, amenities, unit types, documents, contact info).
+export async function getProjectPreviewBySlug(slug: string): Promise<ProjectPreview | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects_public_meta")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getProjectSitemapEntries() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("projects_public_meta").select("slug, updated_at");
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getDevelopers() {
   const supabase = await createClient();
   const { data, error } = await supabase
