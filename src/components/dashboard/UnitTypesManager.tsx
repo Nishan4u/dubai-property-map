@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileStack, ImageIcon, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import { ImageIcon, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectFileManager } from "@/components/dashboard/ProjectFileManager";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
@@ -86,7 +86,12 @@ export function UnitTypesManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftFields>(emptyDraft);
   const [saving, setSaving] = useState(false);
-  const [floorPlansOpenId, setFloorPlansOpenId] = useState<string | null>(null);
+  // Photo + floor plans live in one expandable panel per row, auto-opened
+  // right after a unit type is created -- found during QA that the old
+  // tiny icon-only upload button was too easy to miss, so a newly added
+  // unit type now walks straight into "add its photo" instead of the
+  // developer having to separately discover a small icon afterwards.
+  const [mediaOpenId, setMediaOpenId] = useState<string | null>(null);
   const [imageUploadingId, setImageUploadingId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePercent, setImagePercent] = useState(0);
@@ -147,6 +152,7 @@ export function UnitTypesManager({
     if (!error && data) {
       setUnitTypes((prev) => [...prev, data]);
       setDraft(emptyDraft);
+      setMediaOpenId(data.id);
     }
   }
 
@@ -241,34 +247,15 @@ export function UnitTypesManager({
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <label
-                  title="Unit Type Image"
-                  className="flex cursor-pointer items-center rounded-lg p-1.5 text-ink-500 hover:text-gold-400"
-                >
-                  {imageUploadingId === u.id ? (
-                    <span className="text-[10px]">…</span>
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    disabled={imageUploadingId === u.id}
-                    data-unit-type-id={u.id}
-                    onChange={handleImageUpload}
-                  />
-                </label>
                 <button
-                  onClick={() => setFloorPlansOpenId((cur) => (cur === u.id ? null : u.id))}
-                  title="Floor Plans"
+                  onClick={() => setMediaOpenId((cur) => (cur === u.id ? null : u.id))}
                   className={
-                    floorPlansOpenId === u.id
-                      ? "rounded-lg p-1.5 text-gold-400"
-                      : "rounded-lg p-1.5 text-ink-500 hover:text-gold-400"
+                    mediaOpenId === u.id
+                      ? "flex items-center gap-1.5 rounded-lg border border-gold-500/40 px-2.5 py-1.5 text-xs font-medium text-gold-400"
+                      : "flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100"
                   }
                 >
-                  <FileStack className="h-4 w-4" />
+                  <ImageIcon className="h-3.5 w-3.5" /> Photo &amp; Floor Plans
                 </button>
                 <button
                   onClick={() => startEdit(u)}
@@ -283,29 +270,64 @@ export function UnitTypesManager({
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              {imageUploadingId === u.id && imageFile && (
-                <div className="w-full">
-                  <UploadProgressItem
-                    fileName={imageFile.name}
-                    fileSize={imageFile.size}
-                    state={imageError ? "error" : "uploading"}
-                    percent={imagePercent}
-                    errorMessage={imageError}
-                    onRemove={imageError ? () => { setImageFile(null); setImageUploadingId(null); } : undefined}
-                  />
-                </div>
-              )}
-              {floorPlansOpenId === u.id && (
-                <div className="w-full border-t border-navy-800 pt-3">
-                  <p className="mb-2 text-xs font-semibold text-ink-300">
-                    Floor Plans for {u.unit_name}
-                  </p>
-                  <ProjectFileManager
-                    projectId={projectId}
-                    folder="documents"
-                    accept="application/pdf,image/png,image/jpeg,image/webp"
-                    pathOverride={`${projectId}/floor-plans/${u.id}`}
-                  />
+              {mediaOpenId === u.id && (
+                <div className="w-full space-y-4 border-t border-navy-800 pt-3">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-ink-300">
+                      Photo for {u.unit_name}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950">
+                        {u.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.image_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-ink-600" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
+                          <Upload className="h-4 w-4" />
+                          {imageUploadingId === u.id
+                            ? "Uploading…"
+                            : u.image_url
+                              ? "Replace Photo"
+                              : "Upload Photo"}
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            disabled={imageUploadingId === u.id}
+                            data-unit-type-id={u.id}
+                            onChange={handleImageUpload}
+                          />
+                        </label>
+                        {imageUploadingId === u.id && imageFile && (
+                          <div className="mt-2">
+                            <UploadProgressItem
+                              fileName={imageFile.name}
+                              fileSize={imageFile.size}
+                              state={imageError ? "error" : "uploading"}
+                              percent={imagePercent}
+                              errorMessage={imageError}
+                              onRemove={imageError ? () => { setImageFile(null); setImageUploadingId(null); } : undefined}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-ink-300">
+                      Floor Plans for {u.unit_name}
+                    </p>
+                    <ProjectFileManager
+                      projectId={projectId}
+                      folder="documents"
+                      accept="application/pdf,image/png,image/jpeg,image/webp"
+                      pathOverride={`${projectId}/floor-plans/${u.id}`}
+                    />
+                  </div>
                 </div>
               )}
             </div>
