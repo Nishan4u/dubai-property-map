@@ -52,7 +52,7 @@ export function ProjectFileManager({
   const inputRef = useRef<HTMLInputElement>(null);
   const path =
     pathOverride ??
-    (folder === "documents" && category
+    (category
       ? `${projectId}/${folder}/${categorySlug(category)}`
       : `${projectId}/${folder}`);
 
@@ -69,7 +69,7 @@ export function ProjectFileManager({
     }
 
     const withUrls = (data ?? [])
-      .filter((f) => f.name !== ".emptyFolderPlaceholder")
+      .filter((f) => f.name !== ".emptyFolderPlaceholder" && f.id !== null)
       .map((f) => ({
         name: f.name,
         url: supabase.storage.from("project-media").getPublicUrl(`${path}/${f.name}`)

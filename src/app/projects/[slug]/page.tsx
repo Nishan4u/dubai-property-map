@@ -9,6 +9,7 @@ import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyRequestPropertyPanel";
+import { GalleryLightbox } from "@/components/public/GalleryLightbox";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
 import { formatAed } from "@/data/mock";
@@ -18,6 +19,7 @@ import {
   getMapAccessStatus,
   getProjectBySlug,
   getProjectDocumentsByCategory,
+  getProjectGallerySections,
   getProjectMediaFiles,
   getProjectsForCommunity,
   getProjectUnitTypes,
@@ -108,8 +110,9 @@ export default async function ProjectDetailsPage({
     .slice(0, 3)
     .map((p) => mapProject(p));
 
-  const [gallery, documents, milestones, projectBanner, unitTypes] = await Promise.all([
+  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes] = await Promise.all([
     getProjectMediaFiles(project.id, "gallery"),
+    getProjectGallerySections(project.id),
     getProjectDocumentsByCategory(project.id),
     getConstructionMilestones(project.id),
     getActiveProjectBanner(project.id),
@@ -122,6 +125,8 @@ export default async function ProjectDetailsPage({
       )
     );
   const images = gallery.filter((f) => f.isImage);
+  const exteriorImages = gallerySections.exterior.flatMap((s) => s.files);
+  const interiorImages = gallerySections.interior.flatMap((s) => s.files);
   const brochureDoc =
     documents.find((d) => d.category === "Brochure") ?? documents[0] ?? null;
   const videoEmbedUrl = project.videoUrl ? getVideoEmbedUrl(project.videoUrl) : null;
@@ -340,40 +345,29 @@ export default async function ProjectDetailsPage({
             </Section>
 
             <Section title="Gallery">
-              {images.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {images.map((img) => (
-                    <a
-                      key={img.url}
-                      href={img.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block h-24 overflow-hidden rounded-lg border border-navy-700 bg-navy-850"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt={img.name}
-                        className="h-full w-full object-cover transition-transform hover:scale-105"
-                      />
-                    </a>
-                  ))}
-                </div>
+              {images.length > 0 || exteriorImages.length > 0 || interiorImages.length > 0 ? (
+                <GalleryLightbox
+                  sections={[
+                    { label: "Photos", images },
+                    { label: "Exterior", images: exteriorImages },
+                    { label: "Interior", images: interiorImages },
+                  ]}
+                />
               ) : (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <ProjectThumb
-                      key={i}
-                      gradient={project.gradient}
-                      className="h-24 rounded-lg"
-                    />
-                  ))}
-                </div>
-              )}
-              {images.length === 0 && (
-                <p className="mt-2 text-xs text-ink-500">
-                  No photos uploaded by the developer yet.
-                </p>
+                <>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <ProjectThumb
+                        key={i}
+                        gradient={project.gradient}
+                        className="h-24 rounded-lg"
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-ink-500">
+                    No photos uploaded by the developer yet.
+                  </p>
+                </>
               )}
             </Section>
 

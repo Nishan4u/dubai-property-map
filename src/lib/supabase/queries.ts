@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { categorySlug, documentCategories } from "@/lib/documentCategories";
+import { exteriorGalleryCategories, gallerySlug, interiorGalleryCategories } from "@/lib/galleryCategories";
 import type { ProjectWithRelations } from "@/types/database";
 
 export async function getCurrentProfile() {
@@ -761,8 +762,11 @@ export async function getProjectMediaFiles(
 
   if (error || !data) return [];
 
+  // Folders (e.g. the Exterior/Interior category subfolders under gallery)
+  // are listed alongside files with id === null -- exclude them so they
+  // don't render as broken "images".
   return data
-    .filter((f) => f.name !== ".emptyFolderPlaceholder")
+    .filter((f) => f.name !== ".emptyFolderPlaceholder" && f.id !== null)
     .map((f) => ({
       name: f.name.replace(/^\d+-/, ""),
       url: supabase.storage.from("project-media").getPublicUrl(`${path}/${f.name}`)
@@ -770,6 +774,43 @@ export async function getProjectMediaFiles(
       isImage: /\.(png|jpe?g|webp|gif|avif)$/i.test(f.name),
       isVideo: /\.(mp4|webm|mov)$/i.test(f.name),
     }));
+}
+
+export async function getProjectGallerySections(projectId: string) {
+  const supabase = await createClient();
+
+  async function listCategory(category: string) {
+    const path = `${projectId}/gallery/${gallerySlug(category)}`;
+    const { data } = await supabase.storage.from("project-media").list(path);
+    return (data ?? [])
+      .filter((f) => f.name !== ".emptyFolderPlaceholder" && f.id !== null)
+      .map((f) => ({
+        name: f.name.replace(/^\d+-/, ""),
+        url: supabase.storage.from("project-media").getPublicUrl(`${path}/${f.name}`)
+          .data.publicUrl,
+        isImage: /\.(png|jpe?g|webp|gif|avif)$/i.test(f.name),
+      }));
+  }
+
+  const [exterior, interior] = await Promise.all([
+    Promise.all(
+      exteriorGalleryCategories.map(async (category) => ({
+        category,
+        files: await listCategory(category),
+      }))
+    ),
+    Promise.all(
+      interiorGalleryCategories.map(async (category) => ({
+        category,
+        files: await listCategory(category),
+      }))
+    ),
+  ]);
+
+  return {
+    exterior: exterior.filter((s) => s.files.length > 0),
+    interior: interior.filter((s) => s.files.length > 0),
+  };
 }
 
 export async function getBrochureDownloadsForDeveloper(developerId: string) {

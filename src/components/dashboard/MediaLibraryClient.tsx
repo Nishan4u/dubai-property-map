@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { ProjectFileManager, documentCategories } from "@/components/dashboard/ProjectFileManager";
+import { exteriorGalleryCategories, interiorGalleryCategories } from "@/lib/galleryCategories";
+
+const UNCATEGORIZED = "__uncategorized__";
 
 export function MediaLibraryClient({
   title,
@@ -17,7 +20,9 @@ export function MediaLibraryClient({
   projects: { id: string; name: string }[];
 }) {
   const [selected, setSelected] = useState(projects[0]?.id ?? "");
-  const [category, setCategory] = useState(documentCategories[0]);
+  const [category, setCategory] = useState(
+    folder === "documents" ? documentCategories[0] : exteriorGalleryCategories[0]
+  );
 
   return (
     <div className="space-y-4 p-6">
@@ -47,32 +52,50 @@ export function MediaLibraryClient({
                 ))}
               </select>
             </div>
-            {folder === "documents" && (
-              <div className="flex-1">
-                <label className="mb-1 block text-xs font-medium text-ink-400">
-                  Document Type
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-                >
-                  {documentCategories.map((c) => (
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-ink-400">
+                {folder === "documents" ? "Document Type" : "Gallery Category"}
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+              >
+                {folder === "documents" ? (
+                  documentCategories.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
-                  ))}
-                </select>
-              </div>
-            )}
+                  ))
+                ) : (
+                  <>
+                    <optgroup label="Exterior">
+                      {exteriorGalleryCategories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Interior">
+                      {interiorGalleryCategories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <option value={UNCATEGORIZED}>General (Uncategorized)</option>
+                  </>
+                )}
+              </select>
+            </div>
           </div>
 
           {selected && (
             <ProjectFileManager
-              key={`${selected}-${folder === "documents" ? category : "gallery"}`}
+              key={`${selected}-${category}`}
               projectId={selected}
               folder={folder}
-              category={folder === "documents" ? category : undefined}
+              category={category === UNCATEGORIZED ? undefined : category}
               accept={accept}
             />
           )}
