@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Download, FileText, MapPin, Play, Star } from "lucide-react";
+import { BadgeCheck, Building2, Download, FileText, MapPin, Play, Star } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { MortgageCalculator } from "@/components/public/MortgageCalculator";
 import { ProjectCard } from "@/components/public/ProjectCard";
@@ -587,8 +587,11 @@ export default async function ProjectDetailsPage({
                   {developer?.initial}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-ink-100 hover:text-gold-400">
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-ink-100 hover:text-gold-400">
                     {developer?.name}
+                    {developer?.verified && (
+                      <BadgeCheck className="h-4 w-4 shrink-0 text-sky-400" />
+                    )}
                   </p>
                   <p className="text-xs text-ink-500">
                     {developer?.verified ? "Verified developer" : "Developer"}
