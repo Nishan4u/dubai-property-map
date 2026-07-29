@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Trash2, Upload } from "lucide-react";
@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { ConstructionMilestonesManager } from "@/components/dashboard/ConstructionMilestonesManager";
 import { UnitTypesManager } from "@/components/dashboard/UnitTypesManager";
+import { ProjectFileManager } from "@/components/dashboard/ProjectFileManager";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
@@ -116,6 +117,38 @@ export function ProjectForm({
   const [logoPercent, setLogoPercent] = useState(0);
   const [logoError, setLogoError] = useState("");
 
+  // Create mode only: a project id is needed before Logo/Unit Types/Gallery
+  // can upload anything, but developers shouldn't have to "save" the whole
+  // form first just to unlock those sections. So on the New Project page we
+  // silently insert a minimal draft row the moment the page loads (status
+  // defaults to 'draft' -- invisible everywhere public, exempt from the
+  // listing-limit trigger) and every section attaches to that real id
+  // immediately. Submitting the form later becomes an UPDATE of this same
+  // row (setting the real name/community/status) instead of an INSERT.
+  const [draftProject, setDraftProject] = useState<{ id: string } | null>(null);
+  const draftCreateStarted = useRef(false);
+  const activeProjectId = project?.id ?? draftProject?.id;
+
+  useEffect(() => {
+    if (project || !developerId || draftCreateStarted.current) return;
+    draftCreateStarted.current = true;
+    const supabase = createClient();
+    supabase
+      .from("projects")
+      .insert({
+        name: "Untitled Project",
+        slug: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        developer_id: developerId,
+        community_id: communities[0]?.id,
+      })
+      .select()
+      .single()
+      .then(({ data }) => {
+        if (data) setDraftProject({ id: data.id });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function toggleAmenity(a: string) {
     setAmenities((prev) =>
       prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
@@ -145,14 +178,14 @@ export function ProjectForm({
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !project) return;
+    if (!file || !activeProjectId) return;
     setLogoFile(file);
     setLogoPercent(0);
     setLogoError("");
 
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const path = `${project.id}/logo/${Date.now()}-${safeName}`;
+    const path = `${activeProjectId}/logo/${Date.now()}-${safeName}`;
     const { promise } = uploadFileWithProgress("project-media", path, file, setLogoPercent);
     const { error: uploadError } = await promise;
 
@@ -163,7 +196,7 @@ export function ProjectForm({
     }
 
     const { data } = supabase.storage.from("project-media").getPublicUrl(path);
-    await supabase.from("projects").update({ logo_url: data.publicUrl }).eq("id", project.id);
+    await supabase.from("projects").update({ logo_url: data.publicUrl }).eq("id", activeProjectId);
 
     setLogoUrl(data.publicUrl);
     setLogoFile(null);
@@ -226,29 +259,50 @@ export function ProjectForm({
         ? String(formData.get("developer_id"))
         : developerId;
       const linkedUpcoming = activeUpcomingProjects.find((u) => u.id === linkedUpcomingId);
-      const { data: created, error } = await supabase
-        .from("projects")
-        .insert({
-          ...payload,
-          slug,
-          developer_id: resolvedDeveloperId,
-          listing_type: "off-plan",
-          status: "published",
-          approval_status: developerOptions ? "approved" : "pending",
-          unit_types: [],
-          gradient: gradients[Math.floor(Math.random() * gradients.length)],
-          rating: 0,
-          reviews: 0,
-          views: 0,
-          ...(linkedUpcoming?.logo_url ? { logo_url: linkedUpcoming.logo_url } : {}),
-        })
-        .select()
-        .single();
+      const finalizePayload = {
+        ...payload,
+        slug,
+        listing_type: "off-plan",
+        status: "published",
+        approval_status: developerOptions ? "approved" : "pending",
+        gradient: gradients[Math.floor(Math.random() * gradients.length)],
+        ...(linkedUpcoming?.logo_url ? { logo_url: linkedUpcoming.logo_url } : {}),
+      };
 
-      if (error) {
-        setStatus("error");
-        setErrorMsg(error.message);
-        return;
+      let created: { id: string } | null = null;
+
+      if (draftProject) {
+        const { data, error } = await supabase
+          .from("projects")
+          .update({ ...finalizePayload, developer_id: resolvedDeveloperId })
+          .eq("id", draftProject.id)
+          .select()
+          .single();
+        if (error) {
+          setStatus("error");
+          setErrorMsg(error.message);
+          return;
+        }
+        created = data;
+      } else {
+        const { data, error } = await supabase
+          .from("projects")
+          .insert({
+            ...finalizePayload,
+            developer_id: resolvedDeveloperId,
+            unit_types: [],
+            rating: 0,
+            reviews: 0,
+            views: 0,
+          })
+          .select()
+          .single();
+        if (error) {
+          setStatus("error");
+          setErrorMsg(error.message);
+          return;
+        }
+        created = data;
       }
 
       // Launch workflow (spec section 13): hides the "Coming Soon" pin by
@@ -337,12 +391,12 @@ export function ProjectForm({
       </SectionCard>
 
       <SectionCard title="Project Logo">
-        {project ? (
+        {activeProjectId ? (
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-navy-600 bg-navy-900">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={project.name} className="h-full w-full object-contain p-2" />
+                <img src={logoUrl} alt={project?.name ?? "Project logo"} className="h-full w-full object-contain p-2" />
               ) : (
                 <span className="text-xs text-ink-500">No logo</span>
               )}
@@ -377,6 +431,8 @@ export function ProjectForm({
               )}
             </div>
           </div>
+        ) : developerId ? (
+          <p className="text-sm text-ink-500">Preparing…</p>
         ) : (
           <p className="text-sm text-ink-500">
             Save this project first, then come back to upload a logo.
@@ -514,8 +570,10 @@ export function ProjectForm({
       </SectionCard>
 
       <SectionCard title="Unit Types">
-        {project ? (
-          <UnitTypesManager projectId={project.id} initialUnitTypes={unitTypeRows} />
+        {activeProjectId ? (
+          <UnitTypesManager projectId={activeProjectId} initialUnitTypes={unitTypeRows} />
+        ) : developerId ? (
+          <p className="text-sm text-ink-500">Preparing…</p>
         ) : (
           <p className="text-sm text-ink-500">
             Save this project first, then come back to add detailed unit
@@ -621,18 +679,27 @@ export function ProjectForm({
       </SectionCard>
 
       <SectionCard title="Documents & Media">
-        {project ? (
-          <p className="text-sm text-ink-400">
-            Manage images and documents for this project from{" "}
-            <Link href="/dashboard/media" className="text-gold-400 hover:underline">
-              Media Library
-            </Link>{" "}
-            and{" "}
-            <Link href="/dashboard/documents" className="text-gold-400 hover:underline">
-              Documents
-            </Link>
-            {" "}— select &quot;{project.name}&quot; from the project dropdown there.
-          </p>
+        {activeProjectId ? (
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-xs font-semibold text-ink-300">Gallery Images</p>
+              <ProjectFileManager
+                projectId={activeProjectId}
+                folder="gallery"
+                accept="image/png,image/jpeg,image/webp"
+              />
+            </div>
+            <p className="text-sm text-ink-400">
+              Manage documents (brochures, floor plans, etc) from the{" "}
+              <Link href="/dashboard/documents" className="text-gold-400 hover:underline">
+                Documents
+              </Link>{" "}
+              page — select &quot;{project?.name ?? "this project"}&quot; from the project
+              dropdown there.
+            </p>
+          </div>
+        ) : developerId ? (
+          <p className="text-sm text-ink-500">Preparing…</p>
         ) : (
           <p className="text-sm text-ink-500">
             Save this project first, then come back to add images and documents
