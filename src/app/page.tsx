@@ -71,6 +71,12 @@ export default async function Home() {
   const communities = communityRows.map((c) => mapCommunity(c));
   const developers = developerRows.map((d) => mapDeveloper(d));
   const projects = projectRows.map((p) => mapProject(p));
+  // "Developer sees ONLY own projects everywhere" also covers the "Coming
+  // Soon" teaser layer -- a logged-in developer/salesperson shouldn't see
+  // other developers' unlaunched pins on their own scoped view of the map.
+  const scopedUpcomingProjects = viewerDeveloperId
+    ? upcomingProjects.filter((u) => u.developer_id === viewerDeveloperId)
+    : upcomingProjects;
 
   return (
     <HomeClient
@@ -100,7 +106,7 @@ export default async function Home() {
         .map((l) => ({ label: l.label, url: l.url }))}
       viewerDeveloperId={viewerDeveloperId}
       sliderClickBehavior={sliderClickBehavior}
-      upcomingProjects={upcomingProjects}
+      upcomingProjects={scopedUpcomingProjects}
     />
   );
 }

@@ -38,4 +38,25 @@ where
   or p.developer_id = (select developer_id from profiles where id = auth.uid())
   or exists (select 1 from profiles where id = auth.uid() and role = 'admin');
 
+-- Second, unrelated fix bundled into the same round-trip: a logged-in
+-- developer/salesperson viewing the homepage map saw every developer's
+-- "Coming Soon" pins, not just their own -- "Developer sees ONLY own
+-- projects everywhere" should also cover this teaser layer. developer_id
+-- wasn't previously exposed by this view (only name/slug), needed now so
+-- the app can filter pins down to the viewer's own developer when scoped.
+create or replace view upcoming_projects_public as
+select
+  up.id,
+  up.lat,
+  up.lng,
+  coalesce(up.logo_url, d.logo_url) as logo_url,
+  d.name as developer_name,
+  d.slug as developer_slug,
+  up.developer_id
+from upcoming_projects up
+join developers d on d.id = up.developer_id
+where up.status = 'active';
+
+grant select on upcoming_projects_public to anon, authenticated;
+
 notify pgrst, 'reload schema';

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { MapPin } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { isShortGoogleMapsLink, parseGoogleMapsLink } from "@/lib/parseGoogleMapsLink";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -19,6 +21,50 @@ export function CoordinatesPicker({
   const markerRef = useRef<import("mapbox-gl").Marker | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const [linkInput, setLinkInput] = useState("");
+  const [linkStatus, setLinkStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [linkError, setLinkError] = useState("");
+
+  function applyCoords(next: { lat: number; lng: number }) {
+    onChangeRef.current(next.lat, next.lng);
+    markerRef.current?.setLngLat([next.lng, next.lat]);
+    mapRef.current?.flyTo({ center: [next.lng, next.lat], zoom: 15 });
+  }
+
+  async function handleUseLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!linkInput.trim()) return;
+    setLinkStatus("loading");
+    setLinkError("");
+
+    const direct = parseGoogleMapsLink(linkInput);
+    if (direct) {
+      applyCoords(direct);
+      setLinkStatus("idle");
+      return;
+    }
+
+    if (!isShortGoogleMapsLink(linkInput)) {
+      setLinkStatus("error");
+      setLinkError("Couldn't find coordinates in that link or text. Paste a Google Maps link or \"lat, lng\".");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/geocode/resolve-map-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: linkInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't resolve that link.");
+      applyCoords(data);
+      setLinkStatus("idle");
+    } catch (err) {
+      setLinkStatus("error");
+      setLinkError(err instanceof Error ? err.message : "Couldn't resolve that link.");
+    }
+  }
 
   useEffect(() => {
     if (!containerRef.current || !MAPBOX_TOKEN || mapRef.current) return;
@@ -77,6 +123,25 @@ export function CoordinatesPicker({
 
   return (
     <div>
+      <form onSubmit={handleUseLink} className="mb-2 flex gap-2">
+        <input
+          value={linkInput}
+          onChange={(e) => setLinkInput(e.target.value)}
+          placeholder="Paste a Google Maps link (or lat, lng) to jump to the exact location"
+          className="min-w-0 flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={linkStatus === "loading" || !linkInput.trim()}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gold-500 px-3 py-2 text-xs font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          {linkStatus === "loading" ? "Locating…" : "Set Location"}
+        </button>
+      </form>
+      {linkStatus === "error" && (
+        <p className="mb-2 text-xs font-medium text-rose-400">{linkError}</p>
+      )}
       <div ref={containerRef} className="h-56 w-full rounded-lg" />
       <p className="mt-1 text-xs text-ink-500">
         Click the map or drag the pin to set the exact location.

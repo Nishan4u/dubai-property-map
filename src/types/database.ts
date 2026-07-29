@@ -308,6 +308,7 @@ export interface UpcomingProjectPublicRow {
   logo_url: string | null;
   developer_name: string;
   developer_slug: string;
+  developer_id: string;
 }
 
 export interface ProjectEventRow {

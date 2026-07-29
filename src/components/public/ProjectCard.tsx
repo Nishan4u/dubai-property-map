@@ -76,7 +76,7 @@ export function ProjectCard({
             </button>
           </div>
         </div>
-        <p className="truncate text-xs text-ink-500">by {developerName}</p>
+        <p className="truncate text-sm font-medium text-ink-200">by {developerName}</p>
         <p className="truncate text-xs text-ink-500">{communityName}</p>
         <p className="mt-1 text-sm font-semibold text-gold-400">
           From {formatAed(project.priceFromAed)}
@@ -90,6 +90,11 @@ export function ProjectCard({
               : ""}{" "}
           · Handover {project.handoverQuarter} {project.handoverYear}
         </p>
+        {project.paymentPlan && (
+          <p className="mt-0.5 truncate text-xs text-ink-400">
+            Payment Plan: <span className="font-medium text-ink-300">{project.paymentPlan}</span>
+          </p>
+        )}
       </div>
     </Link>
   );
