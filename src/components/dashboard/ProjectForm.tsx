@@ -11,10 +11,9 @@ import { UnitTypesManager } from "@/components/dashboard/UnitTypesManager";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
+import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { Community, Project, ProjectTag } from "@/types";
 import type { ConstructionMilestoneRow, ProjectUnitTypeRow } from "@/types/database";
-
-const unitTypeOptions = ["Studio", "1BR", "2BR", "3BR", "4BR", "Penthouse", "Villa"];
 
 const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
 

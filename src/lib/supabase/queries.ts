@@ -72,7 +72,7 @@ export async function getPublishedProjects(developerId?: string) {
   const supabase = await createClient();
   let query = supabase
     .from("projects")
-    .select("*, developers(*), communities(*)")
+    .select("*, developers(*), communities(*), project_unit_types(unit_type, size_sqft)")
     .in("status", ["published", "featured"]);
 
   if (developerId) {

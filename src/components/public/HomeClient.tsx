@@ -267,6 +267,15 @@ export function HomeClient({
       if (filters.escrowStatus && p.escrowStatus !== filters.escrowStatus) return false;
       if (filters.furnishing && p.furnishing !== filters.furnishing) return false;
       if (filters.completionStatus && getProjectStatusLabel(p) !== filters.completionStatus) return false;
+      if (filters.unitType && !(p.structuredUnitTypes ?? []).includes(filters.unitType)) return false;
+      if (filters.sizeSqftMin) {
+        const min = Number(filters.sizeSqftMin);
+        if (p.unitSizeSqftMax == null || p.unitSizeSqftMax < min) return false;
+      }
+      if (filters.sizeSqftMax) {
+        const max = Number(filters.sizeSqftMax);
+        if (p.unitSizeSqftMin == null || p.unitSizeSqftMin > max) return false;
+      }
       return true;
     });
   }, [allProjects, activeTab, activeTag, filters, searchQuery]);

@@ -53,6 +53,21 @@ export function mapProject(row: ProjectWithRelations): Project {
     developerPhone: row.developers?.phone ?? null,
     communityName: row.communities?.name,
     communitySlug: row.communities?.slug,
+    structuredUnitTypes: row.project_unit_types
+      ? Array.from(new Set(row.project_unit_types.map((u) => u.unit_type)))
+      : undefined,
+    unitSizeSqftMin: row.project_unit_types
+      ? row.project_unit_types.reduce<number | null>((min, u) => {
+          if (u.size_sqft == null) return min;
+          return min == null ? u.size_sqft : Math.min(min, u.size_sqft);
+        }, null)
+      : undefined,
+    unitSizeSqftMax: row.project_unit_types
+      ? row.project_unit_types.reduce<number | null>((max, u) => {
+          if (u.size_sqft == null) return max;
+          return max == null ? u.size_sqft : Math.max(max, u.size_sqft);
+        }, null)
+      : undefined,
   };
 }
 

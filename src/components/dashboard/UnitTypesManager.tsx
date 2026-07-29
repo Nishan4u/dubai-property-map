@@ -4,18 +4,8 @@ import { useState } from "react";
 import { FileStack, Pencil, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectFileManager } from "@/components/dashboard/ProjectFileManager";
+import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { ProjectUnitTypeRow } from "@/types/database";
-
-const unitTypeOptions = [
-  "Studio",
-  "1BR",
-  "2BR",
-  "3BR",
-  "4BR",
-  "Penthouse",
-  "Villa",
-  "Townhouse",
-];
 
 const availabilityOptions: { label: string; value: ProjectUnitTypeRow["availability"] }[] = [
   { label: "Available", value: "available" },

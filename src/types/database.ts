@@ -298,6 +298,7 @@ export interface ProjectEventRow {
 export interface ProjectWithRelations extends ProjectRow {
   developers: DeveloperRow;
   communities: CommunityRow;
+  project_unit_types?: { unit_type: string; size_sqft: number | null }[];
 }
 
 export interface LeadRow {

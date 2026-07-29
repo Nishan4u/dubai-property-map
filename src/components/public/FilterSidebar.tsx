@@ -6,6 +6,7 @@ import { BookmarkPlus, ChevronRight, MapPin, SlidersHorizontal } from "lucide-re
 import { createClient } from "@/lib/supabase/client";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { LocationAutocomplete } from "@/components/public/LocationAutocomplete";
+import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { Community, Developer } from "@/types";
 
 export interface ProjectFilters {
@@ -25,6 +26,9 @@ export interface ProjectFilters {
   escrowStatus: string;
   furnishing: string;
   completionStatus: string;
+  unitType: string;
+  sizeSqftMin: string;
+  sizeSqftMax: string;
 }
 
 export const emptyFilters: ProjectFilters = {
@@ -44,6 +48,9 @@ export const emptyFilters: ProjectFilters = {
   escrowStatus: "",
   furnishing: "",
   completionStatus: "",
+  unitType: "",
+  sizeSqftMin: "",
+  sizeSqftMax: "",
 };
 
 export function FilterSidebar({
@@ -215,6 +222,35 @@ export function FilterSidebar({
               { label: "4+ BR", value: "4" },
             ]}
           />
+          <Select
+            label="Unit Type"
+            placeholder="Any"
+            value={draft.unitType}
+            onChange={(v) => set("unitType", v)}
+            options={unitTypeOptions.map((t) => ({ label: t, value: t }))}
+          />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Size (Sq Ft)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Min"
+                value={draft.sizeSqftMin}
+                onChange={(e) => set("sizeSqftMin", e.target.value)}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+              />
+              <span className="text-ink-500">-</span>
+              <input
+                type="number"
+                placeholder="Max"
+                value={draft.sizeSqftMax}
+                onChange={(e) => set("sizeSqftMax", e.target.value)}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+              />
+            </div>
+          </div>
           <Select
             label="Handover Year"
             placeholder="Any"

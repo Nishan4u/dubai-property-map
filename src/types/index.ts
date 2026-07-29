@@ -93,6 +93,12 @@ export interface Project {
   escrowStatus?: "available" | "not_available" | null;
   furnishing?: "furnished" | "unfurnished" | "semi_furnished" | null;
   updatedAt?: string;
+  // Derived from the project_unit_types child table when the list query
+  // joins it (spec section 12: Unit Type / Size sqft search filters).
+  // Absent (not empty-array) when the query didn't join it.
+  structuredUnitTypes?: string[];
+  unitSizeSqftMin?: number | null;
+  unitSizeSqftMax?: number | null;
   // Optional denormalized fields populated when sourced from a Supabase
   // join (real data). Falls back to the mock `getDeveloper`/`getCommunity`
   // lookups when absent, so existing mock-backed pages keep working.
