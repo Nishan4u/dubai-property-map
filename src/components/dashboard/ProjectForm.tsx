@@ -13,7 +13,7 @@ import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { Community, Project, ProjectTag } from "@/types";
-import type { ConstructionMilestoneRow, ProjectUnitTypeRow } from "@/types/database";
+import type { ConstructionMilestoneRow, ProjectUnitTypeRow, UpcomingProjectRow } from "@/types/database";
 
 const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
 
@@ -64,6 +64,7 @@ export function ProjectForm({
   communities,
   constructionMilestones = [],
   unitTypeRows = [],
+  activeUpcomingProjects = [],
   propertyTypes = fallbackPropertyTypes,
   amenityOptions = fallbackAmenities,
 }: {
@@ -73,6 +74,9 @@ export function ProjectForm({
   communities: Community[];
   constructionMilestones?: ConstructionMilestoneRow[];
   unitTypeRows?: ProjectUnitTypeRow[];
+  /** Developer's own "Coming Soon" pins not yet linked to a live project
+   * (spec section 13 launch workflow) -- only offered on the create form. */
+  activeUpcomingProjects?: UpcomingProjectRow[];
   propertyTypes?: string[];
   amenityOptions?: string[];
 }) {
@@ -87,6 +91,13 @@ export function ProjectForm({
     lat: project?.lat ?? DUBAI_CENTER.lat,
     lng: project?.lng ?? DUBAI_CENTER.lng,
   });
+  const [linkedUpcomingId, setLinkedUpcomingId] = useState("");
+
+  function handleLinkUpcoming(id: string) {
+    setLinkedUpcomingId(id);
+    const match = activeUpcomingProjects.find((u) => u.id === id);
+    if (match) setCoords({ lat: match.lat, lng: match.lng });
+  }
   const [unitPrices, setUnitPrices] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const [k, v] of Object.entries(project?.unitTypePrices ?? {})) {
@@ -214,24 +225,40 @@ export function ProjectForm({
       const resolvedDeveloperId = developerOptions
         ? String(formData.get("developer_id"))
         : developerId;
-      const { error } = await supabase.from("projects").insert({
-        ...payload,
-        slug,
-        developer_id: resolvedDeveloperId,
-        listing_type: "off-plan",
-        status: "published",
-        approval_status: developerOptions ? "approved" : "pending",
-        unit_types: [],
-        gradient: gradients[Math.floor(Math.random() * gradients.length)],
-        rating: 0,
-        reviews: 0,
-        views: 0,
-      });
+      const linkedUpcoming = activeUpcomingProjects.find((u) => u.id === linkedUpcomingId);
+      const { data: created, error } = await supabase
+        .from("projects")
+        .insert({
+          ...payload,
+          slug,
+          developer_id: resolvedDeveloperId,
+          listing_type: "off-plan",
+          status: "published",
+          approval_status: developerOptions ? "approved" : "pending",
+          unit_types: [],
+          gradient: gradients[Math.floor(Math.random() * gradients.length)],
+          rating: 0,
+          reviews: 0,
+          views: 0,
+          ...(linkedUpcoming?.logo_url ? { logo_url: linkedUpcoming.logo_url } : {}),
+        })
+        .select()
+        .single();
 
       if (error) {
         setStatus("error");
         setErrorMsg(error.message);
         return;
+      }
+
+      // Launch workflow (spec section 13): hides the "Coming Soon" pin by
+      // marking it launched, keeping the record for reference rather than
+      // deleting it.
+      if (linkedUpcoming && created) {
+        await supabase
+          .from("upcoming_projects")
+          .update({ status: "launched", launched_project_id: created.id })
+          .eq("id", linkedUpcoming.id);
       }
     }
 
@@ -273,6 +300,29 @@ export function ProjectForm({
             }))}
           />
         </div>
+        {!project && activeUpcomingProjects.length > 0 && (
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Link to Upcoming Project
+            </label>
+            <select
+              value={linkedUpcomingId}
+              onChange={(e) => handleLinkUpcoming(e.target.value)}
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            >
+              <option value="">— None —</option>
+              {activeUpcomingProjects.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.internal_name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-ink-500">
+              Linking will hide that &quot;Coming Soon&quot; pin, carry over
+              its location and logo, and publish this as the live project.
+            </p>
+          </div>
+        )}
         <div className="mt-4">
           <label className="mb-1 block text-xs font-medium text-ink-400">
             Description

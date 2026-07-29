@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import type { Community, Project } from "@/types";
+import type { UpcomingProjectPublicRow } from "@/types/database";
 import { formatAed, getDeveloper } from "@/data/mock";
 import { poiLayers } from "@/data/poi";
 import { trackProjectEvent } from "@/lib/trackEvent";
@@ -36,6 +37,7 @@ export function DubaiMap({
   focusProjectId = null,
   isFullscreen = false,
   onFullscreenToggle,
+  upcomingProjects = [],
 }: {
   communities: Community[];
   projects: Project[];
@@ -46,6 +48,10 @@ export function DubaiMap({
   focusProjectId?: string | null;
   isFullscreen?: boolean;
   onFullscreenToggle?: () => void;
+  /** Public "Coming Soon" pins (spec section 13) -- always visible
+   * regardless of subscription/gating status, since these are deliberately
+   * public teasers with no protected data (just developer name/logo). */
+  upcomingProjects?: UpcomingProjectPublicRow[];
 }) {
   const [zoom, setZoom] = useState(1);
   const [satellite, setSatellite] = useState(false);
@@ -55,6 +61,7 @@ export function DubaiMap({
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
   const markerElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const propertyMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
+  const upcomingMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
   const selectedCommunityIdRef = useRef(selectedCommunityId);
   selectedCommunityIdRef.current = selectedCommunityId;
   const [popupIndex, setPopupIndex] = useState(0);
@@ -386,6 +393,66 @@ export function DubaiMap({
       propertyMarkersRef.current = [];
     };
   }, [communityProjects, selectedCommunity, popupIndex, useLiveMap, sponsoredPinIds]);
+
+  // "Coming Soon" pins (spec section 13) -- always shown, independent of
+  // community selection, with an animated marker. The popup deliberately
+  // only ever contains developer name/logo/"Coming Soon" -- never the
+  // internal project name, which this component never even receives (the
+  // public query it's fed from excludes it at the database level).
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current) return;
+    const map = mapRef.current;
+
+    upcomingMarkersRef.current.forEach((m) => m.remove());
+    upcomingMarkersRef.current = [];
+
+    import("mapbox-gl").then((mapboxgl) => {
+      upcomingProjects.forEach((u) => {
+        const el = document.createElement("div");
+        el.style.cursor = "pointer";
+        el.innerHTML = `
+          <div style="position:relative;width:22px;height:22px;">
+            <div style="position:absolute;inset:0;border-radius:9999px;background:#38bdf8;animation:dpm-upcoming-pulse 1.8s ease-out infinite;"></div>
+            <div style="position:absolute;inset:5px;border-radius:9999px;background:#38bdf8;border:2px solid #0a0f1c;"></div>
+          </div>`;
+
+        // Built via safe DOM APIs (not setHTML/innerHTML string interpolation)
+        // since developer_name is a developer-editable field -- interpolating
+        // it into an HTML string would be a stored XSS vector.
+        const content = document.createElement("div");
+        content.style.cssText = "display:flex;align-items:center;gap:8px;";
+        if (u.logo_url) {
+          const img = document.createElement("img");
+          img.src = u.logo_url;
+          img.alt = "";
+          img.style.cssText = "height:28px;width:28px;object-fit:contain;border-radius:6px;background:#ffffff;padding:2px;flex-shrink:0;";
+          content.appendChild(img);
+        }
+        const textWrap = document.createElement("div");
+        const nameEl = document.createElement("div");
+        nameEl.style.cssText = "font-size:12px;font-weight:700;color:#0a0f1c;";
+        nameEl.textContent = u.developer_name;
+        const labelEl = document.createElement("div");
+        labelEl.style.cssText = "font-size:10px;font-weight:600;color:#0369a1;";
+        labelEl.textContent = "Coming Soon";
+        textWrap.appendChild(nameEl);
+        textWrap.appendChild(labelEl);
+        content.appendChild(textWrap);
+
+        const popup = new mapboxgl.default.Popup({ closeButton: false, offset: 16 }).setDOMContent(content);
+        const marker = new mapboxgl.default.Marker({ element: el })
+          .setLngLat([u.lng, u.lat])
+          .setPopup(popup)
+          .addTo(map);
+        upcomingMarkersRef.current.push(marker);
+      });
+    });
+
+    return () => {
+      upcomingMarkersRef.current.forEach((m) => m.remove());
+      upcomingMarkersRef.current = [];
+    };
+  }, [upcomingProjects, useLiveMap]);
 
   function handleZoomIn() {
     if (mapRef.current) mapRef.current.zoomIn();

@@ -852,6 +852,53 @@ export async function getConstructionMilestones(projectId: string) {
   return data ?? [];
 }
 
+export async function getAllUpcomingProjectsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("upcoming_projects")
+    .select("*, developers(name, slug, logo_url)")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getUpcomingProjectsForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("upcoming_projects")
+    .select("*")
+    .eq("developer_id", developerId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getActiveUpcomingProjectsForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("upcoming_projects")
+    .select("*")
+    .eq("developer_id", developerId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Public-safe: never exposes internal_name or developer_id -- see
+// upcoming_projects_public in patch_80 for why this is safe to call
+// unauthenticated.
+export async function getUpcomingProjectsPublic() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("upcoming_projects_public").select("*");
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getProjectUnitTypes(projectId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

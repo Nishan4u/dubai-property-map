@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Mail,
   Package,
+  Rocket,
   Settings,
   User,
   Users,
@@ -21,6 +22,7 @@ import { DashboardShell } from "@/components/ui/DashboardShell";
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: Building2 },
+  { label: "Upcoming Projects", href: "/upcoming-projects", icon: Rocket },
   { label: "Investor / Buyer Leads", href: "/leads", icon: Users },
   { label: "Salespersons", href: "/salespersons", icon: Briefcase },
   { label: "Bookings", href: "/bookings", icon: CalendarCheck },

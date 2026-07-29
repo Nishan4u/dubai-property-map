@@ -288,6 +288,27 @@ export interface ProjectUnitTypeRow {
   created_at: string;
 }
 
+export interface UpcomingProjectRow {
+  id: string;
+  developer_id: string;
+  internal_name: string;
+  lat: number;
+  lng: number;
+  logo_url: string | null;
+  status: "active" | "launched";
+  launched_project_id: string | null;
+  created_at: string;
+}
+
+export interface UpcomingProjectPublicRow {
+  id: string;
+  lat: number;
+  lng: number;
+  logo_url: string | null;
+  developer_name: string;
+  developer_slug: string;
+}
+
 export interface ProjectEventRow {
   id: string;
   project_id: string;

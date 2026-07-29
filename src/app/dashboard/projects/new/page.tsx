@@ -1,5 +1,6 @@
 import { ProjectForm } from "@/components/dashboard/ProjectForm";
 import {
+  getActiveUpcomingProjectsForDeveloper,
   getAmenitiesList,
   getCommunities,
   getPropertyTypes,
@@ -17,6 +18,7 @@ export default async function NewProjectPage() {
     getAmenitiesList(),
   ]);
   const communities = communityRows.map((c) => mapCommunity(c));
+  const activeUpcomingProjects = await getActiveUpcomingProjectsForDeveloper(profile.developer_id);
 
   return (
     <div className="space-y-4 p-6">
@@ -31,6 +33,7 @@ export default async function NewProjectPage() {
         communities={communities}
         propertyTypes={propertyTypes.map((p) => p.name)}
         amenityOptions={amenities.map((a) => a.name)}
+        activeUpcomingProjects={activeUpcomingProjects}
       />
     </div>
   );

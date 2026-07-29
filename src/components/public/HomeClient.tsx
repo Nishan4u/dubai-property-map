@@ -23,6 +23,7 @@ import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { createClient } from "@/lib/supabase/client";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
+import type { UpcomingProjectPublicRow } from "@/types/database";
 
 interface HomepageBanner {
   title: string;
@@ -43,6 +44,7 @@ export function HomeClient({
   subscriptionHref = "",
   developerInactiveForSalesperson = false,
   sliderClickBehavior = "guest",
+  upcomingProjects = [],
 }: {
   communities: Community[];
   developers: Developer[];
@@ -51,6 +53,9 @@ export function HomeClient({
   sidebarBanner?: HomepageBanner | null;
   sponsoredPinIds?: string[];
   navLinks?: { label: string; url: string }[];
+  /** Public "Coming Soon" teaser pins (spec section 13) -- always fetched
+   * regardless of mapAccessStatus, since these are deliberately public. */
+  upcomingProjects?: UpcomingProjectPublicRow[];
   /** Set when the logged-in viewer is a Developer or Salesperson account —
    * `projects` has already been scoped to their developer server-side; this
    * just tells the UI to lock/hide the Developer filter and other-developer
@@ -411,6 +416,7 @@ export function HomeClient({
             focusProjectId={focusProjectId}
             isFullscreen={isFullscreen}
             onFullscreenToggle={handleFullscreenToggle}
+            upcomingProjects={upcomingProjects}
           />
           {featuredProject && (
             <FeaturedProjectCard

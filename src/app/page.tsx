@@ -10,6 +10,7 @@ import {
   getNavLinks,
   getPublishedProjects,
   getSalespersonDeveloperAccess,
+  getUpcomingProjectsPublic,
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import type { SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
@@ -47,6 +48,7 @@ export default async function Home() {
     sidebarBanner,
     sponsoredPinIds,
     navLinks,
+    upcomingProjects,
   ] = await Promise.all([
     getCommunities(),
     getDevelopers(),
@@ -61,6 +63,9 @@ export default async function Home() {
     getActiveSidebarBanner(),
     getActiveSponsoredPinProjectIds(),
     getNavLinks("header"),
+    // "Coming Soon" pins are deliberately public teasers (spec section 13)
+    // -- unlike real listings, these are never gated behind mapAccessStatus.
+    getUpcomingProjectsPublic(),
   ]);
 
   const communities = communityRows.map((c) => mapCommunity(c));
@@ -95,6 +100,7 @@ export default async function Home() {
         .map((l) => ({ label: l.label, url: l.url }))}
       viewerDeveloperId={viewerDeveloperId}
       sliderClickBehavior={sliderClickBehavior}
+      upcomingProjects={upcomingProjects}
     />
   );
 }
