@@ -35,6 +35,7 @@ export function ProjectFileManager({
   category,
   accept,
   pathOverride,
+  onImagePreview,
 }: {
   projectId: string;
   folder: "gallery" | "documents";
@@ -44,6 +45,10 @@ export function ProjectFileManager({
    * (e.g. per-unit-type floor plans). `folder` still controls whether the
    * "set as cover" button is offered. */
   pathOverride?: string;
+  /** When provided, clicking an image file opens it here (a lightbox)
+   * instead of navigating to it in a new tab. Non-image files (PDFs etc)
+   * always open in a new tab regardless. */
+  onImagePreview?: (url: string) => void;
 }) {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,15 +236,26 @@ export function ProjectFileManager({
               key={f.name}
               className="flex items-center justify-between gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2 text-sm"
             >
-              <a
-                href={f.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-w-0 items-center gap-2 truncate text-ink-200 hover:text-gold-400"
-              >
-                <File className="h-4 w-4 shrink-0 text-ink-500" />
-                <span className="truncate">{f.name.replace(/^\d+-/, "")}</span>
-              </a>
+              {onImagePreview && imageExtensions.test(f.name) ? (
+                <button
+                  type="button"
+                  onClick={() => onImagePreview(f.url)}
+                  className="flex min-w-0 items-center gap-2 truncate text-left text-ink-200 hover:text-gold-400"
+                >
+                  <ImageIcon className="h-4 w-4 shrink-0 text-ink-500" />
+                  <span className="truncate">{f.name.replace(/^\d+-/, "")}</span>
+                </button>
+              ) : (
+                <a
+                  href={f.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-w-0 items-center gap-2 truncate text-ink-200 hover:text-gold-400"
+                >
+                  <File className="h-4 w-4 shrink-0 text-ink-500" />
+                  <span className="truncate">{f.name.replace(/^\d+-/, "")}</span>
+                </a>
+              )}
               <div className="flex shrink-0 items-center gap-2">
                 {folder === "gallery" && imageExtensions.test(f.name) && (
                   <button

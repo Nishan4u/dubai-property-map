@@ -7,6 +7,7 @@ import { ProjectFileManager } from "@/components/dashboard/ProjectFileManager";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import { CompactSelect } from "@/components/public/CompactSelect";
+import { Lightbox } from "@/components/ui/Lightbox";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { ProjectUnitTypeRow } from "@/types/database";
 
@@ -102,6 +103,7 @@ export function UnitTypesManager({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePercent, setImagePercent] = useState(0);
   const [imageError, setImageError] = useState("");
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const uploadedAt = Date.now();
@@ -252,14 +254,19 @@ export function UnitTypesManager({
               key={u.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy-700 bg-navy-900 px-3 py-2.5 text-sm"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950">
+              <button
+                type="button"
+                onClick={() => u.image_url && setLightboxUrl(u.image_url)}
+                disabled={!u.image_url}
+                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950 disabled:cursor-default"
+              >
                 {u.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={u.image_url} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <ImageIcon className="h-4 w-4 text-ink-600" />
                 )}
-              </div>
+              </button>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-ink-100">{u.unit_name}</span>
@@ -314,14 +321,19 @@ export function UnitTypesManager({
                       Photo for {u.unit_name}
                     </p>
                     <div className="flex items-center gap-3">
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950">
+                      <button
+                        type="button"
+                        onClick={() => u.image_url && setLightboxUrl(u.image_url)}
+                        disabled={!u.image_url}
+                        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950 disabled:cursor-default"
+                      >
                         {u.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={u.image_url} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <ImageIcon className="h-5 w-5 text-ink-600" />
                         )}
-                      </div>
+                      </button>
                       <div className="min-w-0 flex-1">
                         <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
                           <Upload className="h-4 w-4" />
@@ -363,6 +375,7 @@ export function UnitTypesManager({
                       folder="documents"
                       accept="application/pdf,image/png,image/jpeg,image/webp"
                       pathOverride={`${projectId}/floor-plans/${u.id}`}
+                      onImagePreview={setLightboxUrl}
                     />
                   </div>
                 </div>
@@ -416,6 +429,7 @@ export function UnitTypesManager({
           <Plus className="h-3.5 w-3.5" /> {saving ? "Adding & Uploading…" : "Add Unit Type"}
         </button>
       </div>
+      <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
     </div>
   );
 }
