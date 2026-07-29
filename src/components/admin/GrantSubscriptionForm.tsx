@@ -35,6 +35,7 @@ export function GrantSubscriptionForm({
   const [accountId, setAccountId] = useState("");
   const [planKey, setPlanKey] = useState("");
   const [durationDays, setDurationDays] = useState(30);
+  const [noExpiry, setNoExpiry] = useState(false);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +61,13 @@ export function GrantSubscriptionForm({
       const res = await fetch("/api/admin/subscriptions/grant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountType, accountId, planKey, durationDays, reason }),
+        body: JSON.stringify({
+          accountType,
+          accountId,
+          planKey,
+          durationDays: noExpiry ? null : durationDays,
+          reason,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not grant subscription");
@@ -124,9 +131,10 @@ export function GrantSubscriptionForm({
           type="number"
           min={1}
           value={durationDays}
+          disabled={noExpiry}
           onChange={(e) => setDurationDays(Number(e.target.value))}
           placeholder="Duration (days)"
-          className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100"
+          className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100 disabled:opacity-40"
         />
         <input
           type="text"
@@ -136,6 +144,15 @@ export function GrantSubscriptionForm({
           className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100"
         />
       </div>
+      <label className="flex items-center gap-1.5 text-xs text-ink-300">
+        <input
+          type="checkbox"
+          checked={noExpiry}
+          onChange={(e) => setNoExpiry(e.target.checked)}
+          className="accent-gold-500"
+        />
+        No expiry (permanent, unlimited access — won&apos;t auto-renew reminders or lapse)
+      </label>
       {error && <p className="text-xs font-medium text-rose-400">{error}</p>}
       {success && <p className="text-xs font-medium text-emerald-400">{success}</p>}
       <button

@@ -51,15 +51,16 @@ export async function POST(request: NextRequest) {
     accountType?: AccountType;
     accountId?: string;
     planKey?: string;
-    durationDays?: number;
+    durationDays?: number | null;
     reason?: string;
   };
 
   if (!accountType || !TABLE[accountType] || !accountId || !planKey) {
     return NextResponse.json({ error: "Account type, account, and plan are required." }, { status: 400 });
   }
+  const noExpiry = durationDays === null;
   const days = Number(durationDays);
-  if (!Number.isFinite(days) || days < 1) {
+  if (!noExpiry && (!Number.isFinite(days) || days < 1)) {
     return NextResponse.json({ error: "Duration must be at least 1 day." }, { status: 400 });
   }
 
@@ -90,9 +91,12 @@ export async function POST(request: NextRequest) {
   const accountEmail = (account as unknown as Record<string, string | null>)[emailColumn];
 
   const startDate = new Date();
-  const expiryDate = new Date(startDate);
-  expiryDate.setDate(expiryDate.getDate() + days);
-  const expiryDateStr = expiryDate.toISOString().slice(0, 10);
+  let expiryDateStr: string | null = null;
+  if (!noExpiry) {
+    const expiryDate = new Date(startDate);
+    expiryDate.setDate(expiryDate.getDate() + days);
+    expiryDateStr = expiryDate.toISOString().slice(0, 10);
+  }
 
   const { error: updateError } = await admin
     .from(table)
@@ -128,16 +132,17 @@ export async function POST(request: NextRequest) {
     "subscription.grant_free",
     accountType,
     accountId,
-    { planKey, durationDays: days, reason },
+    { planKey, durationDays: noExpiry ? "no_expiry" : days, reason },
     { client: admin, actorId: user.id, actorEmail: user.email }
   );
 
   if (accountEmail) {
+    const validityText = noExpiry ? "with no expiry" : `active until ${expiryDateStr}`;
     await sendEmail({
       category: "free_subscription_granted",
       to: accountEmail,
       subject: "You've been granted a free Dubai Property Map subscription",
-      html: `<p>Hi ${accountName},</p><p>An admin has granted you free access to the <strong>${planKey}</strong> plan, active until ${expiryDateStr}.</p><p><strong>Subscription Status:</strong> Active<br/><strong>Payment Type:</strong> Admin Granted / Free</p>${reason ? `<p>Note: ${reason}</p>` : ""}`,
+      html: `<p>Hi ${accountName},</p><p>An admin has granted you free access to the <strong>${planKey}</strong> plan, ${validityText}.</p><p><strong>Subscription Status:</strong> Active<br/><strong>Payment Type:</strong> Admin Granted / Free</p>${reason ? `<p>Note: ${reason}</p>` : ""}`,
       relatedEntityType: accountType,
       relatedEntityId: accountId,
     });
