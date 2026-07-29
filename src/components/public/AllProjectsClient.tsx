@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import { clsx } from "clsx";
 import type { Project, Developer, Community } from "@/types";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { FilterSidebar, emptyFilters, type ProjectFilters } from "@/components/public/FilterSidebar";
@@ -62,6 +63,16 @@ export function AllProjectsClient({
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);
   const [sort, setSort] = useState<SortOption>("Featured");
   const [visible, setVisible] = useState(12);
+  // The filter sidebar has ~15 fields -- on mobile, where it stacks above
+  // the results instead of sitting beside them, that's a wall of filters
+  // before any project is visible. Collapsed by default below lg; always
+  // shown at lg and up (unchanged desktop behavior).
+  const [showFilters, setShowFilters] = useState(false);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter((v) => (typeof v === "boolean" ? v : v !== "")).length,
+    [filters]
+  );
 
   const propertyTypes = useMemo(
     () => Array.from(new Set(projects.map((p) => p.propertyType))).sort(),
@@ -147,19 +158,39 @@ export function AllProjectsClient({
       >
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           <div className="lg:w-72 lg:shrink-0">
-            <FilterSidebar
-              developers={developers}
-              communities={communities}
-              propertyTypes={propertyTypes}
-              paymentPlans={paymentPlans}
-              handoverYears={handoverYears}
-              filters={filters}
-              onApply={(next) => {
-                setFilters(next);
-                setVisible(12);
-              }}
-              viewerDeveloperId={viewerDeveloperId}
-            />
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className="mb-3 flex w-full items-center justify-between rounded-lg border border-navy-700 bg-navy-850 px-4 py-2.5 text-sm font-medium text-ink-200 lg:hidden"
+            >
+              <span className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-gold-400" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-semibold text-navy-950">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+              <ChevronDown
+                className={clsx("h-4 w-4 shrink-0 transition-transform", showFilters && "rotate-180")}
+              />
+            </button>
+            <div className={clsx(showFilters ? "block" : "hidden", "lg:block")}>
+              <FilterSidebar
+                developers={developers}
+                communities={communities}
+                propertyTypes={propertyTypes}
+                paymentPlans={paymentPlans}
+                handoverYears={handoverYears}
+                filters={filters}
+                onApply={(next) => {
+                  setFilters(next);
+                  setVisible(12);
+                  setShowFilters(false);
+                }}
+                viewerDeveloperId={viewerDeveloperId}
+              />
+            </div>
           </div>
 
           <div className="min-w-0 flex-1">
