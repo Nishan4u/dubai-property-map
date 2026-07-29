@@ -23,6 +23,7 @@ import { formatAed, getDeveloper } from "@/data/mock";
 import { poiLayers } from "@/data/poi";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
+import { ShareButton } from "@/components/public/ShareButton";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const POI_SOURCE_ID = "poi-source";
@@ -669,7 +670,7 @@ export function DubaiMap({
             <ProjectThumb
               gradient={activeProject.gradient}
               imageUrl={activeProject.coverImageUrl}
-              logoUrl={activeProject.logoUrl}
+              logoUrl={activeProject.logoUrl ?? activeProject.developerLogoUrl}
               className="h-28 w-full"
             />
             {communityProjects.length > 1 && (
@@ -712,13 +713,31 @@ export function DubaiMap({
                 </span>
               )}
             </p>
-            <h4 className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-ink-100">
-              {activeProject.name}
-              {sponsoredPinIds.includes(activeProject.id) && (
-                <span className="rounded-full bg-gold-500/15 px-1.5 py-0.5 text-[10px] font-medium text-gold-400">
-                  Sponsored
-                </span>
-              )}
+            <h4 className="mt-0.5 flex items-center justify-between gap-1.5 text-sm font-semibold text-ink-100">
+              <span className="flex min-w-0 items-center gap-1.5 truncate">
+                <span className="truncate">{activeProject.name}</span>
+                {sponsoredPinIds.includes(activeProject.id) && (
+                  <span className="shrink-0 rounded-full bg-gold-500/15 px-1.5 py-0.5 text-[10px] font-medium text-gold-400">
+                    Sponsored
+                  </span>
+                )}
+              </span>
+              <ShareButton
+                targetType="project"
+                targetId={activeProject.id}
+                title={activeProject.name}
+                path={`/projects/${activeProject.slug}`}
+                compact
+                card={{
+                  imageUrl: activeProject.coverImageUrl,
+                  logoUrl: activeProject.logoUrl ?? activeProject.developerLogoUrl,
+                  developerName: activeProject.developerName ?? getDeveloper(activeProject.developerId)?.name,
+                  communityName: selectedCommunity.name,
+                  priceLabel: formatAed(activeProject.priceFromAed),
+                  lat: activeProject.lat,
+                  lng: activeProject.lng,
+                }}
+              />
             </h4>
             <p className="text-xs text-ink-500">
               by{" "}

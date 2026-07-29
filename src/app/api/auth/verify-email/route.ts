@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
+// This route deliberately does NOT consume the token or confirm the email --
+// it only forwards the token to a page that requires an actual user gesture
+// (a button click, POST to verify-email/confirm) before anything happens.
+//
+// Found during QA: every verification token's used_at was ~15 seconds after
+// created_at across multiple different real users -- far faster than a
+// human opening an email client and clicking, and consistent across
+// accounts. That's an email security scanner ("Safe Links"-style link
+// prefetching) auto-following the link in the email and burning the
+// single-use token before the real recipient ever clicks it, so by the time
+// they do click, verification fails with "expired or invalid". A bare GET
+// is exactly what those scanners issue, so a GET must never be able to
+// complete a one-time action -- see verify-email/confirm/route.ts for where
+// the actual consumption now happens.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const token = searchParams.get("token");
   const next = searchParams.get("next") ?? "/";
 
-  const confirmUrl = (params: string) => NextResponse.redirect(`${origin}/auth/confirm?${params}`);
+  if (!token) {
+    return NextResponse.redirect(`${origin}/auth/confirm?verify_error=invalid`);
+  }
 
-  if (!token) return confirmUrl("verify_error=invalid");
-
-  const admin = createAdminClient();
-  const { data: row } = await admin.from("email_verification_tokens").select("*").eq("token", token).maybeSingle();
-
-  if (!row) return confirmUrl("verify_error=invalid");
-  if (row.used_at) return confirmUrl("verify_error=used");
-  if (new Date(row.expires_at).getTime() < Date.now()) return confirmUrl("verify_error=expired");
-
-  await admin.from("email_verification_tokens").update({ used_at: new Date().toISOString() }).eq("id", row.id);
-  await admin.auth.admin.updateUserById(row.user_id, { email_confirm: true });
-
-  return confirmUrl(`verified=1&next=${encodeURIComponent(next)}`);
+  return NextResponse.redirect(
+    `${origin}/auth/confirm?token=${encodeURIComponent(token)}&next=${encodeURIComponent(next)}`
+  );
 }

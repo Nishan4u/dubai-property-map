@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Project } from "@/types";
 import { ProjectCard } from "./ProjectCard";
+import { CompactSelect } from "./CompactSelect";
 
 const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
 type SortOption = (typeof sortOptions)[number];
@@ -53,20 +54,19 @@ export function ProjectListPanel({
         <h3 className="text-sm font-semibold text-ink-100">
           {projects.length} Projects Found
         </h3>
-        <select
+        <CompactSelect
+          label="Sort"
+          hideLabel
+          allowClear={false}
+          placeholder="Sort"
           value={sort}
-          onChange={(e) => {
-            setSort(e.target.value as SortOption);
+          onChange={(v) => {
+            setSort((v || "Featured") as SortOption);
             setVisible(6);
           }}
-          className="rounded-lg border border-navy-600 bg-navy-800 px-2 py-1 text-xs text-ink-300 focus:outline-none"
-        >
-          {sortOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              Sort: {opt}
-            </option>
-          ))}
-        </select>
+          options={sortOptions.map((opt) => ({ label: `Sort: ${opt}`, value: opt }))}
+          className="w-40"
+        />
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {sortedProjects.slice(0, visible).map((project) => (

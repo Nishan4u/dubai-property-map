@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { formatAed } from "@/data/mock";
 import type { Project } from "@/types";
 
@@ -89,17 +90,16 @@ export function CompareClient({ projects }: { projects: Project[] }) {
                         imageUrl={p.coverImageUrl}
                         className="h-20 w-full rounded-lg"
                       />
-                      <select
+                      <CompactSelect
+                        label="Project"
+                        hideLabel
+                        allowClear={false}
+                        placeholder={p.name}
                         value={p.slug}
-                        onChange={(e) => updateSlot(i, e.target.value)}
-                        className="mt-2 w-full rounded-lg border border-navy-600 bg-navy-800 px-2 py-1.5 text-xs text-ink-100"
-                      >
-                        {projects.map((proj) => (
-                          <option key={proj.id} value={proj.slug}>
-                            {proj.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => v && updateSlot(i, v)}
+                        options={projects.map((proj) => ({ label: proj.name, value: proj.slug }))}
+                        className="mt-2"
+                      />
                       {selected.length > 1 && (
                         <button
                           onClick={() => removeSlot(i)}

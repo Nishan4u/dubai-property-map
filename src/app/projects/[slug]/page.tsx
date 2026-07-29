@@ -228,7 +228,7 @@ export default async function ProjectDetailsPage({
                   title={project.name}
                   card={{
                     imageUrl: project.coverImageUrl,
-                    logoUrl: project.logoUrl,
+                    logoUrl: project.logoUrl ?? project.developerLogoUrl,
                     developerName: project.developerName ?? developer?.name,
                     communityName: project.communityName ?? community?.name,
                     priceLabel: formatAed(project.priceFromAed),
@@ -296,8 +296,17 @@ export default async function ProjectDetailsPage({
                   {unitTypes.map((u) => (
                     <div
                       key={u.id}
-                      className="rounded-lg border border-navy-700 bg-navy-850 p-4"
+                      className="overflow-hidden rounded-lg border border-navy-700 bg-navy-850"
                     >
+                      {u.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={u.image_url}
+                          alt={u.unit_name}
+                          className="h-32 w-full object-cover"
+                        />
+                      )}
+                      <div className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-sm font-semibold text-ink-100">{u.unit_name}</p>
@@ -351,6 +360,7 @@ export default async function ProjectDetailsPage({
                           ))}
                         </div>
                       )}
+                      </div>
                     </div>
                   ))}
                 </div>

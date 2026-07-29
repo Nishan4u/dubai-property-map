@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FileStack, Pencil, Plus, Trash2, X } from "lucide-react";
+import { FileStack, ImageIcon, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectFileManager } from "@/components/dashboard/ProjectFileManager";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
 import type { ProjectUnitTypeRow } from "@/types/database";
 
@@ -84,6 +87,47 @@ export function UnitTypesManager({
   const [editDraft, setEditDraft] = useState<DraftFields>(emptyDraft);
   const [saving, setSaving] = useState(false);
   const [floorPlansOpenId, setFloorPlansOpenId] = useState<string | null>(null);
+  const [imageUploadingId, setImageUploadingId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePercent, setImagePercent] = useState(0);
+  const [imageError, setImageError] = useState("");
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const uploadedAt = Date.now();
+    const unitTypeId = e.currentTarget.dataset.unitTypeId;
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !unitTypeId) return;
+    setImageUploadingId(unitTypeId);
+    setImageFile(file);
+    setImagePercent(0);
+    setImageError("");
+
+    const supabase = createClient();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${projectId}/unit-types/${unitTypeId}/image/${uploadedAt}-${safeName}`;
+    const { promise } = uploadFileWithProgress("project-media", path, file, setImagePercent);
+    const { error: uploadError } = await promise;
+
+    if (uploadError) {
+      setImageError(uploadError.message);
+      setImageFile(null);
+      setImageUploadingId(null);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from("project-media").getPublicUrl(path);
+    const { data } = await supabase
+      .from("project_unit_types")
+      .update({ image_url: pub.publicUrl })
+      .eq("id", unitTypeId)
+      .select()
+      .single();
+
+    if (data) setUnitTypes((prev) => prev.map((u) => (u.id === unitTypeId ? data : u)));
+    setImageFile(null);
+    setImageUploadingId(null);
+  }
 
   async function addUnitType() {
     if (!draft.unitName.trim()) return;
@@ -165,7 +209,15 @@ export function UnitTypesManager({
               key={u.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy-700 bg-navy-900 px-3 py-2.5 text-sm"
             >
-              <div className="min-w-0">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-navy-600 bg-navy-950">
+                {u.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={u.image_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-4 w-4 text-ink-600" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-ink-100">{u.unit_name}</span>
                   <span className="text-xs text-ink-500">{u.unit_type}</span>
@@ -189,6 +241,24 @@ export function UnitTypesManager({
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <label
+                  title="Unit Type Image"
+                  className="flex cursor-pointer items-center rounded-lg p-1.5 text-ink-500 hover:text-gold-400"
+                >
+                  {imageUploadingId === u.id ? (
+                    <span className="text-[10px]">…</span>
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={imageUploadingId === u.id}
+                    data-unit-type-id={u.id}
+                    onChange={handleImageUpload}
+                  />
+                </label>
                 <button
                   onClick={() => setFloorPlansOpenId((cur) => (cur === u.id ? null : u.id))}
                   title="Floor Plans"
@@ -213,6 +283,18 @@ export function UnitTypesManager({
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+              {imageUploadingId === u.id && imageFile && (
+                <div className="w-full">
+                  <UploadProgressItem
+                    fileName={imageFile.name}
+                    fileSize={imageFile.size}
+                    state={imageError ? "error" : "uploading"}
+                    percent={imagePercent}
+                    errorMessage={imageError}
+                    onRemove={imageError ? () => { setImageFile(null); setImageUploadingId(null); } : undefined}
+                  />
+                </div>
+              )}
               {floorPlansOpenId === u.id && (
                 <div className="w-full border-t border-navy-800 pt-3">
                   <p className="mb-2 text-xs font-semibold text-ink-300">
@@ -269,17 +351,15 @@ function UnitTypeFields({
         onChange={(e) => set("unitName", e.target.value)}
         className="col-span-2 rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none sm:col-span-1"
       />
-      <select
+      <CompactSelect
+        label="Unit Type"
+        hideLabel
+        allowClear={false}
+        placeholder="Unit Type"
         value={draft.unitType}
-        onChange={(e) => set("unitType", e.target.value)}
-        className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 focus:outline-none"
-      >
-        {unitTypeOptions.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => set("unitType", v || unitTypeOptions[0])}
+        options={unitTypeOptions.map((o) => ({ label: o, value: o }))}
+      />
       <input
         type="number"
         placeholder="Starting Price (AED)"
@@ -308,17 +388,16 @@ function UnitTypeFields({
         onChange={(e) => set("bathrooms", e.target.value)}
         className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
       />
-      <select
+      <CompactSelect
+        label="Availability"
+        hideLabel
+        allowClear={false}
+        searchable={false}
+        placeholder="Availability"
         value={draft.availability}
-        onChange={(e) => set("availability", e.target.value as DraftFields["availability"])}
-        className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 focus:outline-none"
-      >
-        {availabilityOptions.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => set("availability", (v || "available") as DraftFields["availability"])}
+        options={availabilityOptions.map((o) => ({ label: o.label, value: o.value }))}
+      />
       <label className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1.5 text-xs text-ink-300">
         <input
           type="checkbox"

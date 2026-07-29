@@ -58,7 +58,13 @@ function ResendForm() {
   );
 }
 
-function ConfirmCard({ status }: { status: "working" | "error" | "verified" }) {
+function ConfirmCard({
+  status,
+  onConfirmClick,
+}: {
+  status: "working" | "error" | "verified" | "confirm";
+  onConfirmClick?: () => void;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-navy-950 p-6">
       <div className="w-full max-w-sm rounded-2xl border border-navy-700 bg-navy-850 p-8 text-center">
@@ -66,6 +72,20 @@ function ConfirmCard({ status }: { status: "working" | "error" | "verified" }) {
           <>
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
             <p className="text-sm text-ink-300">Confirming your account…</p>
+          </>
+        )}
+        {status === "confirm" && (
+          <>
+            <h1 className="text-lg font-semibold text-ink-100">Confirm your email</h1>
+            <p className="mt-2 text-sm text-ink-400">
+              Click below to finish confirming this email address.
+            </p>
+            <button
+              onClick={onConfirmClick}
+              className="mt-4 w-full rounded-lg bg-gold-500 py-2.5 text-sm font-semibold text-navy-950 hover:bg-gold-400"
+            >
+              Confirm email address
+            </button>
           </>
         )}
         {status === "verified" && (
@@ -109,7 +129,22 @@ function ConfirmCard({ status }: { status: "working" | "error" | "verified" }) {
 function ConfirmInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"working" | "error" | "verified">("working");
+  const [status, setStatus] = useState<"working" | "error" | "verified" | "confirm">("working");
+  const token = searchParams.get("token");
+
+  async function handleConfirmClick() {
+    setStatus("working");
+    try {
+      const res = await fetch("/api/auth/verify-email/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      setStatus(res.ok ? "verified" : "error");
+    } catch {
+      setStatus("error");
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -120,8 +155,12 @@ function ConfirmInner() {
       // Supabase's built-in confirmation email depends on their outbound
       // SMTP, which is broken at the platform level, so account creation
       // and confirmation now go through a self-issued token instead.
-      if (searchParams.get("verified") === "1") {
-        setStatus("verified");
+      // Requires an explicit button click (handleConfirmClick) rather than
+      // firing automatically here -- an email security scanner prefetching
+      // this page would otherwise burn the one-time token before the real
+      // recipient ever sees it.
+      if (token) {
+        setStatus("confirm");
         return;
       }
       if (searchParams.get("verify_error")) {
@@ -178,7 +217,7 @@ function ConfirmInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <ConfirmCard status={status} />;
+  return <ConfirmCard status={status} onConfirmClick={handleConfirmClick} />;
 }
 
 export default function ConfirmPage() {

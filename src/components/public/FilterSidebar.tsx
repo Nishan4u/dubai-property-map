@@ -178,7 +178,7 @@ export function FilterSidebar({
             onChange={(v) => set("communityId", v)}
             options={communities.map((c) => ({ label: c.name, value: c.id }))}
           />
-          <Select
+          <CompactSelect
             label="Property Type"
             placeholder="All Types"
             value={draft.propertyType}
@@ -209,7 +209,7 @@ export function FilterSidebar({
             </div>
           </div>
 
-          <Select
+          <CompactSelect
             label="Bedrooms"
             placeholder="Any"
             value={draft.bedrooms}
@@ -222,7 +222,7 @@ export function FilterSidebar({
               { label: "4+ BR", value: "4" },
             ]}
           />
-          <Select
+          <CompactSelect
             label="Unit Type"
             placeholder="Any"
             value={draft.unitType}
@@ -251,14 +251,14 @@ export function FilterSidebar({
               />
             </div>
           </div>
-          <Select
+          <CompactSelect
             label="Handover Year"
             placeholder="Any"
             value={draft.handoverYear}
             onChange={(v) => set("handoverYear", v)}
             options={handoverYears.map((y) => ({ label: String(y), value: String(y) }))}
           />
-          <Select
+          <CompactSelect
             label="Payment Plan"
             placeholder="Any"
             value={draft.paymentPlan}
@@ -302,7 +302,7 @@ export function FilterSidebar({
             Near a Metro Station (within 1.5km)
           </label>
 
-          <Select
+          <CompactSelect
             label="Investment Score"
             placeholder="Any"
             value={draft.minInvestmentScore}
@@ -313,7 +313,7 @@ export function FilterSidebar({
               { label: "90+", value: "90" },
             ]}
           />
-          <Select
+          <CompactSelect
             label="Escrow Account"
             placeholder="All"
             value={draft.escrowStatus}
@@ -323,7 +323,7 @@ export function FilterSidebar({
               { label: "Not Available", value: "not_available" },
             ]}
           />
-          <Select
+          <CompactSelect
             label="Furnishing"
             placeholder="Any"
             value={draft.furnishing}
@@ -334,7 +334,7 @@ export function FilterSidebar({
               { label: "Semi-Furnished", value: "semi_furnished" },
             ]}
           />
-          <Select
+          <CompactSelect
             label="Completion Status"
             placeholder="Any"
             value={draft.completionStatus}
@@ -455,36 +455,3 @@ export function FilterSidebar({
   );
 }
 
-function Select({
-  label,
-  placeholder,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { label: string; value: string }[];
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-ink-400">
-        {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-xs text-ink-300 focus:outline-none"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}

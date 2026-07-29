@@ -11,6 +11,9 @@ export function CompactSelect({
   onChange,
   options,
   searchable = true,
+  hideLabel = false,
+  allowClear = true,
+  className,
 }: {
   label: string;
   placeholder: string;
@@ -18,6 +21,16 @@ export function CompactSelect({
   onChange: (v: string) => void;
   options: { label: string; value: string }[];
   searchable?: boolean;
+  /** Skip rendering the label above the trigger -- for inline controls
+   * (e.g. a "Sort by" dropdown next to a search bar) where the surrounding
+   * layout already makes the field's purpose clear. */
+  hideLabel?: boolean;
+  /** Set false for fields that always hold a value (e.g. Sort, or picking
+   * which project fills a Compare slot) -- hides the "clear selection"
+   * entry, which would otherwise be a dead option since there's nothing
+   * meaningful to clear to. */
+  allowClear?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -49,10 +62,13 @@ export function CompactSelect({
   }
 
   return (
-    <div ref={containerRef} className="relative">
-      <label className="mb-1 block text-xs font-medium text-ink-400">{label}</label>
+    <div ref={containerRef} className={clsx("relative", className)}>
+      {!hideLabel && (
+        <label className="mb-1 block text-xs font-medium text-ink-400">{label}</label>
+      )}
       <button
         type="button"
+        title={hideLabel ? label : undefined}
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-left text-xs text-ink-300 focus:outline-none"
       >
@@ -75,16 +91,18 @@ export function CompactSelect({
             </div>
           )}
           <div className="max-h-52 overflow-y-auto py-1">
-            <button
-              type="button"
-              onClick={() => handleSelect("")}
-              className={clsx(
-                "block w-full truncate px-3 py-1.5 text-left text-xs hover:bg-navy-800",
-                !value ? "text-gold-400" : "text-ink-300"
-              )}
-            >
-              {placeholder}
-            </button>
+            {allowClear && (
+              <button
+                type="button"
+                onClick={() => handleSelect("")}
+                className={clsx(
+                  "block w-full truncate px-3 py-1.5 text-left text-xs hover:bg-navy-800",
+                  !value ? "text-gold-400" : "text-ink-300"
+                )}
+              >
+                {placeholder}
+              </button>
+            )}
             {filtered.map((o) => (
               <button
                 key={o.value}

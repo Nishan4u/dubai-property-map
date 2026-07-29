@@ -6,6 +6,7 @@ import type { Project, Developer, Community } from "@/types";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { FilterSidebar, emptyFilters, type ProjectFilters } from "@/components/public/FilterSidebar";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { isNearMetro, getInvestmentScore } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
@@ -164,20 +165,19 @@ export function AllProjectsClient({
                 className="w-full min-w-0 bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
               />
             </div>
-            <select
+            <CompactSelect
+              label="Sort"
+              hideLabel
+              allowClear={false}
+              placeholder="Sort"
               value={sort}
-              onChange={(e) => {
-                setSort(e.target.value as SortOption);
+              onChange={(v) => {
+                setSort((v || "Featured") as SortOption);
                 setVisible(12);
               }}
-              className="shrink-0 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-300 focus:outline-none"
-            >
-              {sortOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  Sort: {opt}
-                </option>
-              ))}
-            </select>
+              options={sortOptions.map((opt) => ({ label: `Sort: ${opt}`, value: opt }))}
+              className="w-48 shrink-0"
+            />
           </div>
 
           <p className="mt-3 text-xs text-ink-500">

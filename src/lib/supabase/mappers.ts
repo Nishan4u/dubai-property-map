@@ -51,6 +51,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     developerColor: row.developers?.color,
     developerSlug: row.developers?.slug,
     developerPhone: row.developers?.phone ?? null,
+    developerLogoUrl: row.developers?.logo_url ?? null,
     communityName: row.communities?.name,
     communitySlug: row.communities?.slug,
     structuredUnitTypes: row.project_unit_types

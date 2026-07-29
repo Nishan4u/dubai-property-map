@@ -285,6 +285,7 @@ export interface ProjectUnitTypeRow {
   has_parking: boolean;
   availability: "available" | "limited" | "sold_out";
   sort_order: number;
+  image_url: string | null;
   created_at: string;
 }
 

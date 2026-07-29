@@ -36,7 +36,7 @@ export function ProjectCard({
       <ProjectThumb
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
-        logoUrl={project.logoUrl}
+        logoUrl={project.logoUrl ?? project.developerLogoUrl}
         className="h-24 w-28 shrink-0 rounded-lg"
       />
       <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export function ProjectCard({
               compact
               card={{
                 imageUrl: project.coverImageUrl,
-                logoUrl: project.logoUrl,
+                logoUrl: project.logoUrl ?? project.developerLogoUrl,
                 developerName,
                 communityName,
                 priceLabel: formatAed(project.priceFromAed),

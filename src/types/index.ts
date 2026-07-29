@@ -106,6 +106,7 @@ export interface Project {
   developerColor?: string;
   developerSlug?: string;
   developerPhone?: string | null;
+  developerLogoUrl?: string | null;
   communityName?: string;
   communitySlug?: string;
   createdAt?: string;

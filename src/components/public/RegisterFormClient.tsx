@@ -5,6 +5,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface DeveloperOption {
   id: string;
@@ -291,18 +292,13 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-ink-400">Select Developer</label>
-                  <select
-                    required
+                  <CompactSelect
+                    label="Select Developer"
+                    placeholder="Select the developer you work for…"
                     value={developerId}
-                    onChange={(e) => setDeveloperId(e.target.value)}
-                    className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 focus:outline-none"
-                  >
-                    <option value="">Select the developer you work for…</option>
-                    {developers.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                    onChange={setDeveloperId}
+                    options={developers.map((d) => ({ label: d.name, value: d.id }))}
+                  />
                 </div>
               </>
             )}
