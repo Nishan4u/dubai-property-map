@@ -1,17 +1,20 @@
 import { SettingsTable } from "@/components/admin/SettingsTable";
 import { RegistrationTypeSettingsPanel } from "@/components/admin/RegistrationTypeSettingsPanel";
 import { FreeAccessSettingsPanel } from "@/components/admin/FreeAccessSettingsPanel";
+import { SiteAccessSettingsPanel } from "@/components/admin/SiteAccessSettingsPanel";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
-  const [{ data: settings }, { data: registrationTypes }, { data: freeAccessTypes }] = await Promise.all([
-    supabase.from("platform_settings").select("key, label, value").order("label"),
-    supabase.from("registration_type_settings").select("account_type, enabled"),
-    supabase.from("free_access_settings").select("account_type, enabled"),
-  ]);
+  const [{ data: settings }, { data: registrationTypes }, { data: freeAccessTypes }, { data: siteAccess }] =
+    await Promise.all([
+      supabase.from("platform_settings").select("key, label, value").order("label"),
+      supabase.from("registration_type_settings").select("account_type, enabled"),
+      supabase.from("free_access_settings").select("account_type, enabled"),
+      supabase.from("site_access_settings").select("restrictions_enabled").eq("id", true).maybeSingle(),
+    ]);
 
   return (
     <div className="space-y-8 p-6">
@@ -22,6 +25,7 @@ export default async function AdminSettingsPage() {
           here.
         </p>
       </div>
+      <SiteAccessSettingsPanel initialEnabled={siteAccess?.restrictions_enabled ?? true} />
       <RegistrationTypeSettingsPanel settings={registrationTypes ?? []} />
       <FreeAccessSettingsPanel settings={freeAccessTypes ?? []} />
       <div>

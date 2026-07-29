@@ -122,6 +122,22 @@ export interface MapAccessResult {
 // affordance on top of that, not the actual protection.
 export async function getMapAccessStatus(): Promise<MapAccessResult> {
   const supabase = await createClient();
+
+  // Admin master switch (patch_85) -- disables every restriction platform-
+  // wide, guests included, for maintenance/demo purposes. Must stay in
+  // sync with get_viewer_map_access_status()'s own copy of this check,
+  // since that function is what actually enforces the RLS lock-down on the
+  // projects table (patch_83) -- this app-layer check controls whether the
+  // UI even attempts to fetch/render, but the database is the real gate.
+  const { data: siteSettings } = await supabase
+    .from("site_access_settings")
+    .select("restrictions_enabled")
+    .eq("id", true)
+    .maybeSingle();
+  if (siteSettings?.restrictions_enabled === false) {
+    return { status: "ok", subscriptionHref: "" };
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();

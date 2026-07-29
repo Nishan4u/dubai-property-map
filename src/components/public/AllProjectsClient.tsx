@@ -6,6 +6,7 @@ import type { Project, Developer, Community } from "@/types";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { FilterSidebar, emptyFilters, type ProjectFilters } from "@/components/public/FilterSidebar";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
+import { ProjectGridSkeleton } from "@/components/public/ProjectGridSkeleton";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { isNearMetro, getInvestmentScore } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
@@ -194,15 +195,23 @@ export function AllProjectsClient({
             }}
             subscribeCtaLabel="Subscribe Now"
           >
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {sortedProjects.slice(0, visible).map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-            {sortedProjects.length === 0 && (
-              <p className="mt-6 text-center text-sm text-ink-500">
-                No projects match your search and filters.
-              </p>
+            {mapAccessStatus !== "ok" ? (
+              <div className="mt-3">
+                <ProjectGridSkeleton />
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {sortedProjects.slice(0, visible).map((project) => (
+                    <ProjectCard key={project.id} project={project} />
+                  ))}
+                </div>
+                {sortedProjects.length === 0 && (
+                  <p className="mt-6 text-center text-sm text-ink-500">
+                    No projects match your search and filters.
+                  </p>
+                )}
+              </>
             )}
             {visible < sortedProjects.length && (
               <button
