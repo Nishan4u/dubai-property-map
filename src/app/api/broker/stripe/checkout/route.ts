@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { isPromoLive } from "@/lib/subscriptionStatus";
 
 export async function POST(request: NextRequest) {
   const { plan, referralCode } = await request.json();
@@ -8,7 +9,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive")
+    .select(
+      "stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive, promo_active, promo_ends_at, promo_price_label, promo_stripe_price_id"
+    )
     .eq("key", plan)
     .eq("plan_type", "broker")
     .maybeSingle();
@@ -23,7 +26,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const priceId = planRow?.stripe_price_id;
+  const priceId = isPromoLive(planRow) && planRow.promo_stripe_price_id ? planRow.promo_stripe_price_id : planRow?.stripe_price_id;
   if (!priceId) {
     return NextResponse.json(
       {

@@ -150,6 +150,8 @@ export default async function ProjectDetailsPage({
       <ProjectThumb
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
+        logoUrl={project.logoUrl}
+        logoSize="lg"
         className="h-64 w-full sm:h-72"
       />
 

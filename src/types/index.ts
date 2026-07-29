@@ -75,6 +75,7 @@ export interface Project {
   reviews: number;
   gradient: string;
   coverImageUrl?: string | null;
+  logoUrl?: string | null;
   tags: ProjectTag[];
   description: string;
   amenities: string[];

@@ -100,6 +100,8 @@ export function SiteHeader({
                   <ProjectThumb
                     gradient={project.gradient}
                     imageUrl={project.coverImageUrl}
+                    logoUrl={project.logoUrl}
+                    logoSize="sm"
                     className="h-10 w-10 shrink-0 rounded-lg"
                   />
                   <span className="min-w-0 flex-1">

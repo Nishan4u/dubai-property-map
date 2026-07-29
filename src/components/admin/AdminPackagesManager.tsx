@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { Badge } from "@/components/ui/Badge";
+import { isPromoLive } from "@/lib/subscriptionStatus";
 import type { SubscriptionPlanFeatureLimits } from "@/types/database";
 
 interface PlanRow {
@@ -15,7 +16,7 @@ interface PlanRow {
   features: string[];
   stripe_price_id: string | null;
   sort_order: number;
-  plan_type: "developer" | "broker" | "salesperson";
+  plan_type: "developer" | "broker" | "broker_agency" | "salesperson";
   description: string | null;
   duration_days: number | null;
   status: "active" | "inactive";
@@ -25,9 +26,13 @@ interface PlanRow {
   bank_transfer_enabled: boolean;
   renewal_allowed_when_inactive: boolean;
   feature_limits: SubscriptionPlanFeatureLimits;
+  promo_price_label: string | null;
+  promo_stripe_price_id: string | null;
+  promo_active: boolean;
+  promo_ends_at: string | null;
 }
 
-const planTypeTone = { developer: "gold", broker: "purple", salesperson: "blue" } as const;
+const planTypeTone = { developer: "gold", broker: "purple", broker_agency: "red", salesperson: "blue" } as const;
 
 export function AdminPackagesManager({
   plans,
@@ -40,7 +45,7 @@ export function AdminPackagesManager({
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [newName, setNewName] = useState("");
-  const [newPlanType, setNewPlanType] = useState<"developer" | "broker" | "salesperson">(
+  const [newPlanType, setNewPlanType] = useState<"developer" | "broker" | "broker_agency" | "salesperson">(
     "developer"
   );
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -82,6 +87,10 @@ export function AdminPackagesManager({
         bank_transfer_enabled: row.bank_transfer_enabled,
         renewal_allowed_when_inactive: row.renewal_allowed_when_inactive,
         feature_limits: row.feature_limits,
+        promo_price_label: row.promo_price_label || null,
+        promo_stripe_price_id: row.promo_stripe_price_id || null,
+        promo_active: row.promo_active,
+        promo_ends_at: row.promo_ends_at || null,
       })
       .eq("id", row.id);
     await logAudit("subscription_plan.updated", "subscription_plan", row.id, { key: row.key });
@@ -139,6 +148,7 @@ export function AdminPackagesManager({
                 <Badge tone={row.status === "active" ? "green" : "neutral"}>{row.status}</Badge>
                 {row.is_popular && <Badge tone="gold">Popular</Badge>}
                 {row.is_recommended && <Badge tone="blue">Recommended</Badge>}
+                {isPromoLive(row) && <Badge tone="red">Promo Live</Badge>}
               </div>
               <Badge tone="blue">
                 {subscriberCounts[row.key] ?? 0} subscriber
@@ -325,6 +335,51 @@ export function AdminPackagesManager({
                 </p>
               </div>
 
+              <div className="sm:col-span-2 rounded-lg border border-navy-700 bg-navy-900 p-3">
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.promo_active}
+                    onChange={(e) => updateField(row.id, "promo_active", e.target.checked)}
+                    className="accent-rose-500"
+                  />
+                  Promotional Pricing Active
+                </label>
+                <p className="mb-2 text-xs text-ink-500">
+                  The normal price and Stripe Price ID above stay untouched — this is a separate,
+                  temporary override shown instead of them while active.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-400">Promo Price Label</label>
+                    <input
+                      value={row.promo_price_label ?? ""}
+                      onChange={(e) => updateField(row.id, "promo_price_label", e.target.value)}
+                      placeholder="e.g. AED 50/year"
+                      className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-400">Promo Stripe Price ID</label>
+                    <input
+                      value={row.promo_stripe_price_id ?? ""}
+                      onChange={(e) => updateField(row.id, "promo_stripe_price_id", e.target.value)}
+                      placeholder="price_... (a separate Stripe price)"
+                      className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-400">Promo Ends (blank = no end date)</label>
+                    <input
+                      type="date"
+                      value={row.promo_ends_at ?? ""}
+                      onChange={(e) => updateField(row.id, "promo_ends_at", e.target.value || null)}
+                      className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="sm:col-span-2 flex flex-wrap items-center gap-4 border-t border-navy-800 pt-3">
                 <label className="flex items-center gap-1.5 text-xs text-ink-300">
                   <input
@@ -426,12 +481,13 @@ export function AdminPackagesManager({
             <select
               value={newPlanType}
               onChange={(e) =>
-                setNewPlanType(e.target.value as "developer" | "broker" | "salesperson")
+                setNewPlanType(e.target.value as "developer" | "broker" | "broker_agency" | "salesperson")
               }
               className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
             >
               <option value="developer">Developer</option>
               <option value="broker">Broker</option>
+              <option value="broker_agency">Broker Agency</option>
               <option value="salesperson">Salesperson</option>
             </select>
           </div>

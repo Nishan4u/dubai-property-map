@@ -8,6 +8,7 @@ import { BankTransferPayment, type BankDetails } from "@/components/dashboard/Ba
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
 import { isExpiringSoon } from "@/lib/subscriptionStatus";
 import { getReferralCookie } from "@/lib/referralCookie";
+import { PromoPrice } from "@/components/ui/PromoPrice";
 import type { SubscriptionBankTransferRow } from "@/types/database";
 
 interface Plan {
@@ -17,6 +18,9 @@ interface Plan {
   features: string[];
   online_payment_enabled?: boolean;
   bank_transfer_enabled?: boolean;
+  promo_active?: boolean;
+  promo_ends_at?: string | null;
+  promo_price_label?: string | null;
 }
 
 export function BrokerSubscriptionClient({
@@ -136,7 +140,7 @@ export function BrokerSubscriptionClient({
               )}
             >
               <h3 className="text-sm font-semibold text-ink-100">{plan.name}</h3>
-              <p className="mt-1 text-xl font-bold text-ink-100">{plan.price_label}</p>
+              <PromoPrice plan={plan} />
               <ul className="mt-4 space-y-2 text-xs text-ink-300">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2">

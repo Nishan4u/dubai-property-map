@@ -36,6 +36,7 @@ export function ProjectCard({
       <ProjectThumb
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
+        logoUrl={project.logoUrl}
         className="h-24 w-28 shrink-0 rounded-lg"
       />
       <div className="min-w-0 flex-1">

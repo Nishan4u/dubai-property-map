@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { ConstructionMilestonesManager } from "@/components/dashboard/ConstructionMilestonesManager";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import type { Community, Project, ProjectTag } from "@/types";
 import type { ConstructionMilestoneRow } from "@/types/database";
 
@@ -96,6 +98,10 @@ export function ProjectForm({
       percent: String(d.percent),
     }))
   );
+  const [logoUrl, setLogoUrl] = useState(project?.logoUrl ?? "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPercent, setLogoPercent] = useState(0);
+  const [logoError, setLogoError] = useState("");
 
   function toggleAmenity(a: string) {
     setAmenities((prev) =>
@@ -121,6 +127,33 @@ export function ProjectForm({
 
   function removeInstallment(i: number) {
     setInstallments((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !project) return;
+    setLogoFile(file);
+    setLogoPercent(0);
+    setLogoError("");
+
+    const supabase = createClient();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${project.id}/logo/${Date.now()}-${safeName}`;
+    const { promise } = uploadFileWithProgress("project-media", path, file, setLogoPercent);
+    const { error: uploadError } = await promise;
+
+    if (uploadError) {
+      setLogoError(uploadError.message);
+      setLogoFile(null);
+      return;
+    }
+
+    const { data } = supabase.storage.from("project-media").getPublicUrl(path);
+    await supabase.from("projects").update({ logo_url: data.publicUrl }).eq("id", project.id);
+
+    setLogoUrl(data.publicUrl);
+    setLogoFile(null);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -249,6 +282,54 @@ export function ProjectForm({
             className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
           />
         </div>
+      </SectionCard>
+
+      <SectionCard title="Project Logo">
+        {project ? (
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-navy-600 bg-navy-900">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={project.name} className="h-full w-full object-contain p-2" />
+              ) : (
+                <span className="text-xs text-ink-500">No logo</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-navy-600 px-4 py-2.5 text-sm text-ink-300 hover:border-gold-500/40 hover:text-ink-100">
+                <Upload className="h-4 w-4" />
+                {logoFile ? "Uploading…" : logoUrl ? "Replace Logo" : "Upload Logo"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden"
+                  disabled={!!logoFile}
+                  onChange={handleLogoUpload}
+                />
+              </label>
+              <p className="mt-2 text-xs text-ink-500">
+                Shown on the project card, details page, map popup and search
+                results. PNG, SVG, JPG or WEBP.
+              </p>
+              {logoFile && (
+                <div className="mt-2 max-w-xs">
+                  <UploadProgressItem
+                    fileName={logoFile.name}
+                    fileSize={logoFile.size}
+                    state={logoError ? "error" : "uploading"}
+                    percent={logoPercent}
+                    errorMessage={logoError}
+                    onRemove={logoError ? () => setLogoFile(null) : undefined}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-ink-500">
+            Save this project first, then come back to upload a logo.
+          </p>
+        )}
       </SectionCard>
 
       <SectionCard title="Pricing & Payment Plan">

@@ -28,6 +28,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     reviews: row.reviews,
     gradient: row.gradient,
     coverImageUrl: row.cover_image_url ?? null,
+    logoUrl: row.logo_url ?? null,
     tags: row.tags as ProjectTag[],
     description: row.description ?? "",
     amenities: row.amenities,

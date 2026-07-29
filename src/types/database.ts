@@ -243,6 +243,7 @@ export interface ProjectRow {
   reviews: number;
   gradient: string;
   cover_image_url: string | null;
+  logo_url: string | null;
   tags: string[];
   description: string | null;
   amenities: string[];
