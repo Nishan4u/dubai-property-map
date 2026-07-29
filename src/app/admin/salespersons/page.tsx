@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { AdminCreateSalespersonForm } from "@/components/admin/AdminCreateSalespersonForm";
 import { InvitationsTable } from "@/components/admin/InvitationsTable";
+import { DeleteSalespersonButton } from "@/components/admin/DeleteSalespersonButton";
 import { getAllDevelopersAdmin, getAllSalespersonsAdmin, getInvitationsAdmin } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,10 @@ export default async function AdminSalespersonsPage() {
                 {s.status.replace(/_/g, " ")}
               </Badge>
             ),
+          },
+          {
+            header: "",
+            render: (s) => <DeleteSalespersonButton salespersonId={s.id} salespersonName={s.full_name} />,
           },
         ]}
         rows={salespersons}

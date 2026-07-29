@@ -2,6 +2,7 @@ import { BadgeCheck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { BrokerageVerifiedToggle } from "@/components/admin/BrokerageVerifiedToggle";
+import { DeleteBrokerageButton } from "@/components/admin/DeleteBrokerageButton";
 import { getAllBrokeragesAdmin, getAllBrokersAdmin } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,16 @@ export default async function AdminBrokeragesPage() {
           {
             header: "",
             render: (br) => <BrokerageVerifiedToggle brokerageId={br.id} verified={br.verified} />,
+          },
+          {
+            header: "",
+            render: (br) => (
+              <DeleteBrokerageButton
+                brokerageId={br.id}
+                brokerageName={br.name}
+                brokerCount={brokers.filter((b) => b.brokerage_id === br.id).length}
+              />
+            ),
           },
         ]}
         rows={brokerages}

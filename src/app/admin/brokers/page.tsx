@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { BrokerStatusActions } from "@/components/admin/BrokerStatusActions";
 import { BrokerForceLogoutButton } from "@/components/admin/BrokerForceLogoutButton";
+import { DeleteBrokerButton } from "@/components/admin/DeleteBrokerButton";
 import { getAllBrokersAdmin } from "@/lib/supabase/queries";
 import type { DbBrokerAccountStatus, DbBrokerSubscriptionStatus } from "@/types/database";
 
@@ -82,6 +83,7 @@ export default async function AdminBrokersPage() {
                 <Link href={`/admin/brokers/${b.id}`} className="text-xs font-medium text-gold-400 hover:text-gold-300">
                   View →
                 </Link>
+                <DeleteBrokerButton brokerId={b.id} brokerName={b.full_name} />
               </div>
             ),
           },
