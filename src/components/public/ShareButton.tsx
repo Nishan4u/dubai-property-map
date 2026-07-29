@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Share2, Copy, Mail, Check } from "lucide-react";
+import { Share2, Copy, Mail, Check, QrCode } from "lucide-react";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
 
 export function ShareButton({
@@ -25,6 +26,8 @@ export function ShareButton({
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
     const directUrl = path ? new URL(path, window.location.origin).toString() : window.location.href;
@@ -82,10 +85,27 @@ export function ShareButton({
 
   const links = [
     { label: "WhatsApp", href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}` },
+    { label: "Telegram", href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}` },
     { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
     { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
     { label: "X", href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}` },
   ];
+
+  async function handleToggleQr() {
+    if (!showQr && !qrDataUrl && shareUrl) {
+      try {
+        const dataUrl = await QRCode.toDataURL(shareUrl, {
+          width: 176,
+          margin: 1,
+          color: { dark: "#0a0f1e", light: "#ffffff" },
+        });
+        setQrDataUrl(dataUrl);
+      } catch {
+        // Non-critical — the rest of the share menu still works without a QR.
+      }
+    }
+    setShowQr((v) => !v);
+  }
 
   // On devices with the OS share sheet (mostly mobile), tapping the trigger
   // goes straight there instead of opening the custom dropdown -- that sheet
@@ -150,6 +170,22 @@ export function ShareButton({
           >
             <Mail className="h-4 w-4" /> Email
           </a>
+          <button
+            onClick={handleToggleQr}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+          >
+            <QrCode className="h-4 w-4" /> {showQr ? "Hide QR Code" : "Show QR Code"}
+          </button>
+          {showQr && (
+            <div className="flex justify-center p-2">
+              {qrDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrDataUrl} alt="QR code for this share link" className="h-44 w-44 rounded-lg" />
+              ) : (
+                <div className="flex h-44 w-44 items-center justify-center text-xs text-ink-500">Generating…</div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

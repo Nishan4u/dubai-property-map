@@ -19,7 +19,7 @@ export function GatedDetailPlaceholder({
   contentLabel: string;
 }) {
   return (
-    <div className="relative mx-auto max-w-6xl px-6 py-10">
+    <div className="relative mx-auto max-h-screen max-w-6xl overflow-hidden px-6 py-10">
       <div className="pointer-events-none max-h-[75vh] select-none overflow-hidden blur-sm" aria-hidden="true">
         <div className="h-8 w-2/3 rounded-lg bg-navy-800" />
         <div className="mt-3 h-4 w-1/3 rounded bg-navy-800" />
@@ -40,7 +40,16 @@ export function GatedDetailPlaceholder({
           </div>
         </div>
       </div>
-      <MapAccessOverlay status={status} subscriptionHref={subscriptionHref} contentLabel={contentLabel} />
+      <MapAccessOverlay
+        status={status}
+        subscriptionHref={subscriptionHref}
+        contentLabel={contentLabel}
+        titleOverride={{
+          guest: "Register or Subscribe to Continue",
+          no_subscription: "Register or Subscribe to Continue",
+          subscription_expired: "Register or Subscribe to Continue",
+        }}
+      />
     </div>
   );
 }

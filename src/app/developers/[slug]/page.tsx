@@ -37,7 +37,12 @@ export async function generateMetadata({
   return {
     title,
     description,
-    openGraph: { title, description, type: "website" },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      ...(developer.logo_url ? { images: [developer.logo_url] } : {}),
+    },
   };
 }
 

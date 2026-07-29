@@ -27,6 +27,7 @@ import { mapProject } from "@/lib/supabase/mappers";
 import { getLocationEmbedUrl, getVideoEmbedUrl } from "@/lib/mediaEmbed";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { documentCategories } from "@/lib/documentCategories";
+import { getMapboxStaticImageUrl } from "@/lib/mapboxStaticImage";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,21 @@ export async function generateMetadata({
     project.description ||
     `${project.propertyType} in ${project.communityName ?? row.communities?.name}, starting from AED ${project.priceFromAed.toLocaleString()}.`;
 
+  // Rich share-card image (spec: Share Feature) -- the project's own cover
+  // photo first (what most platforms show), the Mapbox static map card as a
+  // fallback/secondary image when there's no cover photo but coordinates exist.
+  const mapImage = project.lat != null && project.lng != null ? getMapboxStaticImageUrl(project.lat, project.lng) : null;
+  const images = [project.coverImageUrl, mapImage].filter((url): url is string => Boolean(url));
+
   return {
     title,
     description,
-    openGraph: { title, description, type: "website" },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      ...(images.length ? { images } : {}),
+    },
   };
 }
 
