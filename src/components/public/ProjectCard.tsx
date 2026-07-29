@@ -51,6 +51,15 @@ export function ProjectCard({
               title={project.name}
               path={`/projects/${project.slug}`}
               compact
+              card={{
+                imageUrl: project.coverImageUrl,
+                logoUrl: project.logoUrl,
+                developerName,
+                communityName,
+                priceLabel: formatAed(project.priceFromAed),
+                lat: project.lat,
+                lng: project.lng,
+              }}
             />
             <button
               onClick={async (e) => {

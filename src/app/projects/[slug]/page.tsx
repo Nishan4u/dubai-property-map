@@ -208,7 +208,20 @@ export default async function ProjectDetailsPage({
             </div>
             <div className="text-right">
               <div className="flex justify-end">
-                <ShareButton targetType="project" targetId={project.id} title={project.name} />
+                <ShareButton
+                  targetType="project"
+                  targetId={project.id}
+                  title={project.name}
+                  card={{
+                    imageUrl: project.coverImageUrl,
+                    logoUrl: project.logoUrl,
+                    developerName: project.developerName ?? developer?.name,
+                    communityName: project.communityName ?? community?.name,
+                    priceLabel: formatAed(project.priceFromAed),
+                    lat: project.lat,
+                    lng: project.lng,
+                  }}
+                />
               </div>
               <p className="mt-2 text-xs text-ink-500">Starting From</p>
               <p className="text-2xl font-bold text-gold-400">

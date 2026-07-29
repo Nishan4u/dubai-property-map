@@ -1,9 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Share2, Copy, Mail, Check, QrCode } from "lucide-react";
+import { Building2, Share2, Copy, Mail, Check, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
+import { getMapboxStaticImageUrl } from "@/lib/mapboxStaticImage";
+
+export interface ShareCardData {
+  imageUrl?: string | null;
+  logoUrl?: string | null;
+  developerName?: string;
+  communityName?: string;
+  priceLabel?: string;
+  lat?: number | null;
+  lng?: number | null;
+}
 
 export function ShareButton({
   targetType,
@@ -11,6 +22,7 @@ export function ShareButton({
   title,
   path,
   compact = false,
+  card,
 }: {
   targetType: "project" | "developer";
   targetId: string;
@@ -22,6 +34,11 @@ export function ShareButton({
   path?: string;
   /** Icon-only trigger sized for a card, instead of the labeled button. */
   compact?: boolean;
+  /** Project Card fields for the rich in-app share preview (spec: Share
+   * Feature -- Project Card/Mapbox Map Card/Image/Logo/Name/Developer/
+   * Community/Starting Price). Omit for non-project shares (e.g. developer
+   * pages), which fall back to the plain link list. */
+  card?: ShareCardData;
 }) {
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
@@ -82,6 +99,10 @@ export function ShareButton({
 
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
+  const mapImageUrl =
+    card?.lat != null && card?.lng != null
+      ? getMapboxStaticImageUrl(card.lat, card.lng, { width: 400, height: 150 })
+      : null;
 
   const links = [
     { label: "WhatsApp", href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}` },
@@ -144,8 +165,43 @@ export function ShareButton({
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+          className={
+            card ? "absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl" : "absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+          }
         >
+          {card && (
+            <div className="mb-2 overflow-hidden rounded-lg border border-navy-700 bg-navy-850">
+              <div className="relative h-28 w-full bg-navy-800">
+                {card.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Building2 className="h-8 w-8 text-ink-600" />
+                  </div>
+                )}
+                {card.logoUrl && (
+                  <div className="absolute bottom-1.5 left-1.5 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-navy-700 bg-white/95 p-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={card.logoUrl} alt="" className="h-full w-full object-contain" />
+                  </div>
+                )}
+              </div>
+              {mapImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mapImageUrl} alt="" className="h-16 w-full object-cover" />
+              )}
+              <div className="p-2.5">
+                <p className="truncate text-sm font-semibold text-ink-100">{title}</p>
+                <p className="truncate text-xs text-ink-500">
+                  {[card.developerName, card.communityName].filter(Boolean).join(" · ")}
+                </p>
+                {card.priceLabel && (
+                  <p className="mt-1 text-xs font-semibold text-gold-400">From {card.priceLabel}</p>
+                )}
+              </div>
+            </div>
+          )}
           <button
             onClick={handleCopy}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
