@@ -20,7 +20,7 @@ export default async function EditProjectPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: row }, profile, communityRows, { data: milestones }, propertyTypes, amenities] =
+  const [{ data: row }, profile, communityRows, { data: milestones }, { data: unitTypeRows }, propertyTypes, amenities] =
     await Promise.all([
       supabase
         .from("projects")
@@ -34,6 +34,11 @@ export default async function EditProjectPage({
         .select("*")
         .eq("project_id", id)
         .order("milestone_date", { ascending: true }),
+      supabase
+        .from("project_unit_types")
+        .select("*")
+        .eq("project_id", id)
+        .order("sort_order", { ascending: true }),
       getPropertyTypes(),
       getAmenitiesList(),
     ]);
@@ -54,6 +59,7 @@ export default async function EditProjectPage({
         developerId={profile.developer_id}
         communities={communities}
         constructionMilestones={milestones ?? []}
+        unitTypeRows={unitTypeRows ?? []}
         propertyTypes={propertyTypes.map((p) => p.name)}
         amenityOptions={amenities.map((a) => a.name)}
       />

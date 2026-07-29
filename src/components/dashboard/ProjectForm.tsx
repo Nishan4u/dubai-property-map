@@ -7,11 +7,12 @@ import { Plus, Trash2, Upload } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { ConstructionMilestonesManager } from "@/components/dashboard/ConstructionMilestonesManager";
+import { UnitTypesManager } from "@/components/dashboard/UnitTypesManager";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import type { Community, Project, ProjectTag } from "@/types";
-import type { ConstructionMilestoneRow } from "@/types/database";
+import type { ConstructionMilestoneRow, ProjectUnitTypeRow } from "@/types/database";
 
 const unitTypeOptions = ["Studio", "1BR", "2BR", "3BR", "4BR", "Penthouse", "Villa"];
 
@@ -63,6 +64,7 @@ export function ProjectForm({
   developerOptions,
   communities,
   constructionMilestones = [],
+  unitTypeRows = [],
   propertyTypes = fallbackPropertyTypes,
   amenityOptions = fallbackAmenities,
 }: {
@@ -71,6 +73,7 @@ export function ProjectForm({
   developerOptions?: { id: string; name: string }[];
   communities: Community[];
   constructionMilestones?: ConstructionMilestoneRow[];
+  unitTypeRows?: ProjectUnitTypeRow[];
   propertyTypes?: string[];
   amenityOptions?: string[];
 }) {
@@ -458,6 +461,18 @@ export function ProjectForm({
         <p className="mt-2 text-xs text-ink-500">
           Leave a unit type blank if it&apos;s not offered in this project.
         </p>
+      </SectionCard>
+
+      <SectionCard title="Unit Types">
+        {project ? (
+          <UnitTypesManager projectId={project.id} initialUnitTypes={unitTypeRows} />
+        ) : (
+          <p className="text-sm text-ink-500">
+            Save this project first, then come back to add detailed unit
+            types (name, size, bedrooms, bathrooms, balcony, parking and
+            availability).
+          </p>
+        )}
       </SectionCard>
 
       <SectionCard title="Installment Plan">

@@ -811,6 +811,34 @@ export async function getConstructionMilestones(projectId: string) {
   return data ?? [];
 }
 
+export async function getProjectUnitTypes(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_unit_types")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getUnitTypeFloorPlans(projectId: string, unitTypeId: string) {
+  const supabase = await createClient();
+  const path = `${projectId}/floor-plans/${unitTypeId}`;
+  const { data, error } = await supabase.storage.from("project-media").list(path);
+
+  if (error || !data) return [];
+
+  return data
+    .filter((f) => f.name !== ".emptyFolderPlaceholder")
+    .map((f) => ({
+      name: f.name.replace(/^\d+-/, ""),
+      url: supabase.storage.from("project-media").getPublicUrl(`${path}/${f.name}`)
+        .data.publicUrl,
+    }));
+}
+
 export async function getProjectDocumentsByCategory(projectId: string) {
   const supabase = await createClient();
   const results: { category: string; name: string; url: string }[] = [];

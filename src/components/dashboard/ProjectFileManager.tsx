@@ -34,11 +34,16 @@ export function ProjectFileManager({
   folder,
   category,
   accept,
+  pathOverride,
 }: {
   projectId: string;
   folder: "gallery" | "documents";
   category?: string;
   accept: string;
+  /** Use a custom storage path instead of the gallery/documents convention
+   * (e.g. per-unit-type floor plans). `folder` still controls whether the
+   * "set as cover" button is offered. */
+  pathOverride?: string;
 }) {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +51,10 @@ export function ProjectFileManager({
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const path =
-    folder === "documents" && category
+    pathOverride ??
+    (folder === "documents" && category
       ? `${projectId}/${folder}/${categorySlug(category)}`
-      : `${projectId}/${folder}`;
+      : `${projectId}/${folder}`);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);

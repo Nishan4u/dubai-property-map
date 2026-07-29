@@ -272,6 +272,22 @@ export interface ConstructionMilestoneRow {
   created_at: string;
 }
 
+export interface ProjectUnitTypeRow {
+  id: string;
+  project_id: string;
+  unit_name: string;
+  unit_type: string;
+  starting_price_aed: number | null;
+  size_sqft: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  has_balcony: boolean;
+  has_parking: boolean;
+  availability: "available" | "limited" | "sold_out";
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ProjectEventRow {
   id: string;
   project_id: string;

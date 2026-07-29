@@ -20,6 +20,8 @@ import {
   getProjectDocumentsByCategory,
   getProjectMediaFiles,
   getProjectsForCommunity,
+  getProjectUnitTypes,
+  getUnitTypeFloorPlans,
   getViewerProjectScope,
   incrementProjectViews,
 } from "@/lib/supabase/queries";
@@ -106,12 +108,19 @@ export default async function ProjectDetailsPage({
     .slice(0, 3)
     .map((p) => mapProject(p));
 
-  const [gallery, documents, milestones, projectBanner] = await Promise.all([
+  const [gallery, documents, milestones, projectBanner, unitTypes] = await Promise.all([
     getProjectMediaFiles(project.id, "gallery"),
     getProjectDocumentsByCategory(project.id),
     getConstructionMilestones(project.id),
     getActiveProjectBanner(project.id),
+    getProjectUnitTypes(project.id),
   ]);
+  const unitTypeFloorPlans: Record<string, Awaited<ReturnType<typeof getUnitTypeFloorPlans>>> =
+    Object.fromEntries(
+      await Promise.all(
+        unitTypes.map(async (u) => [u.id, await getUnitTypeFloorPlans(project.id, u.id)] as const)
+      )
+    );
   const images = gallery.filter((f) => f.isImage);
   const brochureDoc =
     documents.find((d) => d.category === "Brochure") ?? documents[0] ?? null;
@@ -243,6 +252,73 @@ export default async function ProjectDetailsPage({
                     >
                       <span className="text-ink-300">{stage.label}</span>
                       <span className="font-semibold text-gold-400">{stage.percent}%</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {unitTypes.length > 0 && (
+              <Section title="Unit Types">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {unitTypes.map((u) => (
+                    <div
+                      key={u.id}
+                      className="rounded-lg border border-navy-700 bg-navy-850 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-ink-100">{u.unit_name}</p>
+                          <p className="text-xs text-ink-500">{u.unit_type}</p>
+                        </div>
+                        <Badge
+                          tone={
+                            u.availability === "available"
+                              ? "green"
+                              : u.availability === "limited"
+                                ? "gold"
+                                : "red"
+                          }
+                        >
+                          {u.availability === "sold_out"
+                            ? "Sold Out"
+                            : u.availability === "limited"
+                              ? "Limited"
+                              : "Available"}
+                        </Badge>
+                      </div>
+                      {u.starting_price_aed != null && (
+                        <p className="mt-2 text-sm font-semibold text-gold-400">
+                          From {formatAed(u.starting_price_aed)}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-ink-400">
+                        {[
+                          u.size_sqft != null ? `${u.size_sqft.toLocaleString()} sq ft` : null,
+                          u.bedrooms != null ? `${u.bedrooms} Bed` : null,
+                          u.bathrooms != null ? `${u.bathrooms} Bath` : null,
+                          u.has_balcony ? "Balcony" : null,
+                          u.has_parking ? "Parking" : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      {(unitTypeFloorPlans[u.id] ?? []).length > 0 && (
+                        <div className="mt-3 space-y-1.5 border-t border-navy-800 pt-3">
+                          {unitTypeFloorPlans[u.id].map((f) => (
+                            <a
+                              key={f.url}
+                              href={f.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-xs font-medium text-gold-400 hover:text-gold-300"
+                            >
+                              <FileText className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
