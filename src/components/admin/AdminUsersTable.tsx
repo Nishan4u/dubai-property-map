@@ -21,6 +21,7 @@ const roles = ["buyer", "developer", "admin"] as const;
 
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
   const [rows, setRows] = useState(users);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function changeRole(id: string, role: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, role } : r)));
@@ -34,6 +35,23 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
     const supabase = createClient();
     await supabase.from("profiles").update({ suspended }).eq("id", id);
     await logAudit(suspended ? "user.suspended" : "user.reinstated", "profile", id);
+  }
+
+  async function handleDelete(u: UserRow) {
+    if (!window.confirm(`Permanently delete ${u.full_name ?? u.email}'s account? This cannot be undone.`)) return;
+    setDeletingId(u.id);
+    const res = await fetch("/api/admin/users/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: u.id }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== u.id));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error ?? "Failed to delete user.");
+    }
+    setDeletingId(null);
   }
 
   return (
@@ -85,16 +103,25 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
           {
             header: "",
             render: (u) => (
-              <button
-                onClick={() => toggleSuspended(u.id, !u.suspended)}
-                className={
-                  u.suspended
-                    ? "text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                    : "text-xs font-medium text-rose-400 hover:text-rose-300"
-                }
-              >
-                {u.suspended ? "Reinstate" : "Suspend"}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleSuspended(u.id, !u.suspended)}
+                  className={
+                    u.suspended
+                      ? "text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                      : "text-xs font-medium text-rose-400 hover:text-rose-300"
+                  }
+                >
+                  {u.suspended ? "Reinstate" : "Suspend"}
+                </button>
+                <button
+                  onClick={() => handleDelete(u)}
+                  disabled={deletingId === u.id}
+                  className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50"
+                >
+                  {deletingId === u.id ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             ),
           },
         ]}

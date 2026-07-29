@@ -3,17 +3,19 @@ import { RegistrationTypeSettingsPanel } from "@/components/admin/RegistrationTy
 import { FreeAccessSettingsPanel } from "@/components/admin/FreeAccessSettingsPanel";
 import { SiteAccessSettingsPanel } from "@/components/admin/SiteAccessSettingsPanel";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
-  const [{ data: settings }, { data: registrationTypes }, { data: freeAccessTypes }, { data: siteAccess }] =
+  const [{ data: settings }, { data: registrationTypes }, { data: freeAccessTypes }, { data: siteAccess }, profile] =
     await Promise.all([
       supabase.from("platform_settings").select("key, label, value").order("label"),
       supabase.from("registration_type_settings").select("account_type, enabled"),
       supabase.from("free_access_settings").select("account_type, enabled"),
       supabase.from("site_access_settings").select("restrictions_enabled").eq("id", true).maybeSingle(),
+      getCurrentProfile(),
     ]);
 
   return (
@@ -25,7 +27,10 @@ export default async function AdminSettingsPage() {
           here.
         </p>
       </div>
-      <SiteAccessSettingsPanel initialEnabled={siteAccess?.restrictions_enabled ?? true} />
+      <SiteAccessSettingsPanel
+        initialEnabled={siteAccess?.restrictions_enabled ?? true}
+        canManage={Boolean(profile?.is_super_admin)}
+      />
       <RegistrationTypeSettingsPanel settings={registrationTypes ?? []} />
       <FreeAccessSettingsPanel settings={freeAccessTypes ?? []} />
       <div>

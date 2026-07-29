@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectForm } from "@/components/dashboard/ProjectForm";
+import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
 import {
   getAmenitiesList,
   getCommunities,
@@ -50,9 +51,16 @@ export default async function EditProjectPage({
 
   return (
     <div className="space-y-4 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-ink-100">{project.name}</h1>
-        <p className="text-sm text-ink-400">Edit project details.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-ink-100">{project.name}</h1>
+          <p className="text-sm text-ink-400">Edit project details.</p>
+        </div>
+        <DeleteProjectButton
+          projectId={project.id}
+          projectName={project.name}
+          redirectTo="/dashboard/projects"
+        />
       </div>
       <ProjectForm
         project={project}

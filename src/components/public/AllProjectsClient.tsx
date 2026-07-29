@@ -135,66 +135,68 @@ export function AllProjectsClient({
         </p>
       </div>
 
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-        <div className="lg:w-72 lg:shrink-0">
-          <FilterSidebar
-            developers={developers}
-            communities={communities}
-            propertyTypes={propertyTypes}
-            paymentPlans={paymentPlans}
-            handoverYears={handoverYears}
-            filters={filters}
-            onApply={(next) => {
-              setFilters(next);
-              setVisible(12);
-            }}
-            viewerDeveloperId={viewerDeveloperId}
-          />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2.5">
-              <Search className="h-4 w-4 shrink-0 text-ink-500" />
-              <input
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setVisible(12);
-                }}
-                placeholder="Search projects by name, developer or community…"
-                className="w-full min-w-0 bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-              />
-            </div>
-            <CompactSelect
-              label="Sort"
-              hideLabel
-              allowClear={false}
-              placeholder="Sort"
-              value={sort}
-              onChange={(v) => {
-                setSort((v || "Featured") as SortOption);
+      <ProjectAccessGate
+        status={mapAccessStatus}
+        subscriptionHref={subscriptionHref}
+        titleOverride={{ guest: "Registration Required", no_subscription: "Subscription Required" }}
+        bodyOverride={{
+          guest: "Register or log in to explore Dubai projects.",
+          no_subscription: "An active subscription is required to access All Projects.",
+        }}
+        subscribeCtaLabel="Subscribe Now"
+      >
+        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+          <div className="lg:w-72 lg:shrink-0">
+            <FilterSidebar
+              developers={developers}
+              communities={communities}
+              propertyTypes={propertyTypes}
+              paymentPlans={paymentPlans}
+              handoverYears={handoverYears}
+              filters={filters}
+              onApply={(next) => {
+                setFilters(next);
                 setVisible(12);
               }}
-              options={sortOptions.map((opt) => ({ label: `Sort: ${opt}`, value: opt }))}
-              className="w-48 shrink-0"
+              viewerDeveloperId={viewerDeveloperId}
             />
           </div>
 
-          <p className="mt-3 text-xs text-ink-500">
-            {sortedProjects.length} project{sortedProjects.length === 1 ? "" : "s"} found
-          </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2.5">
+                <Search className="h-4 w-4 shrink-0 text-ink-500" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setVisible(12);
+                  }}
+                  placeholder="Search projects by name, developer or community…"
+                  className="w-full min-w-0 bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+              </div>
+              <CompactSelect
+                label="Sort"
+                hideLabel
+                allowClear={false}
+                placeholder="Sort"
+                value={sort}
+                onChange={(v) => {
+                  setSort((v || "Featured") as SortOption);
+                  setVisible(12);
+                }}
+                options={sortOptions.map((opt) => ({ label: `Sort: ${opt}`, value: opt }))}
+                className="w-48 shrink-0"
+              />
+            </div>
 
-          <ProjectAccessGate
-            status={mapAccessStatus}
-            subscriptionHref={subscriptionHref}
-            titleOverride={{ guest: "Registration Required", no_subscription: "Subscription Required" }}
-            bodyOverride={{
-              guest: "Register or log in to explore Dubai projects.",
-              no_subscription: "An active subscription is required to access All Projects.",
-            }}
-            subscribeCtaLabel="Subscribe Now"
-          >
+            {mapAccessStatus === "ok" && (
+              <p className="mt-3 text-xs text-ink-500">
+                {sortedProjects.length} project{sortedProjects.length === 1 ? "" : "s"} found
+              </p>
+            )}
+
             {mapAccessStatus !== "ok" ? (
               <div className="mt-3">
                 <ProjectGridSkeleton />
@@ -221,9 +223,9 @@ export function AllProjectsClient({
                 Load More
               </button>
             )}
-          </ProjectAccessGate>
+          </div>
         </div>
-      </div>
+      </ProjectAccessGate>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
+import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
 import type { Project, ProjectStatus } from "@/types";
 
 const tabs: { label: string; value: ProjectStatus | "all" }[] = [
@@ -71,12 +72,15 @@ export function DeveloperProjectsTable({ projects }: { projects: Project[] }) {
           {
             header: "",
             render: (p) => (
-              <Link
-                href={`/dashboard/projects/${p.id}`}
-                className="text-xs font-medium text-gold-400 hover:text-gold-300"
-              >
-                Edit →
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/dashboard/projects/${p.id}`}
+                  className="text-xs font-medium text-gold-400 hover:text-gold-300"
+                >
+                  Edit →
+                </Link>
+                <DeleteProjectButton projectId={p.id} projectName={p.name} />
+              </div>
             ),
           },
         ]}
