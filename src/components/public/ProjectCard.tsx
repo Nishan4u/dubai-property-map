@@ -37,6 +37,7 @@ export function ProjectCard({
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
         logoUrl={project.logoUrl ?? project.developerLogoUrl}
+        logoSize="lg"
         className="h-24 w-28 shrink-0 rounded-lg"
       />
       <div className="min-w-0 flex-1">
