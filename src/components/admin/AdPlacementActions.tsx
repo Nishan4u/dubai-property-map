@@ -34,6 +34,21 @@ export function AdPlacementActions({
     setLoading(false);
   }
 
+  async function handleDelete() {
+    if (!window.confirm(`Permanently delete the ad placement "${title}"? This cannot be undone.`)) return;
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("ad_placements").delete().eq("id", id);
+    if (error) {
+      window.alert("Failed to delete ad placement.");
+      setLoading(false);
+      return;
+    }
+    await logAudit("ad_placement.delete", "ad_placement", id);
+    router.refresh();
+    setLoading(false);
+  }
+
   return (
     <div className="flex gap-2">
       <button
@@ -56,6 +71,13 @@ export function AdPlacementActions({
         className="text-xs font-medium text-ink-400 hover:text-ink-200 disabled:opacity-50"
       >
         Expire
+      </button>
+      <button
+        disabled={loading}
+        onClick={handleDelete}
+        className="text-xs font-medium text-rose-500 hover:text-rose-400 disabled:opacity-50"
+      >
+        Delete
       </button>
     </div>
   );
