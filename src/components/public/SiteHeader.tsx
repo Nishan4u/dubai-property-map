@@ -46,17 +46,26 @@ export function SiteHeader({
 
   return (
     <div className="border-b border-navy-700 bg-navy-900">
-    <header className="flex flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6">
-      <Link href="/" className="flex shrink-0 items-center">
-        <Image
-          src="/logo/dubai-property-map-logo.png"
-          alt="Dubai Property Map"
-          width={883}
-          height={237}
-          priority
-          className="h-8 w-auto sm:h-9"
-        />
-      </Link>
+    <header className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
+      {/* On mobile this row deliberately pairs the logo with auth/admin
+         buttons so they don't wrap onto their own orphaned row with a big
+         empty gap next to them (what "sm:contents" undoes at sm: and up,
+         rejoining these two as ordinary flex-wrap children like before). */}
+      <div className="flex w-full items-center justify-between gap-2 sm:contents">
+        <Link href="/" className="flex shrink-0 items-center">
+          <Image
+            src="/logo/dubai-property-map-logo.png"
+            alt="Dubai Property Map"
+            width={883}
+            height={237}
+            priority
+            className="h-8 w-auto sm:h-9"
+          />
+        </Link>
+        <div className="flex shrink-0 items-center gap-2 sm:hidden">
+          <AuthStatus />
+        </div>
+      </div>
 
       <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
         <div
@@ -122,35 +131,37 @@ export function SiteHeader({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto rounded-lg bg-navy-850 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => onTabChange(tab.value)}
-            className={clsx(
-              "shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
-              activeTab === tab.value
-                ? "bg-gold-500 text-navy-950"
-                : "text-ink-300 hover:text-ink-100"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex w-full items-center gap-2 sm:contents">
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto rounded-lg bg-navy-850 p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => onTabChange(tab.value)}
+              className={clsx(
+                "shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
+                activeTab === tab.value
+                  ? "bg-gold-500 text-navy-950"
+                  : "text-ink-300 hover:text-ink-100"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      <button
-        onClick={onFiltersClick}
-        className="flex shrink-0 items-center gap-2 rounded-lg border border-navy-700 px-2.5 py-2 text-sm font-medium text-ink-300 hover:text-ink-100 sm:px-3"
-      >
-        <Filter className="h-4 w-4" />
-        <span className="hidden sm:inline">Filters</span>
-        {!!activeFilterCount && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-navy-950">
-            {activeFilterCount}
-          </span>
-        )}
-      </button>
+        <button
+          onClick={onFiltersClick}
+          className="flex shrink-0 items-center gap-2 rounded-lg border border-navy-700 px-2.5 py-2 text-sm font-medium text-ink-300 hover:text-ink-100 sm:px-3"
+        >
+          <Filter className="h-4 w-4" />
+          <span className="hidden sm:inline">Filters</span>
+          {!!activeFilterCount && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-navy-950">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       <Link
         href="/favorites"
@@ -159,7 +170,7 @@ export function SiteHeader({
         <Heart className="h-4 w-4" />
       </Link>
 
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
         <AuthStatus />
       </div>
     </header>

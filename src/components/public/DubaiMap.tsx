@@ -196,6 +196,18 @@ export function DubaiMap({
           });
           // Below the POI point layers (added next) so line paths never
           // obscure the station/POI markers sitting on top of them.
+          // "poi-lines-hit" is an invisible, much wider copy of the same
+          // line underneath -- the visible line is deliberately thin, which
+          // makes it a tiny, hard-to-hit target (especially on touch), so
+          // clicks/taps are handled against this wide invisible layer
+          // instead.
+          map.addLayer({
+            id: "poi-lines-hit",
+            type: "line",
+            source: LINE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#000000", "line-width": 20, "line-opacity": 0 },
+          });
           map.addLayer({
             id: "poi-lines",
             type: "line",
@@ -203,8 +215,27 @@ export function DubaiMap({
             layout: { "line-join": "round", "line-cap": "round" },
             paint: {
               "line-color": ["get", "color"],
-              "line-width": 3,
-              "line-opacity": 0.85,
+              "line-width": 4,
+              "line-opacity": 0.9,
+            },
+          });
+          // Line name drawn directly along the path (repeating every
+          // ~200px) so it's readable at a glance instead of only on tap.
+          map.addLayer({
+            id: "poi-line-labels",
+            type: "symbol",
+            source: LINE_SOURCE_ID,
+            layout: {
+              "symbol-placement": "line",
+              "symbol-spacing": 200,
+              "text-field": ["get", "name"],
+              "text-size": 11,
+              "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            },
+            paint: {
+              "text-color": ["get", "color"],
+              "text-halo-color": "#0a0f1c",
+              "text-halo-width": 1.5,
             },
           });
 
@@ -221,11 +252,11 @@ export function DubaiMap({
               .setHTML(`<div style="font-size:12px;color:#0a0f1c;font-weight:600;">${name}</div>`)
               .addTo(map);
           };
-          map.on("click", "poi-lines", showLinePopup);
-          map.on("mouseenter", "poi-lines", () => {
+          map.on("click", "poi-lines-hit", showLinePopup);
+          map.on("mouseenter", "poi-lines-hit", () => {
             map.getCanvas().style.cursor = "pointer";
           });
-          map.on("mouseleave", "poi-lines", () => {
+          map.on("mouseleave", "poi-lines-hit", () => {
             map.getCanvas().style.cursor = "";
           });
         }

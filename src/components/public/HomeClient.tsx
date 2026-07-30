@@ -329,7 +329,7 @@ export function HomeClient({
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         navLinks={navLinks}
-        searchResults={isFullscreen ? filteredProjects : undefined}
+        searchResults={filteredProjects}
         onSelectResult={handleSelectSearchResult}
         searchDisabled={mapAccessStatus !== "ok"}
       />

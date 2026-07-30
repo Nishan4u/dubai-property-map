@@ -99,8 +99,8 @@ export const poiLayers: PoiLayer[] = [
       { name: "International City 3 (Blue Line — Planned Area)", lng: 55.43, lat: 25.155, color: "#3b82f6" },
       { name: "Dubai Silicon Oasis (Blue Line — Planned Area)", lng: 55.377, lat: 25.122, color: "#3b82f6" },
       { name: "Dubai Academic City (Blue Line — Planned Area)", lng: 55.414, lat: 25.113, color: "#3b82f6" },
-      { name: "Mirdif (Blue Line — Planned Area)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
       { name: "Al Warqa (Blue Line — Planned Area)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
+      { name: "Mirdif (Blue Line — Planned Area)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
       { name: "Mina Rashid (Gold Line — Confirmed Route Area)", lng: 55.276, lat: 25.266, color: "#eab308" },
       { name: "City Walk (Gold Line — Confirmed Route Area)", lng: 55.263, lat: 25.207, color: "#eab308" },
       { name: "Mohammed Bin Rashid City (Gold Line — Confirmed Route Area)", lng: 55.305, lat: 25.168, color: "#eab308" },
@@ -269,21 +269,20 @@ export interface PoiLine {
 const metroLineNames: Record<string, string> = {
   "#ef4444": "Red Line",
   "#22c55e": "Green Line",
+  "#3b82f6": "Blue Line (Planned)",
   "#eab308": "Gold Line (Planned)",
 };
 
 // Connects the metro station points above into real line paths, colored by
 // line. Built from the same station list (not a separate hand-copied
-// dataset) so the two can never drift apart. Red and Green are Dubai
-// Metro's two operational lines and their stations are already listed in
-// real physical sequence, so a straight connect-the-dots per color works.
-// Red also forks at Ibn Battuta for the Route 2020 extension -- handled as
-// its own segment sharing Ibn Battuta's coordinate as the branch point,
-// rather than one continuous line, so the fork renders correctly instead
-// of a diagonal jump across the map. The Blue Line is deliberately left as
-// points only: its station list is still-uncertain "Planned Area"
-// coordinates that don't reflect a confirmed physical route, so drawing a
-// connected line for it would imply more routing certainty than exists.
+// dataset) so the two can never drift apart. Stations are listed in
+// physical sequence per line, so a straight connect-the-dots per color
+// works (Blue Line's stations were reordered above -- Al Warqa before
+// Mirdif -- to match a sane path instead of the doubling-back order they
+// were originally entered in). Red also forks at Ibn Battuta for the
+// Route 2020 extension -- handled as its own segment sharing Ibn Battuta's
+// coordinate as the branch point, rather than one continuous line, so the
+// fork renders correctly instead of a diagonal jump across the map.
 function buildMetroLines(): PoiLine[] {
   const metroPoints = poiLayers.find((l) => l.key === "metro")!.points;
   const ibnBattuta = metroPoints.find((p) => p.name.startsWith("Ibn Battuta"));
@@ -292,7 +291,6 @@ function buildMetroLines(): PoiLine[] {
 
   for (const pt of metroPoints) {
     const color = pt.color ?? "#94a3b8";
-    if (color === "#3b82f6") continue; // Blue Line: points only, see comment above
 
     const isRoute2020 = pt.name.includes("Route 2020 Extension");
     if (isRoute2020 && current?.name !== "Red Line (Route 2020 Extension)") {

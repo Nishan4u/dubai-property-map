@@ -20,7 +20,7 @@ export function ProjectThumb({
         "absolute overflow-hidden rounded-md border-2 border-white/90 bg-navy-900/40 shadow-md backdrop-blur-sm",
         logoSize === "sm" && "bottom-1 left-1 h-4 w-4",
         logoSize === "md" && "bottom-1.5 left-1.5 h-6 w-6",
-        logoSize === "lg" && "bottom-3 left-3 h-12 w-12 rounded-lg"
+        logoSize === "lg" && "bottom-1 left-3 h-12 w-12 rounded-lg"
       )}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
