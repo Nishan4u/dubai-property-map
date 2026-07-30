@@ -76,6 +76,35 @@ body {
   display: none !important;
 }
 
+/* Scoped to popups created with { className: "dpm-popup-dark" } -- not a
+   blanket .mapboxgl-popup-content override, since other popups on the map
+   (community pin, "Coming Soon") already build their own content assuming
+   Mapbox's default white bubble and would go illegible on a dark one. */
+.dpm-popup-dark .mapboxgl-popup-content {
+  background: var(--color-navy-850);
+  color: var(--color-ink-100);
+  border: 1px solid var(--color-navy-700);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 6px 10px;
+}
+.dpm-popup-dark.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.dpm-popup-dark.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.dpm-popup-dark.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: var(--color-navy-850);
+}
+.dpm-popup-dark.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.dpm-popup-dark.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.dpm-popup-dark.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: var(--color-navy-850);
+}
+.dpm-popup-dark.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: var(--color-navy-850);
+}
+.dpm-popup-dark.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: var(--color-navy-850);
+}
+
 @keyframes marquee-scroll {
   from {
     transform: translateX(0);

@@ -71,17 +71,26 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-navy-950">
       <div className="border-b border-navy-700 bg-navy-900">
-        <header className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center">
-            <Image
-              src="/logo/dubai-property-map-logo.png"
-              alt="Dubai Property Map"
-              width={883}
-              height={237}
-              priority
-              className="h-8 w-auto sm:h-9"
-            />
-          </Link>
+        <header className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
+          {/* Pairs logo with auth/admin buttons on mobile so they don't
+             wrap onto their own orphaned row with a big empty gap next to
+             them -- "sm:contents" undoes this at sm: and up, rejoining
+             them as ordinary flex-wrap children like before. */}
+          <div className="flex w-full items-center justify-between gap-2 sm:contents">
+            <Link href="/" className="flex shrink-0 items-center">
+              <Image
+                src="/logo/dubai-property-map-logo.png"
+                alt="Dubai Property Map"
+                width={883}
+                height={237}
+                priority
+                className="h-8 w-auto sm:h-9"
+              />
+            </Link>
+            <div className="flex shrink-0 items-center gap-2 sm:hidden">
+              <AuthStatus />
+            </div>
+          </div>
 
           <GlobalSearchBox items={searchItems} />
 
@@ -92,7 +101,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             <Heart className="h-4 w-4" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
             <AuthStatus />
           </div>
         </header>

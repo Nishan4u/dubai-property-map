@@ -247,9 +247,9 @@ export function DubaiMap({
             const feature = e.features?.[0];
             if (!feature) return;
             const name = feature.properties?.name as string;
-            new mapboxgl.default.Popup({ closeButton: false, offset: 10 })
+            new mapboxgl.default.Popup({ closeButton: false, offset: 10, className: "dpm-popup-dark" })
               .setLngLat(e.lngLat)
-              .setHTML(`<div style="font-size:12px;color:#0a0f1c;font-weight:600;">${name}</div>`)
+              .setHTML(`<div style="font-size:12px;font-weight:600;">${name}</div>`)
               .addTo(map);
           };
           map.on("click", "poi-lines-hit", showLinePopup);
@@ -322,11 +322,9 @@ export function DubaiMap({
             const feature = e.features?.[0];
             if (!feature) return;
             const name = feature.properties?.name as string;
-            new mapboxgl.default.Popup({ closeButton: false, offset: 10 })
+            new mapboxgl.default.Popup({ closeButton: false, offset: 10, className: "dpm-popup-dark" })
               .setLngLat(e.lngLat)
-              .setHTML(
-                `<div style="font-size:12px;color:#0a0f1c;font-weight:600;">${name}</div>`
-              )
+              .setHTML(`<div style="font-size:12px;font-weight:600;">${name}</div>`)
               .addTo(map);
           };
           ["poi-circles", "poi-icons"].forEach((layerId) => {
