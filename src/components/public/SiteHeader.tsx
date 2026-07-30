@@ -163,14 +163,19 @@ export function SiteHeader({
         </button>
       </div>
 
-      <Link
-        href="/favorites"
-        className="hidden shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100 sm:flex"
-      >
-        <Heart className="h-4 w-4" />
-      </Link>
-
+      {/* Favorites + auth are one non-splitting cluster -- at widths where
+         the row wraps, flex-wrap can otherwise land them on the same
+         wrapped line as separate items with unclaimed space between them
+         (nothing there is set to grow and fill it), leaving a stray gap
+         before Admin Panel/Logout. Grouped together they always sit flush,
+         wherever the whole cluster ends up. */}
       <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
+        <Link
+          href="/favorites"
+          className="flex shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100"
+        >
+          <Heart className="h-4 w-4" />
+        </Link>
         <AuthStatus />
       </div>
     </header>
