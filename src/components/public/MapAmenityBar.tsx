@@ -33,10 +33,12 @@ export function MapAmenityBar({
   onToggle: (key: string) => void;
 }) {
   return (
-    // Same p-1 container + single-line button height as the Map/Satellite
-    // toggle it sits beside, so the two bottom-bar clusters align instead
-    // of this one looming taller (was a stacked icon-over-label layout,
-    // ~73px tall vs. Map/Satellite's ~38px).
+    // Same p-1 container + single-line icon-only button height as the
+    // Map/Satellite toggle it always shares a row with -- kept compact at
+    // every breakpoint (not just mobile) since the map panel itself can be
+    // narrow even on desktop once the filters+list+map 3-column layout
+    // kicks in, so "small enough to always fit beside Map/Satellite" beats
+    // "roomy at desktop widths but has to stack/overlap sometimes".
     <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
       {amenityLayers.map((a) => {
         const isActive = active.includes(a.key);
@@ -44,15 +46,15 @@ export function MapAmenityBar({
           <button
             key={a.key}
             onClick={() => onToggle(a.key)}
+            title={a.label}
             className={clsx(
-              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
               isActive
                 ? "bg-gold-500/15 text-gold-400"
                 : "text-ink-400 hover:bg-navy-800 hover:text-ink-100"
             )}
           >
             <a.icon className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden lg:inline">{a.label}</span>
           </button>
         );
       })}

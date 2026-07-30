@@ -63,16 +63,16 @@ export const poiLayers: PoiLayer[] = [
       { name: "Sobha Realty (Red Line)", lng: 55.148, lat: 25.081, color: "#ef4444" },
       { name: "DMCC (Red Line)", lng: 55.137, lat: 25.069, color: "#ef4444" },
       { name: "Jabal Ali (Red Line)", lng: 55.127, lat: 25.06, color: "#ef4444" },
-      { name: "Ibn Battuta (Red Line)", lng: 55.117, lat: 25.044, color: "#ef4444" },
+      { name: "Ibn Battuta (Red Line)", lng: 55.1175, lat: 25.0468, color: "#ef4444" },
       { name: "Energy (Red Line)", lng: 55.093, lat: 25.007, color: "#ef4444" },
       { name: "Danube (Red Line)", lng: 55.091, lat: 24.977, color: "#ef4444" },
       { name: "UAE Exchange (Red Line)", lng: 55.088, lat: 24.972, color: "#ef4444" },
-      { name: "The Gardens (Red Line – Route 2020 Branch)", lng: 55.12, lat: 25.038, color: "#ef4444" },
-      { name: "Discovery Gardens (Red Line – Route 2020 Branch)", lng: 55.135, lat: 25.038, color: "#ef4444" },
-      { name: "Al Furjan (Red Line – Route 2020 Branch)", lng: 55.151, lat: 25.026, color: "#ef4444" },
-      { name: "Jumeirah Golf Estates (Red Line – Route 2020 Branch, Gold Line — Confirmed Interchange)", lng: 55.207, lat: 25.003, color: "#ef4444" },
-      { name: "Dubai Investment Park (Red Line – Route 2020 Branch)", lng: 55.201, lat: 24.971, color: "#ef4444" },
-      { name: "Expo City Dubai (Red Line – Route 2020 Branch)", lng: 55.136, lat: 24.965, color: "#ef4444" },
+      { name: "The Gardens (Red Line – Route 2020 Branch)", lng: 55.1348, lat: 25.0438, color: "#ef4444" },
+      { name: "Discovery Gardens (Red Line – Route 2020 Branch)", lng: 55.1454, lat: 25.0352, color: "#ef4444" },
+      { name: "Al Furjan (Red Line – Route 2020 Branch)", lng: 55.1522, lat: 25.0304, color: "#ef4444" },
+      { name: "Jumeirah Golf Estates (Red Line – Route 2020 Branch, Gold Line — Confirmed Interchange)", lng: 55.1637, lat: 25.0175, color: "#ef4444" },
+      { name: "Dubai Investment Park (Red Line – Route 2020 Branch)", lng: 55.1557, lat: 25.0055, color: "#ef4444" },
+      { name: "Expo City Dubai (Red Line – Route 2020 Branch)", lng: 55.1469, lat: 24.963, color: "#ef4444" },
       { name: "e& (Green Line)", lng: 55.401, lat: 25.285, color: "#22c55e" },
       { name: "Al Qusais (Green Line)", lng: 55.394, lat: 25.276, color: "#22c55e" },
       { name: "Dubai Airport Free Zone (Green Line)", lng: 55.381, lat: 25.27, color: "#22c55e" },
@@ -99,8 +99,17 @@ export const poiLayers: PoiLayer[] = [
       { name: "International City 3 (Blue Line — Planned Area)", lng: 55.43, lat: 25.155, color: "#3b82f6" },
       { name: "Dubai Silicon Oasis (Blue Line — Planned Area)", lng: 55.377, lat: 25.122, color: "#3b82f6" },
       { name: "Dubai Academic City (Blue Line — Planned Area)", lng: 55.414, lat: 25.113, color: "#3b82f6" },
-      { name: "Al Warqa (Blue Line — Planned Area)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
-      { name: "Mirdif (Blue Line — Planned Area)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
+      // Blue Line is Y-shaped, not one continuous line -- this second branch
+      // starts at Centrepoint (Red Line interchange) and rejoins the main
+      // Creek branch at International City, it does not continue past
+      // Dubai Academic City. Centrepoint and International City 1 are
+      // duplicated here (same coordinates as their entries above) so this
+      // branch renders as its own connected segment instead of the line
+      // wrongly doubling back from Academic City.
+      { name: "Centrepoint (Blue Line — Centrepoint Branch, Red Line Interchange)", lng: 55.391, lat: 25.23, color: "#3b82f6" },
+      { name: "Mirdif (Blue Line — Centrepoint Branch)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
+      { name: "Al Warqa (Blue Line — Centrepoint Branch)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
+      { name: "International City 1 (Blue Line — Centrepoint Branch, Interchange)", lng: 55.407, lat: 25.166, color: "#3b82f6" },
       // Officially announced station areas (Gold Line, planned 2032) --
       // ordered by nearest-neighbor geographic proximity rather than the
       // order they were announced in, so the connected line traces a
@@ -116,7 +125,7 @@ export const poiLayers: PoiLayer[] = [
       { name: "Dubai Hills (Gold Line — Announced Area)", lng: 55.246, lat: 25.1135, color: "#eab308" },
       { name: "Jumeirah Village Circle (JVC) (Gold Line — Announced Area)", lng: 55.2094, lat: 25.0544, color: "#eab308" },
       { name: "Jumeirah Village Triangle (JVT) (Gold Line — Announced Area)", lng: 55.1815, lat: 25.0432, color: "#eab308" },
-      { name: "Jumeirah Golf Estates (Gold Line — Announced Area, Red Line Interchange)", lng: 55.207, lat: 25.003, color: "#eab308" },
+      { name: "Jumeirah Golf Estates (Gold Line — Announced Area, Red Line Interchange)", lng: 55.1637, lat: 25.0175, color: "#eab308" },
       { name: "Tilal Al Ghaf (Gold Line — Announced Area)", lng: 55.2265, lat: 25.0208, color: "#eab308" },
       { name: "Global Village (Gold Line — Announced Area)", lng: 55.3084, lat: 25.0717, color: "#eab308" },
       { name: "Dubailand (Gold Line — Announced Area)", lng: 55.32, lat: 25.08, color: "#eab308" },
@@ -289,12 +298,11 @@ const metroLineNames: Record<string, string> = {
 // line. Built from the same station list (not a separate hand-copied
 // dataset) so the two can never drift apart. Stations are listed in
 // physical sequence per line, so a straight connect-the-dots per color
-// works (Blue Line's stations were reordered above -- Al Warqa before
-// Mirdif -- to match a sane path instead of the doubling-back order they
-// were originally entered in). Red also forks at Ibn Battuta for the
-// Route 2020 extension -- handled as its own segment sharing Ibn Battuta's
-// coordinate as the branch point, rather than one continuous line, so the
-// fork renders correctly instead of a diagonal jump across the map.
+// works. Both Red and Blue are Y-shaped rather than one continuous line --
+// Red forks at Ibn Battuta for the Route 2020 branch, Blue forks at
+// International City for the Centrepoint branch -- each handled as its own
+// segment (sharing the fork/join station's coordinate) so the branch
+// renders as a real fork instead of the trunk line doubling back on itself.
 function buildMetroLines(): PoiLine[] {
   const metroPoints = poiLayers.find((l) => l.key === "metro")!.points;
   const ibnBattuta = metroPoints.find((p) => p.name.startsWith("Ibn Battuta"));
@@ -305,6 +313,7 @@ function buildMetroLines(): PoiLine[] {
     const color = pt.color ?? "#94a3b8";
 
     const isRoute2020 = pt.name.includes("Route 2020 Branch");
+    const isCentrepointBranch = pt.name.includes("Centrepoint Branch");
     if (isRoute2020 && current?.name !== "Red Line (Route 2020 Branch)") {
       current = {
         name: "Red Line (Route 2020 Branch)",
@@ -312,7 +321,17 @@ function buildMetroLines(): PoiLine[] {
         coordinates: ibnBattuta ? [[ibnBattuta.lng, ibnBattuta.lat]] : [],
       };
       lines.push(current);
-    } else if (!isRoute2020 && (!current || current.color !== color || current.name.includes("Route 2020"))) {
+    } else if (isCentrepointBranch && current?.name !== "Blue Line (Centrepoint Branch)") {
+      current = { name: "Blue Line (Centrepoint Branch)", color, coordinates: [] };
+      lines.push(current);
+    } else if (
+      !isRoute2020 &&
+      !isCentrepointBranch &&
+      (!current ||
+        current.color !== color ||
+        current.name.includes("Route 2020") ||
+        current.name.includes("Centrepoint Branch"))
+    ) {
       current = { name: metroLineNames[color] ?? "Metro Line", color, coordinates: [] };
       lines.push(current);
     }
