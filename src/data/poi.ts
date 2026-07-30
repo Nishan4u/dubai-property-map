@@ -259,3 +259,112 @@ export const poiLayers: PoiLayer[] = [
     ],
   },
 ];
+
+export interface PoiLine {
+  name: string;
+  color: string;
+  coordinates: [number, number][];
+}
+
+const metroLineNames: Record<string, string> = {
+  "#ef4444": "Red Line",
+  "#22c55e": "Green Line",
+  "#eab308": "Gold Line (Planned)",
+};
+
+// Connects the metro station points above into real line paths, colored by
+// line. Built from the same station list (not a separate hand-copied
+// dataset) so the two can never drift apart. Red and Green are Dubai
+// Metro's two operational lines and their stations are already listed in
+// real physical sequence, so a straight connect-the-dots per color works.
+// Red also forks at Ibn Battuta for the Route 2020 extension -- handled as
+// its own segment sharing Ibn Battuta's coordinate as the branch point,
+// rather than one continuous line, so the fork renders correctly instead
+// of a diagonal jump across the map. The Blue Line is deliberately left as
+// points only: its station list is still-uncertain "Planned Area"
+// coordinates that don't reflect a confirmed physical route, so drawing a
+// connected line for it would imply more routing certainty than exists.
+function buildMetroLines(): PoiLine[] {
+  const metroPoints = poiLayers.find((l) => l.key === "metro")!.points;
+  const ibnBattuta = metroPoints.find((p) => p.name.startsWith("Ibn Battuta"));
+  const lines: PoiLine[] = [];
+  let current: PoiLine | null = null;
+
+  for (const pt of metroPoints) {
+    const color = pt.color ?? "#94a3b8";
+    if (color === "#3b82f6") continue; // Blue Line: points only, see comment above
+
+    const isRoute2020 = pt.name.includes("Route 2020 Extension");
+    if (isRoute2020 && current?.name !== "Red Line (Route 2020 Extension)") {
+      current = {
+        name: "Red Line (Route 2020 Extension)",
+        color,
+        coordinates: ibnBattuta ? [[ibnBattuta.lng, ibnBattuta.lat]] : [],
+      };
+      lines.push(current);
+    } else if (!isRoute2020 && (!current || current.color !== color || current.name.includes("Route 2020"))) {
+      current = { name: metroLineNames[color] ?? "Metro Line", color, coordinates: [] };
+      lines.push(current);
+    }
+    current!.coordinates.push([pt.lng, pt.lat]);
+  }
+
+  return lines;
+}
+
+export const metroLines: PoiLine[] = buildMetroLines();
+
+// Approximate real routes for Dubai's major highways (a handful of waypoints
+// each, not full precision), used only to draw a recognizable line on the
+// map -- same "real place, approximate coordinates" spirit as the POI
+// points above.
+export const highwayLines: PoiLine[] = [
+  {
+    name: "Sheikh Zayed Road (E11)",
+    color: "#f59e0b",
+    coordinates: [
+      [55.02, 24.985],
+      [55.08, 25.035],
+      [55.14, 25.075],
+      [55.19, 25.115],
+      [55.23, 25.145],
+      [55.27, 25.19],
+      [55.29, 25.225],
+      [55.31, 25.26],
+    ],
+  },
+  {
+    name: "Al Khail Road",
+    color: "#38bdf8",
+    coordinates: [
+      [55.145, 25.02],
+      [55.185, 25.06],
+      [55.22, 25.1],
+      [55.245, 25.14],
+      [55.27, 25.18],
+      [55.3, 25.21],
+    ],
+  },
+  {
+    name: "Sheikh Mohammed Bin Zayed Road",
+    color: "#a78bfa",
+    coordinates: [
+      [55.3, 24.95],
+      [55.33, 25.02],
+      [55.36, 25.08],
+      [55.38, 25.15],
+      [55.4, 25.22],
+      [55.42, 25.28],
+    ],
+  },
+  {
+    name: "Al Ain Road",
+    color: "#4ade80",
+    coordinates: [
+      [55.34, 25.12],
+      [55.4, 25.12],
+      [55.45, 25.05],
+      [55.5, 24.95],
+    ],
+  },
+];

@@ -6,6 +6,7 @@ import {
   Cross,
   Palmtree,
   Plane,
+  Route,
   School,
   ShoppingBag,
   TrainFront,
@@ -14,6 +15,7 @@ import {
 
 export const amenityLayers = [
   { key: "metro", label: "Metro Lines", icon: TrainFront },
+  { key: "highways", label: "Major Highways", icon: Route },
   { key: "schools", label: "Schools", icon: School },
   { key: "hospitals", label: "Hospitals", icon: Cross },
   { key: "malls", label: "Malls", icon: ShoppingBag },

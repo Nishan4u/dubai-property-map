@@ -9,12 +9,13 @@ interface FreeAccessSetting {
 }
 
 const labels: Record<string, string> = {
+  developer: "Developer",
   broker: "Broker",
   broker_agency: "Broker Agency",
   salesperson: "Salesperson",
 };
 
-const order = ["broker", "broker_agency", "salesperson"];
+const order = ["developer", "broker", "broker_agency", "salesperson"];
 
 export function FreeAccessSettingsPanel({ settings }: { settings: FreeAccessSetting[] }) {
   const [values, setValues] = useState<Record<string, boolean>>(
@@ -41,7 +42,9 @@ export function FreeAccessSettingsPanel({ settings }: { settings: FreeAccessSett
         Turn an account type on to give every account of that type free access
         (map, browsing, property requests) regardless of their own subscription
         status — separate from granting a free subscription to one specific
-        account below.
+        account below. Developers already always have map access; turning
+        Developer on instead removes every developer&apos;s active-listing cap,
+        giving unlimited listings platform-wide.
       </p>
       <div className="mt-3 divide-y divide-navy-800 rounded-xl border border-navy-700 bg-navy-850">
         {order

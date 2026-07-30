@@ -20,13 +20,14 @@ import {
 import type { Community, Project } from "@/types";
 import type { UpcomingProjectPublicRow } from "@/types/database";
 import { formatAed, getDeveloper } from "@/data/mock";
-import { poiLayers } from "@/data/poi";
+import { poiLayers, metroLines, highwayLines } from "@/data/poi";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const POI_SOURCE_ID = "poi-source";
+const LINE_SOURCE_ID = "poi-lines-source";
 
 export function DubaiMap({
   communities,
@@ -188,6 +189,47 @@ export function DubaiMap({
           );
         }
 
+        if (!map.getSource(LINE_SOURCE_ID)) {
+          map.addSource(LINE_SOURCE_ID, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          // Below the POI point layers (added next) so line paths never
+          // obscure the station/POI markers sitting on top of them.
+          map.addLayer({
+            id: "poi-lines",
+            type: "line",
+            source: LINE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": ["get", "color"],
+              "line-width": 3,
+              "line-opacity": 0.85,
+            },
+          });
+
+          const showLinePopup = (
+            e: import("mapbox-gl").MapMouseEvent & {
+              features?: import("mapbox-gl").MapboxGeoJSONFeature[];
+            }
+          ) => {
+            const feature = e.features?.[0];
+            if (!feature) return;
+            const name = feature.properties?.name as string;
+            new mapboxgl.default.Popup({ closeButton: false, offset: 10 })
+              .setLngLat(e.lngLat)
+              .setHTML(`<div style="font-size:12px;color:#0a0f1c;font-weight:600;">${name}</div>`)
+              .addTo(map);
+          };
+          map.on("click", "poi-lines", showLinePopup);
+          map.on("mouseenter", "poi-lines", () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", "poi-lines", () => {
+            map.getCanvas().style.cursor = "";
+          });
+        }
+
         if (!map.getSource(POI_SOURCE_ID)) {
           map.addSource(POI_SOURCE_ID, {
             type: "geojson",
@@ -347,6 +389,32 @@ export function DubaiMap({
       });
 
     source.setData({ type: "FeatureCollection", features });
+
+    const lineSource = map.getSource(LINE_SOURCE_ID) as
+      | import("mapbox-gl").GeoJSONSource
+      | undefined;
+    if (lineSource) {
+      const lineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+      if (activeLayers.includes("metro")) {
+        metroLines.forEach((line) => {
+          lineFeatures.push({
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: line.coordinates },
+            properties: { name: line.name, color: line.color },
+          });
+        });
+      }
+      if (activeLayers.includes("highways")) {
+        highwayLines.forEach((line) => {
+          lineFeatures.push({
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: line.coordinates },
+            properties: { name: line.name, color: line.color },
+          });
+        });
+      }
+      lineSource.setData({ type: "FeatureCollection", features: lineFeatures });
+    }
   }, [activeLayers, useLiveMap]);
 
   // Show each individual property's exact pin (small dots) once a
