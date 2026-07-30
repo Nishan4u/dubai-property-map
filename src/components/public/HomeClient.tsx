@@ -427,7 +427,16 @@ export function HomeClient({
               onExpandChange={setFeaturedExpanded}
             />
           )}
-          <div className="absolute bottom-4 left-4 right-52 z-10">
+          {/* Below lg: the map is always full viewport width, so the
+             amenity bar comfortably shares the bottom row with Map/
+             Satellite + fullscreen (reserved via right-52). At lg: and up
+             the 3-column filters+list+map layout kicks in and the map
+             panel itself can end up quite narrow -- sharing that row then
+             squeezes the amenity bar to almost nothing, overlaps Map/
+             Satellite, and pushes fullscreen off-panel entirely. Stacking
+             the amenity bar in its own full-width row above them avoids
+             that regardless of how narrow the map panel gets. */}
+          <div className="absolute bottom-4 left-4 right-52 z-10 lg:bottom-16 lg:left-2 lg:right-2">
             <MapAmenityBar active={activeLayers} onToggle={toggleLayer} />
           </div>
         </div>

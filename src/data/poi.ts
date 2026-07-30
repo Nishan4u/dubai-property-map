@@ -92,7 +92,7 @@ export const poiLayers: PoiLayer[] = [
       { name: "Al Jadaf (Green Line)", lng: 55.334, lat: 25.219, color: "#22c55e" },
       { name: "Creek (Green Line, Blue Line — Confirmed Interchange)", lng: 55.35, lat: 25.224, color: "#22c55e" },
       { name: "Dubai Festival City (Blue Line — Planned Area)", lng: 55.359, lat: 25.221, color: "#3b82f6" },
-      { name: "Dubai Creek Harbour (Blue Line — Confirmed Area)", lng: 55.359, lat: 25.197, color: "#3b82f6" },
+      { name: "Dubai Creek Harbour (Blue Line — Confirmed Area)", lng: 55.3478, lat: 25.2067, color: "#3b82f6" },
       { name: "Ras Al Khor (Blue Line — Planned Area)", lng: 55.359, lat: 25.188, color: "#3b82f6" },
       { name: "International City 1 (Blue Line — Confirmed Interchange Area)", lng: 55.407, lat: 25.166, color: "#3b82f6" },
       { name: "International City 2 (Blue Line — Planned Area)", lng: 55.42, lat: 25.16, color: "#3b82f6" },
@@ -315,42 +315,42 @@ export const metroLines: PoiLine[] = buildMetroLines();
 // Approximate real routes for Dubai's major highways (a handful of waypoints
 // each, not full precision), used only to draw a recognizable line on the
 // map -- same "real place, approximate coordinates" spirit as the POI
-// points above.
+// points above. Re-verified against real Google Maps route data (clicked
+// along the actual highlighted route polyline / read place coordinates for
+// each road, not just estimated) -- coordinates marked "real" below were
+// read directly this way; the rest are interpolated between them.
 export const highwayLines: PoiLine[] = [
   {
     name: "Sheikh Zayed Road (E11)",
     color: "#f59e0b",
     coordinates: [
-      [55.02, 24.985],
-      [55.08, 25.035],
-      [55.14, 25.075],
-      [55.19, 25.115],
-      [55.23, 25.145],
-      [55.27, 25.19],
-      [55.29, 25.225],
-      [55.31, 25.26],
+      [55.0273, 24.9857], // real: Mena Jabal Ali end
+      [55.08, 25.03],
+      [55.150343, 25.092493], // real: near Al Safouh / Dubai Marina
+      [55.2, 25.14],
+      [55.24, 25.175],
+      [55.2838, 25.2206], // real: Trade Centre end
     ],
   },
   {
     name: "Al Khail Road",
     color: "#38bdf8",
     coordinates: [
-      [55.145, 25.02],
-      [55.185, 25.06],
-      [55.22, 25.1],
-      [55.245, 25.14],
-      [55.27, 25.18],
-      [55.3, 25.21],
+      [55.14, 24.98],
+      [55.19, 25.06],
+      [55.2601399, 25.1374298], // real: near Business Bay / Al Quoz
+      [55.30, 25.17],
+      [55.340376, 25.215316], // real: near Dubai Airport Free Zone
     ],
   },
   {
-    name: "Sheikh Mohammed Bin Zayed Road",
+    name: "Sheikh Mohammed Bin Zayed Road (E311)",
     color: "#a78bfa",
     coordinates: [
-      [55.3, 24.95],
-      [55.33, 25.02],
-      [55.36, 25.08],
-      [55.38, 25.15],
+      [55.30, 24.95],
+      [55.3052614, 25.074454], // real: near Al Awir
+      [55.318612, 25.114511], // real
+      [55.36, 25.16],
       [55.4, 25.22],
       [55.42, 25.28],
     ],
@@ -359,10 +359,11 @@ export const highwayLines: PoiLine[] = [
     name: "Al Ain Road",
     color: "#4ade80",
     coordinates: [
-      [55.34, 25.12],
-      [55.4, 25.12],
-      [55.45, 25.05],
-      [55.5, 24.95],
+      [55.362837, 25.201706], // real: near Dubai Academic City
+      [55.40, 25.15],
+      [55.45, 25.08],
+      [55.50, 24.98],
+      [55.55, 24.90],
     ],
   },
 ];
