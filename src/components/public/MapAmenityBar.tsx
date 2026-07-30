@@ -33,7 +33,11 @@ export function MapAmenityBar({
   onToggle: (key: string) => void;
 }) {
   return (
-    <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 px-2 py-2 backdrop-blur">
+    // Same p-1 container + single-line button height as the Map/Satellite
+    // toggle it sits beside, so the two bottom-bar clusters align instead
+    // of this one looming taller (was a stacked icon-over-label layout,
+    // ~73px tall vs. Map/Satellite's ~38px).
+    <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
       {amenityLayers.map((a) => {
         const isActive = active.includes(a.key);
         return (
@@ -41,14 +45,14 @@ export function MapAmenityBar({
             key={a.key}
             onClick={() => onToggle(a.key)}
             className={clsx(
-              "flex shrink-0 flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-colors",
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors",
               isActive
                 ? "bg-gold-500/15 text-gold-400"
                 : "text-ink-400 hover:bg-navy-800 hover:text-ink-100"
             )}
           >
-            <a.icon className="h-4 w-4" />
-            {a.label}
+            <a.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden lg:inline">{a.label}</span>
           </button>
         );
       })}
