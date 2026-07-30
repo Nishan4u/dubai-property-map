@@ -110,26 +110,22 @@ export const poiLayers: PoiLayer[] = [
       { name: "Mirdif (Blue Line — Centrepoint Branch)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
       { name: "Al Warqa (Blue Line — Centrepoint Branch)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
       { name: "International City 1 (Blue Line — Centrepoint Branch, Interchange)", lng: 55.407, lat: 25.166, color: "#3b82f6" },
-      // Officially announced station areas (Gold Line, planned 2032) --
-      // ordered by nearest-neighbor geographic proximity rather than the
-      // order they were announced in, so the connected line traces a
-      // coherent path instead of zig-zagging. Al Ghubaiba and Business Bay
-      // are duplicated here (gold-colored) at the same coordinates as
-      // their Green/Red Line entries above so the connect-same-color-
-      // points logic includes them in this line too.
+      // Gold Line (planned 2032) -- rebuilt against RTA's own published
+      // network diagrams (Dubai Rail Network Plan 2032, and the official
+      // Red/Green/Blue/Gold line schematic), not the earlier station-area
+      // list. Those sources agree the Gold Line runs the SAME corridor as
+      // the Red Line from Al Ghubaiba down to Business Bay (sharing that
+      // trunk rather than taking its own path through JVC/JVT/Jumeirah Golf
+      // Estates/Tilal Al Ghaf, which was wrong), then branches southeast to
+      // Meydan, Global Village and Dubailand. Al Ghubaiba and Business Bay
+      // are duplicated here (gold-colored) at the same coordinates as their
+      // Green/Red Line entries above so the connect-same-color-points logic
+      // includes them in this line too.
       { name: "Al Ghubaiba (Gold Line — Confirmed Interchange)", lng: 55.2891, lat: 25.2649, color: "#eab308" },
-      { name: "Bur Dubai (Gold Line — Announced Area)", lng: 55.296, lat: 25.255, color: "#eab308" },
-      { name: "Al Satwa (Gold Line — Announced Area)", lng: 55.274, lat: 25.229, color: "#eab308" },
       { name: "Business Bay (Gold Line — Confirmed Interchange)", lng: 55.261, lat: 25.191, color: "#eab308" },
-      { name: "Al Quoz (Gold Line — Announced Area)", lng: 55.2561, lat: 25.1542, color: "#eab308" },
-      { name: "Dubai Hills (Gold Line — Announced Area)", lng: 55.246, lat: 25.1135, color: "#eab308" },
-      { name: "Jumeirah Village Circle (JVC) (Gold Line — Announced Area)", lng: 55.2094, lat: 25.0544, color: "#eab308" },
-      { name: "Jumeirah Village Triangle (JVT) (Gold Line — Announced Area)", lng: 55.1815, lat: 25.0432, color: "#eab308" },
-      { name: "Jumeirah Golf Estates (Gold Line — Announced Area, Red Line Interchange)", lng: 55.1637, lat: 25.0175, color: "#eab308" },
-      { name: "Tilal Al Ghaf (Gold Line — Announced Area)", lng: 55.2265, lat: 25.0208, color: "#eab308" },
-      { name: "Global Village (Gold Line — Announced Area)", lng: 55.3084, lat: 25.0717, color: "#eab308" },
-      { name: "Dubailand (Gold Line — Announced Area)", lng: 55.32, lat: 25.08, color: "#eab308" },
       { name: "Meydan (Gold Line — Announced Area)", lng: 55.3003, lat: 25.1636, color: "#eab308" },
+      { name: "Dubailand (Gold Line — Announced Area)", lng: 55.32, lat: 25.08, color: "#eab308" },
+      { name: "Global Village (Gold Line — Announced Area)", lng: 55.3084, lat: 25.0717, color: "#eab308" },
     ],
   },
   {

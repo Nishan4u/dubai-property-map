@@ -29,12 +29,15 @@ export function MapFilterChips({
   onChange: (v: ProjectTag | "all") => void;
 }) {
   return (
-    // Same p-1 container + compact button sizing as MapAmenityBar for a
-    // consistent design language between the map's top and bottom bars.
-    // Icon-only below lg: (this sits in a fairly narrow reserved strip --
-    // left-4 right-56 -- that gets tight on mobile/tablet); labels return
-    // at lg: and up since this top bar isn't sharing a row with anything
-    // else the way the bottom amenity bar is.
+    // Same p-1 container + icon-only sizing as MapAmenityBar at every
+    // breakpoint (not just mobile/tablet) -- this sits in a reserved strip
+    // (left-4 right-56) next to the Featured Project card, and "lg:" is a
+    // viewport-width media query, not a container-width one, so on desktop
+    // widths where the 3-column filters+list+map layout leaves the map
+    // panel itself narrow, revealing labels at lg: overflowed past the
+    // reserved strip and got clipped under the featured card. Icon-only
+    // always fits; its own overflow-x-auto is the fallback if it still
+    // doesn't.
     <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
       {chips.map((chip) => (
         <button
@@ -42,14 +45,13 @@ export function MapFilterChips({
           onClick={() => onChange(chip.value)}
           title={chip.label}
           className={clsx(
-            "flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-medium transition-colors lg:px-3",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
             active === chip.value
               ? "bg-gold-500 text-navy-950"
               : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
           )}
         >
           <chip.icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden lg:inline">{chip.label}</span>
         </button>
       ))}
     </div>
