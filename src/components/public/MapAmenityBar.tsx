@@ -12,6 +12,7 @@ import {
   TrainFront,
   Trees,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export const amenityLayers = [
   { key: "metro", label: "Metro Lines", icon: TrainFront },
@@ -43,19 +44,20 @@ export function MapAmenityBar({
       {amenityLayers.map((a) => {
         const isActive = active.includes(a.key);
         return (
-          <button
-            key={a.key}
-            onClick={() => onToggle(a.key)}
-            title={a.label}
-            className={clsx(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-              isActive
-                ? "bg-gold-500/15 text-gold-400"
-                : "text-ink-400 hover:bg-navy-800 hover:text-ink-100"
-            )}
-          >
-            <a.icon className="h-3.5 w-3.5 shrink-0" />
-          </button>
+          <Tooltip key={a.key} label={a.label}>
+            <button
+              onClick={() => onToggle(a.key)}
+              aria-label={a.label}
+              className={clsx(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                isActive
+                  ? "bg-gold-500/15 text-gold-400"
+                  : "text-ink-400 hover:bg-navy-800 hover:text-ink-100"
+              )}
+            >
+              <a.icon className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </Tooltip>
         );
       })}
     </div>

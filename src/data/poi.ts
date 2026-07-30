@@ -110,22 +110,32 @@ export const poiLayers: PoiLayer[] = [
       { name: "Mirdif (Blue Line — Centrepoint Branch)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
       { name: "Al Warqa (Blue Line — Centrepoint Branch)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
       { name: "International City 1 (Blue Line — Centrepoint Branch, Interchange)", lng: 55.407, lat: 25.166, color: "#3b82f6" },
-      // Gold Line (planned 2032) -- rebuilt against RTA's own published
-      // network diagrams (Dubai Rail Network Plan 2032, and the official
-      // Red/Green/Blue/Gold line schematic), not the earlier station-area
-      // list. Those sources agree the Gold Line runs the SAME corridor as
-      // the Red Line from Al Ghubaiba down to Business Bay (sharing that
-      // trunk rather than taking its own path through JVC/JVT/Jumeirah Golf
-      // Estates/Tilal Al Ghaf, which was wrong), then branches southeast to
-      // Meydan, Global Village and Dubailand. Al Ghubaiba and Business Bay
-      // are duplicated here (gold-colored) at the same coordinates as their
-      // Green/Red Line entries above so the connect-same-color-points logic
-      // includes them in this line too.
-      { name: "Al Ghubaiba (Gold Line — Confirmed Interchange)", lng: 55.2891, lat: 25.2649, color: "#eab308" },
+      // Gold Line (planned 2032) -- rebuilt against RTA's official "Dubai
+      // Rail Network Plan 2032" diagram and its published 10-item corridor
+      // list (Al Ghubaiba -> Mina Rashid/Maritime City -> Al Satwa/City Walk
+      // -> Business Bay -> MBR City/District One -> Nad Al Sheba/Meydan ->
+      // Al Barsha South/Dubai Hills -> JVC/JVT -> Dubai Production City ->
+      // Jumeirah Golf Estates), a full arc across the south of the city, not
+      // the short Business-Bay-to-Global-Village spur this had before. Each
+      // named corridor area below is one real, verified coordinate (two
+      // where a corridor area actually names two distinct places in
+      // sequence). Al Ghubaiba and Business Bay are duplicated here
+      // (gold-colored) at the same coordinates as their Green/Red Line
+      // entries above so the connect-same-color-points logic includes them
+      // in this line too; Jumeirah Golf Estates likewise matches the Red
+      // Line's Route 2020 station it interchanges with.
+      { name: "Al Ghubaiba (Gold Line — Confirmed Interchange, Northern Terminus)", lng: 55.2891, lat: 25.2649, color: "#eab308" },
+      { name: "Mina Rashid / Dubai Maritime City (Gold Line — Announced Area)", lng: 55.2679, lat: 25.2612, color: "#eab308" },
+      { name: "Al Satwa / City Walk (Gold Line — Announced Area)", lng: 55.2625, lat: 25.2075, color: "#eab308" },
       { name: "Business Bay (Gold Line — Confirmed Interchange)", lng: 55.261, lat: 25.191, color: "#eab308" },
-      { name: "Meydan (Gold Line — Announced Area)", lng: 55.3003, lat: 25.1636, color: "#eab308" },
-      { name: "Dubailand (Gold Line — Announced Area)", lng: 55.32, lat: 25.08, color: "#eab308" },
-      { name: "Global Village (Gold Line — Announced Area)", lng: 55.3084, lat: 25.0717, color: "#eab308" },
+      { name: "Mohammed Bin Rashid City / District One (Gold Line — Announced Area)", lng: 55.2826, lat: 25.157, color: "#eab308" },
+      { name: "Nad Al Sheba / Meydan (Gold Line — Planned Etihad Rail Interchange)", lng: 55.3003, lat: 25.1636, color: "#eab308" },
+      { name: "Dubai Hills (Gold Line — Announced Area)", lng: 55.246, lat: 25.1135, color: "#eab308" },
+      { name: "Al Barsha South (Gold Line — Announced Area)", lng: 55.2349, lat: 25.0806, color: "#eab308" },
+      { name: "Jumeirah Village Circle (JVC) (Gold Line — Announced Area)", lng: 55.2094, lat: 25.0544, color: "#eab308" },
+      { name: "Jumeirah Village Triangle (JVT) (Gold Line — Announced Area)", lng: 55.1815, lat: 25.0432, color: "#eab308" },
+      { name: "Dubai Production City (Gold Line — Announced Area)", lng: 55.1817, lat: 25.0276, color: "#eab308" },
+      { name: "Jumeirah Golf Estates (Gold Line — Southern Terminus, Red Line Interchange)", lng: 55.1637, lat: 25.0175, color: "#eab308" },
     ],
   },
   {

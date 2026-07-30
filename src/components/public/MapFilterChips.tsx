@@ -10,6 +10,7 @@ import {
   Waves,
 } from "lucide-react";
 import type { ProjectTag } from "@/types";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 const chips: { label: string; value: ProjectTag | "all"; icon: React.ElementType }[] = [
   { label: "All", value: "all", icon: LayoutGrid },
@@ -40,19 +41,20 @@ export function MapFilterChips({
     // doesn't.
     <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-navy-700 bg-navy-900/90 p-1 backdrop-blur">
       {chips.map((chip) => (
-        <button
-          key={chip.value}
-          onClick={() => onChange(chip.value)}
-          title={chip.label}
-          className={clsx(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-            active === chip.value
-              ? "bg-gold-500 text-navy-950"
-              : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
-          )}
-        >
-          <chip.icon className="h-3.5 w-3.5 shrink-0" />
-        </button>
+        <Tooltip key={chip.value} label={chip.label}>
+          <button
+            onClick={() => onChange(chip.value)}
+            aria-label={chip.label}
+            className={clsx(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+              active === chip.value
+                ? "bg-gold-500 text-navy-950"
+                : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+            )}
+          >
+            <chip.icon className="h-3.5 w-3.5 shrink-0" />
+          </button>
+        </Tooltip>
       ))}
     </div>
   );
