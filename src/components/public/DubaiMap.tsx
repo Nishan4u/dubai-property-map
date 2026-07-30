@@ -21,6 +21,7 @@ import type { Community, Project } from "@/types";
 import type { UpcomingProjectPublicRow } from "@/types/database";
 import { formatAed, getDeveloper } from "@/data/mock";
 import { poiLayers, metroLines, highwayLines } from "@/data/poi";
+import { smoothLine } from "@/lib/smoothLine";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
@@ -428,7 +429,11 @@ export function DubaiMap({
         metroLines.forEach((line) => {
           lineFeatures.push({
             type: "Feature",
-            geometry: { type: "LineString", coordinates: line.coordinates },
+            // Rail alignments aren't something Directions APIs can trace
+            // (unlike the highways below), so this smooths a curve through
+            // the real station coordinates instead of leaving them as
+            // sharp straight segments station-to-station.
+            geometry: { type: "LineString", coordinates: smoothLine(line.coordinates) },
             properties: { name: line.name, color: line.color },
           });
         });

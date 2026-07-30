@@ -39,40 +39,40 @@ export const poiLayers: PoiLayer[] = [
     icon: "rail-metro",
     points: [
       { name: "Centrepoint (Red Line, Blue Line — Confirmed Interchange)", lng: 55.391, lat: 25.23, color: "#ef4444" },
-      { name: "Emirates (Red Line)", lng: 55.366, lat: 25.226, color: "#ef4444" },
+      { name: "Emirates (Red Line)", lng: 55.3656, lat: 25.2410, color: "#ef4444" },
       { name: "Airport Terminal 3 (Red Line)", lng: 55.359, lat: 25.245, color: "#ef4444" },
       { name: "Airport Terminal 1 (Red Line)", lng: 55.353, lat: 25.25, color: "#ef4444" },
-      { name: "Al Garhoud (Red Line)", lng: 55.339, lat: 25.249, color: "#ef4444" },
+      { name: "GGICO (Red Line)", lng: 55.3400, lat: 25.2495, color: "#ef4444" },
       { name: "City Centre Deira (Red Line)", lng: 55.333, lat: 25.251, color: "#ef4444" },
       { name: "Al Rigga (Red Line)", lng: 55.315, lat: 25.262, color: "#ef4444" },
       { name: "Union (Red Line, Green Line)", lng: 55.314, lat: 25.266, color: "#ef4444" },
-      { name: "BurJuman (Red Line, Green Line)", lng: 55.305, lat: 25.253, color: "#ef4444" },
+      { name: "BurJuman (Red Line, Green Line)", lng: 55.3043, lat: 25.2547, color: "#ef4444" },
       { name: "ADCB (Red Line)", lng: 55.298, lat: 25.244, color: "#ef4444" },
-      { name: "max (Red Line)", lng: 55.292, lat: 25.233, color: "#ef4444" },
-      { name: "World Trade Center (Red Line)", lng: 55.287, lat: 25.227, color: "#ef4444" },
+      { name: "Max (Red Line)", lng: 55.292, lat: 25.233, color: "#ef4444" },
+      { name: "World Trade Centre (Red Line)", lng: 55.2850, lat: 25.2248, color: "#ef4444" },
       { name: "Emirates Towers (Red Line)", lng: 55.28, lat: 25.217, color: "#ef4444" },
-      { name: "Financial Centre (Red Line)", lng: 55.275, lat: 25.211, color: "#ef4444" },
-      { name: "Burj Khalifa / Dubai Mall (Red Line)", lng: 55.269, lat: 25.201, color: "#ef4444" },
+      { name: "Financial Centre (Red Line)", lng: 55.2756, lat: 25.2112, color: "#ef4444" },
+      { name: "Burj Khalifa / Dubai Mall (Red Line)", lng: 55.2695, lat: 25.2014, color: "#ef4444" },
       { name: "Business Bay (Red Line, Gold Line — Confirmed Interchange)", lng: 55.261, lat: 25.191, color: "#ef4444" },
-      { name: "ONPASSIVE (Red Line)", lng: 55.25, lat: 25.167, color: "#ef4444" },
-      { name: "Equiti (Red Line)", lng: 55.207, lat: 25.14, color: "#ef4444" },
-      { name: "Mall of the Emirates (Red Line)", lng: 55.2, lat: 25.12, color: "#ef4444" },
-      { name: "InsuranceMarket (Red Line)", lng: 55.191, lat: 25.113, color: "#ef4444" },
+      { name: "ONPASSIVE (Red Line)", lng: 55.2285, lat: 25.1558, color: "#ef4444" },
+      { name: "Equiti (Red Line)", lng: 55.2075, lat: 25.1264, color: "#ef4444" },
+      { name: "Mall of the Emirates (Red Line)", lng: 55.1999, lat: 25.1219, color: "#ef4444" },
+      { name: "Mashreq (Red Line)", lng: 55.191, lat: 25.113, color: "#ef4444" },
       { name: "Dubai Internet City (Red Line)", lng: 55.174, lat: 25.102, color: "#ef4444" },
-      { name: "Al Fardan Exchange (Red Line)", lng: 55.159, lat: 25.089, color: "#ef4444" },
+      { name: "Al Khail (Red Line)", lng: 55.1581, lat: 25.0887, color: "#ef4444" },
       { name: "Sobha Realty (Red Line)", lng: 55.148, lat: 25.081, color: "#ef4444" },
       { name: "DMCC (Red Line)", lng: 55.137, lat: 25.069, color: "#ef4444" },
-      { name: "National Paints (Red Line)", lng: 55.127, lat: 25.06, color: "#ef4444" },
+      { name: "Jabal Ali (Red Line)", lng: 55.127, lat: 25.06, color: "#ef4444" },
       { name: "Ibn Battuta (Red Line)", lng: 55.117, lat: 25.044, color: "#ef4444" },
       { name: "Energy (Red Line)", lng: 55.093, lat: 25.007, color: "#ef4444" },
       { name: "Danube (Red Line)", lng: 55.091, lat: 24.977, color: "#ef4444" },
-      { name: "Life Pharmacy (Red Line)", lng: 55.088, lat: 24.972, color: "#ef4444" },
-      { name: "The Gardens (Red Line – Route 2020 Extension)", lng: 55.12, lat: 25.038, color: "#ef4444" },
-      { name: "Discovery Gardens (Red Line – Route 2020 Extension)", lng: 55.135, lat: 25.038, color: "#ef4444" },
-      { name: "Al Furjan (Red Line – Route 2020 Extension)", lng: 55.151, lat: 25.026, color: "#ef4444" },
-      { name: "Jumeirah Golf Estates (Red Line – Route 2020 Extension, Gold Line — Confirmed Interchange)", lng: 55.207, lat: 25.003, color: "#ef4444" },
-      { name: "Dubai Investment Park (Red Line – Route 2020 Extension)", lng: 55.201, lat: 24.971, color: "#ef4444" },
-      { name: "EXPO 2020 (Red Line – Route 2020 Extension)", lng: 55.136, lat: 24.965, color: "#ef4444" },
+      { name: "UAE Exchange (Red Line)", lng: 55.088, lat: 24.972, color: "#ef4444" },
+      { name: "The Gardens (Red Line – Route 2020 Branch)", lng: 55.12, lat: 25.038, color: "#ef4444" },
+      { name: "Discovery Gardens (Red Line – Route 2020 Branch)", lng: 55.135, lat: 25.038, color: "#ef4444" },
+      { name: "Al Furjan (Red Line – Route 2020 Branch)", lng: 55.151, lat: 25.026, color: "#ef4444" },
+      { name: "Jumeirah Golf Estates (Red Line – Route 2020 Branch, Gold Line — Confirmed Interchange)", lng: 55.207, lat: 25.003, color: "#ef4444" },
+      { name: "Dubai Investment Park (Red Line – Route 2020 Branch)", lng: 55.201, lat: 24.971, color: "#ef4444" },
+      { name: "Expo City Dubai (Red Line – Route 2020 Branch)", lng: 55.136, lat: 24.965, color: "#ef4444" },
       { name: "e& (Green Line)", lng: 55.401, lat: 25.285, color: "#22c55e" },
       { name: "Al Qusais (Green Line)", lng: 55.394, lat: 25.276, color: "#22c55e" },
       { name: "Dubai Airport Free Zone (Green Line)", lng: 55.381, lat: 25.27, color: "#22c55e" },
@@ -85,7 +85,7 @@ export const poiLayers: PoiLayer[] = [
       { name: "Baniyas Square (Green Line)", lng: 55.307, lat: 25.275, color: "#22c55e" },
       { name: "Gold Souq (Green Line)", lng: 55.3, lat: 25.28, color: "#22c55e" },
       { name: "Al Ras (Green Line)", lng: 55.296, lat: 25.269, color: "#22c55e" },
-      { name: "Al Gubaiba (Green Line, Gold Line — Confirmed Interchange)", lng: 55.289, lat: 25.265, color: "#22c55e" },
+      { name: "Al Ghubaiba (Green Line, Gold Line — Confirmed Interchange)", lng: 55.2891, lat: 25.2649, color: "#22c55e" },
       { name: "Sharaf DG (Green Line)", lng: 55.297, lat: 25.258, color: "#22c55e" },
       { name: "Oud Metha (Green Line)", lng: 55.315, lat: 25.244, color: "#22c55e" },
       { name: "Dubai Healthcare City (Green Line)", lng: 55.323, lat: 25.231, color: "#22c55e" },
@@ -101,14 +101,26 @@ export const poiLayers: PoiLayer[] = [
       { name: "Dubai Academic City (Blue Line — Planned Area)", lng: 55.414, lat: 25.113, color: "#3b82f6" },
       { name: "Al Warqa (Blue Line — Planned Area)", lng: 55.411, lat: 25.193, color: "#3b82f6" },
       { name: "Mirdif (Blue Line — Planned Area)", lng: 55.421, lat: 25.219, color: "#3b82f6" },
-      { name: "Mina Rashid (Gold Line — Confirmed Route Area)", lng: 55.276, lat: 25.266, color: "#eab308" },
-      { name: "City Walk (Gold Line — Confirmed Route Area)", lng: 55.263, lat: 25.207, color: "#eab308" },
-      { name: "Mohammed Bin Rashid City (Gold Line — Confirmed Route Area)", lng: 55.305, lat: 25.168, color: "#eab308" },
-      { name: "Nad Al Sheba (Gold Line — Confirmed Route Area)", lng: 55.36, lat: 25.155, color: "#eab308" },
-      { name: "Mohammed Bin Rashid Gardens (Gold Line — Route Area)", lng: 55.33, lat: 25.145, color: "#eab308" },
-      { name: "Meydan (Gold Line — Confirmed Etihad Rail Connection)", lng: 55.3, lat: 25.164, color: "#eab308" },
-      { name: "Al Barsha South (Gold Line — Confirmed Route Area)", lng: 55.23, lat: 25.07, color: "#eab308" },
-      { name: "Jumeirah Village Circle (JVC) (Gold Line — Confirmed Route Area)", lng: 55.209, lat: 25.054, color: "#eab308" }
+      // Officially announced station areas (Gold Line, planned 2032) --
+      // ordered by nearest-neighbor geographic proximity rather than the
+      // order they were announced in, so the connected line traces a
+      // coherent path instead of zig-zagging. Al Ghubaiba and Business Bay
+      // are duplicated here (gold-colored) at the same coordinates as
+      // their Green/Red Line entries above so the connect-same-color-
+      // points logic includes them in this line too.
+      { name: "Al Ghubaiba (Gold Line — Confirmed Interchange)", lng: 55.2891, lat: 25.2649, color: "#eab308" },
+      { name: "Bur Dubai (Gold Line — Announced Area)", lng: 55.296, lat: 25.255, color: "#eab308" },
+      { name: "Al Satwa (Gold Line — Announced Area)", lng: 55.274, lat: 25.229, color: "#eab308" },
+      { name: "Business Bay (Gold Line — Confirmed Interchange)", lng: 55.261, lat: 25.191, color: "#eab308" },
+      { name: "Al Quoz (Gold Line — Announced Area)", lng: 55.2561, lat: 25.1542, color: "#eab308" },
+      { name: "Dubai Hills (Gold Line — Announced Area)", lng: 55.246, lat: 25.1135, color: "#eab308" },
+      { name: "Jumeirah Village Circle (JVC) (Gold Line — Announced Area)", lng: 55.2094, lat: 25.0544, color: "#eab308" },
+      { name: "Jumeirah Village Triangle (JVT) (Gold Line — Announced Area)", lng: 55.1815, lat: 25.0432, color: "#eab308" },
+      { name: "Jumeirah Golf Estates (Gold Line — Announced Area, Red Line Interchange)", lng: 55.207, lat: 25.003, color: "#eab308" },
+      { name: "Tilal Al Ghaf (Gold Line — Announced Area)", lng: 55.2265, lat: 25.0208, color: "#eab308" },
+      { name: "Global Village (Gold Line — Announced Area)", lng: 55.3084, lat: 25.0717, color: "#eab308" },
+      { name: "Dubailand (Gold Line — Announced Area)", lng: 55.32, lat: 25.08, color: "#eab308" },
+      { name: "Meydan (Gold Line — Announced Area)", lng: 55.3003, lat: 25.1636, color: "#eab308" },
     ],
   },
   {
@@ -292,10 +304,10 @@ function buildMetroLines(): PoiLine[] {
   for (const pt of metroPoints) {
     const color = pt.color ?? "#94a3b8";
 
-    const isRoute2020 = pt.name.includes("Route 2020 Extension");
-    if (isRoute2020 && current?.name !== "Red Line (Route 2020 Extension)") {
+    const isRoute2020 = pt.name.includes("Route 2020 Branch");
+    if (isRoute2020 && current?.name !== "Red Line (Route 2020 Branch)") {
       current = {
-        name: "Red Line (Route 2020 Extension)",
+        name: "Red Line (Route 2020 Branch)",
         color,
         coordinates: ibnBattuta ? [[ibnBattuta.lng, ibnBattuta.lat]] : [],
       };
@@ -312,58 +324,71 @@ function buildMetroLines(): PoiLine[] {
 
 export const metroLines: PoiLine[] = buildMetroLines();
 
-// Approximate real routes for Dubai's major highways (a handful of waypoints
-// each, not full precision), used only to draw a recognizable line on the
-// map -- same "real place, approximate coordinates" spirit as the POI
-// points above. Re-verified against real Google Maps route data (clicked
-// along the actual highlighted route polyline / read place coordinates for
-// each road, not just estimated) -- coordinates marked "real" below were
-// read directly this way; the rest are interpolated between them.
+// Real road-following geometry for Dubai's major highways -- fetched once
+// from the Mapbox Directions API between the verified anchor points (see
+// git history for the fetch script) and downsampled to ~45 points each, not
+// hand-estimated waypoints. This traces the actual curve of each road
+// (interchange loops, bends) rather than straight segments between a
+// handful of guessed points.
 export const highwayLines: PoiLine[] = [
   {
     name: "Sheikh Zayed Road (E11)",
     color: "#f59e0b",
     coordinates: [
-      [55.0273, 24.9857], // real: Mena Jabal Ali end
-      [55.08, 25.03],
-      [55.150343, 25.092493], // real: near Al Safouh / Dubai Marina
-      [55.2, 25.14],
-      [55.24, 25.175],
-      [55.2838, 25.2206], // real: Trade Centre end
+      [55.0276, 24.9857], [55.0312, 24.9836], [55.0318, 24.9826], [55.0393, 24.9701], [55.0413, 24.9663],
+      [55.0441, 24.9644], [55.0539, 24.955], [55.0634, 24.9457], [55.0625, 24.9443], [55.0609, 24.9452],
+      [55.0619, 24.9465], [55.0669, 24.9484], [55.0728, 24.9515], [55.0777, 24.9561], [55.0888, 24.9737],
+      [55.0941, 24.9934], [55.1004, 25.0254], [55.1112, 25.0401], [55.1414, 25.0743], [55.1482, 25.0806],
+      [55.1503, 25.0815], [55.1541, 25.0827], [55.1541, 25.0867], [55.1526, 25.089], [55.1495, 25.0917],
+      [55.15, 25.0925], [55.1518, 25.0912], [55.1521, 25.0904], [55.1524, 25.0889], [55.1516, 25.0863],
+      [55.1526, 25.0833], [55.1521, 25.0817], [55.1505, 25.0821], [55.1531, 25.085], [55.177, 25.1053],
+      [55.2082, 25.1272], [55.2192, 25.1413], [55.2465, 25.1767], [55.2685, 25.2014], [55.2853, 25.2256],
+      [55.2858, 25.2257], [55.2845, 25.2241], [55.283, 25.2216], [55.2829, 25.221], [55.2838, 25.2206],
     ],
   },
   {
     name: "Al Khail Road",
     color: "#38bdf8",
     coordinates: [
-      [55.14, 24.98],
-      [55.19, 25.06],
-      [55.2601399, 25.1374298], // real: near Business Bay / Al Quoz
-      [55.30, 25.17],
-      [55.340376, 25.215316], // real: near Dubai Airport Free Zone
+      [55.1398, 24.9798], [55.1377, 24.9786], [55.1345, 24.9795], [55.1314, 24.9808], [55.1322, 24.9891],
+      [55.1273, 24.9939], [55.1288, 24.9979], [55.1323, 25.0026], [55.1344, 25.0088], [55.1366, 25.0125],
+      [55.1396, 25.0157], [55.1406, 25.0166], [55.1471, 25.0175], [55.1553, 25.0172], [55.1601, 25.0159],
+      [55.1621, 25.0211], [55.1653, 25.0255], [55.1862, 25.0398], [55.1964, 25.0423], [55.2018, 25.0431],
+      [55.2014, 25.0421], [55.2004, 25.043], [55.1962, 25.0505], [55.1955, 25.0544], [55.1961, 25.0589],
+      [55.1988, 25.0634], [55.207, 25.0726], [55.2204, 25.0877], [55.2358, 25.105], [55.2575, 25.131],
+      [55.2613, 25.1435], [55.2617, 25.1583], [55.263, 25.163], [55.2707, 25.1719], [55.2774, 25.1778],
+      [55.2826, 25.1806], [55.2861, 25.1825], [55.2957, 25.1948], [55.3027, 25.1995], [55.3137, 25.2047],
+      [55.3264, 25.2169], [55.3361, 25.2198], [55.3369, 25.2194], [55.3389, 25.2174], [55.3401, 25.2156],
     ],
   },
   {
     name: "Sheikh Mohammed Bin Zayed Road (E311)",
     color: "#a78bfa",
     coordinates: [
-      [55.30, 24.95],
-      [55.3052614, 25.074454], // real: near Al Awir
-      [55.318612, 25.114511], // real
-      [55.36, 25.16],
-      [55.4, 25.22],
-      [55.42, 25.28],
+      [55.3007, 24.9533], [55.3074, 24.9517], [55.3329, 24.95], [55.3441, 24.9492], [55.343, 24.9502],
+      [55.3411, 24.9621], [55.3314, 24.9799], [55.3064, 25.0002], [55.2807, 25.0224], [55.2571, 25.0388],
+      [55.2499, 25.0517], [55.278, 25.0591], [55.318, 25.0859], [55.3501, 25.1122], [55.3659, 25.1178],
+      [55.3656, 25.122], [55.3593, 25.1269], [55.3409, 25.15], [55.3305, 25.148], [55.3374, 25.1494],
+      [55.3396, 25.1387], [55.3338, 25.1281], [55.3326, 25.1121], [55.3214, 25.1145], [55.3025, 25.1289],
+      [55.2963, 25.1242], [55.2921, 25.1311], [55.298, 25.1408], [55.289, 25.1417], [55.2807, 25.1533],
+      [55.2703, 25.1662], [55.27, 25.1706], [55.2769, 25.1768], [55.2831, 25.1807], [55.2957, 25.1948],
+      [55.3109, 25.2023], [55.3388, 25.2219], [55.3579, 25.2265], [55.3777, 25.23], [55.3871, 25.2552],
+      [55.3954, 25.2693], [55.3971, 25.2818], [55.4073, 25.2941], [55.4271, 25.2865], [55.42, 25.2797],
     ],
   },
   {
     name: "Al Ain Road",
     color: "#4ade80",
     coordinates: [
-      [55.362837, 25.201706], // real: near Dubai Academic City
-      [55.40, 25.15],
-      [55.45, 25.08],
-      [55.50, 24.98],
-      [55.55, 24.90],
+      [55.363, 25.2014], [55.3618, 25.1998], [55.3611, 25.1946], [55.3602, 25.1925], [55.3596, 25.1919],
+      [55.3597, 25.1907], [55.3596, 25.1887], [55.3588, 25.1878], [55.3541, 25.1865], [55.3307, 25.1853],
+      [55.3251, 25.1847], [55.3153, 25.1811], [55.3123, 25.1815], [55.3132, 25.1822], [55.3187, 25.1769],
+      [55.3234, 25.171], [55.334, 25.1576], [55.3657, 25.1187], [55.3971, 25.0812], [55.4136, 25.0617],
+      [55.4164, 25.0602], [55.4279, 25.0594], [55.4413, 25.0645], [55.4506, 25.0715], [55.4592, 25.0818],
+      [55.4508, 25.0871], [55.452, 25.0902], [55.446, 25.0973], [55.4327, 25.1133], [55.4332, 25.1149],
+      [55.4418, 25.1212], [55.4429, 25.1227], [55.407, 25.0977], [55.3912, 25.0871], [55.3899, 25.0878],
+      [55.3925, 25.0866], [55.4129, 25.0629], [55.4396, 25.0371], [55.4577, 25.0149], [55.495, 24.9635],
+      [55.5194, 24.927], [55.5452, 24.8827], [55.5461, 24.8833], [55.541, 24.8912], [55.5504, 24.8972],
     ],
   },
 ];
