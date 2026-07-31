@@ -85,6 +85,101 @@ export async function getPublishedProjects(developerId?: string) {
   return (data ?? []) as ProjectWithRelations[];
 }
 
+export interface AssistantProjectSearchFilters {
+  community?: string;
+  developer?: string;
+  propertyType?: string;
+  bedroomsMin?: number;
+  bedroomsMax?: number;
+  priceMaxAed?: number;
+  tags?: string[];
+  listingType?: string;
+  limit?: number;
+}
+
+export interface AssistantProjectResult {
+  name: string;
+  path: string;
+  priceFromAed: number;
+  bedroomsFrom: number;
+  bedroomsTo: number;
+  propertyType: string;
+  communityName: string;
+  developerName: string;
+  handoverQuarter: string | null;
+  handoverYear: number | null;
+  tags: string[];
+}
+
+// Real, server-side-filtered project search for the AI assistant's
+// search_projects tool (src/lib/ai/assistant.ts) -- deliberately separate
+// from getPublishedProjects() above, which fetches everything unfiltered
+// for the client-side array filtering the public map/list pages already
+// do. An LLM tool call needs a small, targeted result set instead, so this
+// does real .ilike()/.eq()/.gte() filtering in Postgres and returns a lean
+// shape cheap enough to hand back to the model.
+export async function searchProjectsForAssistant(
+  filters: AssistantProjectSearchFilters
+): Promise<AssistantProjectResult[]> {
+  const supabase = await createClient();
+  const limit = Math.min(Math.max(filters.limit ?? 8, 1), 10);
+
+  let query = supabase
+    .from("projects")
+    .select(
+      "slug, name, price_from_aed, bedrooms_from, bedrooms_to, property_type, handover_quarter, handover_year, tags, developers!inner(name), communities!inner(name)"
+    )
+    .in("status", ["published", "featured"]);
+
+  if (filters.community) query = query.ilike("communities.name", `%${filters.community}%`);
+  if (filters.developer) query = query.ilike("developers.name", `%${filters.developer}%`);
+  if (filters.propertyType) query = query.ilike("property_type", `%${filters.propertyType}%`);
+  if (filters.listingType) query = query.eq("listing_type", filters.listingType);
+  if (typeof filters.bedroomsMin === "number") query = query.gte("bedrooms_to", filters.bedroomsMin);
+  if (typeof filters.bedroomsMax === "number") query = query.lte("bedrooms_from", filters.bedroomsMax);
+  if (typeof filters.priceMaxAed === "number") query = query.lte("price_from_aed", filters.priceMaxAed);
+  if (filters.tags?.length) query = query.overlaps("tags", filters.tags);
+
+  const { data, error } = await query
+    .order("price_from_aed", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+
+  type Row = {
+    slug: string;
+    name: string;
+    price_from_aed: number;
+    bedrooms_from: number;
+    bedrooms_to: number;
+    property_type: string;
+    handover_quarter: string | null;
+    handover_year: number | null;
+    tags: string[];
+    developers: { name: string } | { name: string }[];
+    communities: { name: string } | { name: string }[];
+  };
+
+  const rows = (data ?? []) as unknown as Row[];
+  return rows.map((row) => {
+    const developer = Array.isArray(row.developers) ? row.developers[0] : row.developers;
+    const community = Array.isArray(row.communities) ? row.communities[0] : row.communities;
+    return {
+      name: row.name,
+      path: `/projects/${row.slug}`,
+      priceFromAed: row.price_from_aed,
+      bedroomsFrom: row.bedrooms_from,
+      bedroomsTo: row.bedrooms_to,
+      propertyType: row.property_type,
+      communityName: community?.name ?? "",
+      developerName: developer?.name ?? "",
+      handoverQuarter: row.handover_quarter,
+      handoverYear: row.handover_year,
+      tags: row.tags,
+    };
+  });
+}
+
 // A logged-in Developer or Salesperson account only ever sees their own
 // developer's projects on the main map/search/filters — everything else
 // (areas, communities) stays visible. Salespersons don't carry developer_id

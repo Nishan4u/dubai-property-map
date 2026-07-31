@@ -5,6 +5,7 @@ import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavorites
 import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
 import { InstallAppPrompt } from "@/components/public/InstallAppPrompt";
 import { ServiceWorkerRegister } from "@/components/public/ServiceWorkerRegister";
+import { AiChatWidget } from "@/components/public/AiChatWidget";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,6 +61,7 @@ export default async function RootLayout({
         </FavoritesProvider>
         <InstallAppPrompt />
         <ServiceWorkerRegister />
+        <AiChatWidget />
       </body>
     </html>
   );
