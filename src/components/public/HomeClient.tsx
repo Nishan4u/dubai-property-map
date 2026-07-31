@@ -147,6 +147,18 @@ export function HomeClient({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [simulatedFullscreen]);
 
+  // AiChatWidget lives in the root layout, outside this component tree, so
+  // it has no way to read isFullscreen directly -- it hides itself on this
+  // event instead. Needed for both fullscreen paths: native fullscreen
+  // would otherwise let the widget's fixed-position DOM node keep painting
+  // over the in-map Map/Satellite controls (it isn't a descendant of the
+  // fullscreened element, so it isn't promoted to the same top layer the
+  // browser gives the fullscreened subtree), and the simulated/CSS overlay
+  // path has the exact same visual conflict without a browser API to lean on.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("dpm:map-fullscreen", { detail: isFullscreen }));
+  }, [isFullscreen]);
+
   function handleFullscreenToggle() {
     if (isFullscreen) {
       if (document.fullscreenElement) {

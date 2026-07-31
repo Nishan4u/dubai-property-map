@@ -37,13 +37,29 @@ export function AiChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<AssistantProjectResult[]>([]);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // HomeClient's fullscreen map view dispatches this -- it lives outside
+  // this component's tree in the root layout, so a DOM event is the
+  // simplest way to hear about it without wiring up shared context just
+  // for this. Hiding entirely (rather than just repositioning) sidesteps
+  // native fullscreen's top-layer stacking rules, which this widget's
+  // fixed-position node isn't part of, plus it keeps the fullscreen map
+  // view distraction-free.
+  useEffect(() => {
+    function onFullscreenChange(e: Event) {
+      setMapFullscreen((e as CustomEvent<boolean>).detail);
+    }
+    window.addEventListener("dpm:map-fullscreen", onFullscreenChange);
+    return () => window.removeEventListener("dpm:map-fullscreen", onFullscreenChange);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  if (HIDDEN_PATH_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
+  if (mapFullscreen || HIDDEN_PATH_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
@@ -113,12 +129,18 @@ export function AiChatWidget() {
     }
   }
 
+  // bottom-20, not bottom-4: DubaiMap's own Map/Satellite + fullscreen
+  // controls live at "absolute bottom-4 right-4" *inside* the map, and the
+  // map fills to the viewport's right edge on every page it appears on --
+  // so a fixed bottom-4 right-4 widget sits exactly on top of them and
+  // swallows their clicks. bottom-20 clears that ~40px-tall control row
+  // with room to spare.
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open AI assistant"
-        className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-950 shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
+        aria-label="Open MapAI assistant"
+        className="dpm-ai-glow fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-950 shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
       >
         <MessageCircle className="h-6 w-6" />
       </button>
@@ -126,10 +148,10 @@ export function AiChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
+    <div className="fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
       <div className="flex items-center justify-between border-b border-navy-700 px-4 py-3">
         <div>
-          <p className="text-sm font-semibold text-ink-100">Dubai Property Map Assistant</p>
+          <p className="text-sm font-semibold text-ink-100">MapAI</p>
           <p className="text-xs text-ink-500">Ask about projects, communities, or buying off-plan</p>
         </div>
         <button

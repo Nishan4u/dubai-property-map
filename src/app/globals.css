@@ -132,3 +132,44 @@ body {
     opacity: 0;
   }
 }
+
+/* MapAI launcher bubble -- a spinning multi-color ring glowing behind the
+   button so the assistant reads as discoverable rather than blending into
+   the other floating map controls. The button itself stays solid gold; the
+   ring only shows as soft bleed past its edges. */
+@keyframes dpm-ai-ring-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* No position rule here on purpose -- the button already carries Tailwind's
+   `fixed` utility, which is itself a valid containing block for the
+   ::before below. Adding `position: relative` here would fight that
+   utility class in the cascade (same specificity, later source order) and
+   silently override it back to relative positioning. */
+.dpm-ai-glow::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    #eab308,
+    #ec4899,
+    #8b5cf6,
+    #3b82f6,
+    #22c55e,
+    #eab308
+  );
+  filter: blur(7px);
+  opacity: 0.9;
+  animation: dpm-ai-ring-spin 3.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dpm-ai-glow::before {
+    animation: none;
+  }
+}
