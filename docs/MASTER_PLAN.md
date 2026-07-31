@@ -298,6 +298,12 @@ section as modules get built out.
   partial).
 - PWA basics: service worker registered (Module 28/31, partial — no full
   offline support yet).
+- AI Chat Assistant: public-site floating widget, Claude Haiku 4.5 with a
+  tool-calling loop against real listed projects, streaming responses
+  (Module 17, partial — just the buyer-facing chat assistant; AI Property
+  Search/Community Guide/Investment Advisor/Buyer Matching/Broker
+  Assistant/Sales Assistant/Project Comparison/Market Insights/
+  Recommendation Engine/Voice Assistant are still net-new).
 
 **Not yet built (net-new from this document):**
 - Two-factor authentication, device/session management, login history
@@ -310,7 +316,8 @@ section as modules get built out.
   WhatsApp history yet), Connect-Any-CRM integrations, ERP/marketing/
   storage/payment integrations beyond Stripe (Module 15).
 - Live inventory sync automation (Module 16).
-- AI Platform in full (Module 17) — nothing AI-powered yet.
+- Rest of the AI Platform (Module 17) beyond the buyer chat assistant —
+  see the "Substantially built" note above for the full remaining list.
 - Referral & commission system with payouts/targets (some referral-code
   scaffolding exists per staff invites, but no commission engine) (Module
   18).
