@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Share2, Copy, Mail, Check, QrCode } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Building2, Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
-import { getMapboxStaticImageUrl } from "@/lib/mapboxStaticImage";
 
 export interface ShareCardData {
   imageUrl?: string | null;
@@ -12,8 +12,6 @@ export interface ShareCardData {
   developerName?: string;
   communityName?: string;
   priceLabel?: string;
-  lat?: number | null;
-  lng?: number | null;
 }
 
 export function ShareButton({
@@ -35,11 +33,12 @@ export function ShareButton({
   /** Icon-only trigger sized for a card, instead of the labeled button. */
   compact?: boolean;
   /** Project Card fields for the rich in-app share preview (spec: Share
-   * Feature -- Project Card/Mapbox Map Card/Image/Logo/Name/Developer/
-   * Community/Starting Price). Omit for non-project shares (e.g. developer
-   * pages), which fall back to the plain link list. */
+   * Feature -- Project Card/Image/Logo/Name/Developer/Community/Starting
+   * Price). Omit for non-project shares (e.g. developer pages), which fall
+   * back to the plain link list. */
   card?: ShareCardData;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -72,7 +71,12 @@ export function ShareButton({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCopy() {
+  async function handleCopy(e: React.MouseEvent) {
+    // This button has no default action of its own, so an unprevented click
+    // bubbles up looking for one -- when this menu is nested inside a card's
+    // wrapping <Link> (e.g. ProjectCard), that ancestor's navigation would
+    // otherwise fire instead of just copying and closing the menu.
+    e.preventDefault();
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
@@ -94,15 +98,17 @@ export function ShareButton({
       document.body.removeChild(input);
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Brief pause so the "Copied!" confirmation is actually seen before the
+    // menu closes itself, rather than vanishing the instant it appears.
+    setTimeout(() => {
+      setCopied(false);
+      setOpen(false);
+    }, 900);
   }
 
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
-  const mapImageUrl =
-    card?.lat != null && card?.lng != null
-      ? getMapboxStaticImageUrl(card.lat, card.lng, { width: 400, height: 150 })
-      : null;
+  const projectSlug = targetType === "project" ? path?.replace(/^\/projects\//, "") : undefined;
 
   const links = [
     { label: "WhatsApp", href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}` },
@@ -112,7 +118,9 @@ export function ShareButton({
     { label: "X", href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}` },
   ];
 
-  async function handleToggleQr() {
+  async function handleToggleQr(e: React.MouseEvent) {
+    // Same nested-in-a-card-Link concern as handleCopy above.
+    e.preventDefault();
     if (!showQr && !qrDataUrl && shareUrl) {
       try {
         const dataUrl = await QRCode.toDataURL(shareUrl, {
@@ -128,22 +136,15 @@ export function ShareButton({
     setShowQr((v) => !v);
   }
 
-  // On devices with the OS share sheet (mostly mobile), tapping the trigger
-  // goes straight there instead of opening the custom dropdown -- that sheet
-  // already surfaces WhatsApp/Mail/etc. natively. Desktop browsers without
-  // navigator.share fall back to the dropdown below.
-  async function handleTriggerClick(e: React.MouseEvent) {
+  // Previously tried navigator.share() first and fell back to this dropdown
+  // -- but that API is also available on desktop Safari/Chrome (not just
+  // mobile), so it could open the OS share sheet *and* this dropdown at
+  // once depending on timing. Always using the same in-app menu everywhere
+  // is simpler, consistent across devices, and is what actually lets us
+  // offer Compare/auto-close/etc. below.
+  function handleTriggerClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title, url: shareUrl });
-        return;
-      } catch {
-        // User cancelled the native sheet, or it failed -- fall through to
-        // the dropdown so they still have a way to share.
-      }
-    }
     setOpen((o) => !o);
   }
 
@@ -187,10 +188,6 @@ export function ShareButton({
                   </div>
                 )}
               </div>
-              {mapImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mapImageUrl} alt="" className="h-16 w-full object-cover" />
-              )}
               <div className="p-2.5">
                 <p className="truncate text-sm font-semibold text-ink-100">{title}</p>
                 <p className="truncate text-xs text-ink-500">
@@ -209,23 +206,46 @@ export function ShareButton({
             {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copied!" : "Copy Link"}
           </button>
+          {projectSlug && (
+            <button
+              onClick={(e) => {
+                // A <Link> here would be an <a> nested inside this card's own
+                // wrapping <Link> (e.g. ProjectCard) -- invalid HTML that
+                // React flags as a hydration error. Navigate imperatively
+                // instead, same fix as handleCopy/handleToggleQr above.
+                e.preventDefault();
+                setOpen(false);
+                router.push(`/compare?add=${projectSlug}`);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+            >
+              <Scale className="h-4 w-4" /> Compare
+            </button>
+          )}
           {links.map((l) => (
-            <a
+            // A plain <a target="_blank"> here would also be an <a> nested
+            // inside the card's own wrapping <Link> -- same invalid-HTML
+            // hydration error as Compare above, so this opens imperatively.
+            <button
               key={l.label}
-              href={l.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                window.open(l.href, "_blank", "noopener,noreferrer");
+              }}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
             >
               {l.label}
-            </a>
+            </button>
           ))}
-          <a
-            href={`mailto:?subject=${encodedTitle}&body=${encodedUrl}`}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = `mailto:?subject=${encodedTitle}&body=${encodedUrl}`;
+            }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
           >
             <Mail className="h-4 w-4" /> Email
-          </a>
+          </button>
           <button
             onClick={handleToggleQr}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"

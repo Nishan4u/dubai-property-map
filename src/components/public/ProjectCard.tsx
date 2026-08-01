@@ -58,8 +58,6 @@ export function ProjectCard({
                 developerName,
                 communityName,
                 priceLabel: formatAed(project.priceFromAed),
-                lat: project.lat,
-                lng: project.lng,
               }}
             />
             <button

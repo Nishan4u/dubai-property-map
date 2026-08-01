@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { CompactSelect } from "@/components/public/CompactSelect";
@@ -10,9 +11,19 @@ import type { Project } from "@/types";
 const MAX_SLOTS = 5;
 
 export function CompareClient({ projects }: { projects: Project[] }) {
-  const [slugs, setSlugs] = useState<string[]>(
-    projects.slice(0, 3).map((p) => p.slug)
-  );
+  // Lets a project's Share menu link straight into a comparison that
+  // already includes it (/compare?add=<slug>), instead of always landing
+  // on an arbitrary first-3 selection the visitor has to fix themselves.
+  const searchParams = useSearchParams();
+  const addSlug = searchParams.get("add");
+
+  const [slugs, setSlugs] = useState<string[]>(() => {
+    const initial = projects.slice(0, 3).map((p) => p.slug);
+    if (addSlug && projects.some((p) => p.slug === addSlug) && !initial.includes(addSlug)) {
+      return [addSlug, ...initial].slice(0, MAX_SLOTS);
+    }
+    return initial;
+  });
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");

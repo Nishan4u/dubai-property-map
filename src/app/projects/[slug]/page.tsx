@@ -232,8 +232,6 @@ export default async function ProjectDetailsPage({
                     developerName: project.developerName ?? developer?.name,
                     communityName: project.communityName ?? community?.name,
                     priceLabel: formatAed(project.priceFromAed),
-                    lat: project.lat,
-                    lng: project.lng,
                   }}
                 />
               </div>

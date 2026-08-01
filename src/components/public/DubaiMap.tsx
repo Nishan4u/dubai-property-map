@@ -151,6 +151,16 @@ export function DubaiMap({
         console.error("[DubaiMap] mapbox error:", e.error);
       });
 
+      // Closes the pin-click popup on any other map click, instead of it
+      // sitting open until the user finds the explicit X button. Safe
+      // against also firing for marker clicks (community/property/upcoming
+      // pins are plain DOM elements layered over the canvas, not part of
+      // it, so they never reach this canvas-level "click" event) -- it
+      // only fires for genuine background/POI-layer clicks.
+      map.on("click", () => {
+        if (selectedCommunityIdRef.current) onSelectCommunity(null);
+      });
+
       // Mapbox measures the container at construction time; if flexbox
       // layout hasn't settled yet the canvas can end up sized 0x0 and no
       // tiles ever get requested. Re-measure once mounted and on any
@@ -836,8 +846,6 @@ export function DubaiMap({
                   developerName: activeProject.developerName ?? getDeveloper(activeProject.developerId)?.name,
                   communityName: selectedCommunity.name,
                   priceLabel: formatAed(activeProject.priceFromAed),
-                  lat: activeProject.lat,
-                  lng: activeProject.lng,
                 }}
               />
             </h4>
