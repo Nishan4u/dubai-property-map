@@ -38,6 +38,7 @@ export function AiChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const [projects, setProjects] = useState<AssistantProjectResult[]>([]);
   // Non-null while the map is in (native or simulated) fullscreen -- the
   // element to portal this widget into so it stays visible and clickable
@@ -137,23 +138,27 @@ export function AiChatWidget() {
   // swallows their clicks. bottom-20 clears that ~40px-tall control row
   // with room to spare.
   //
-  // The dpm-ai-glow-panel ring below lives on the outer wrapper, not the
+  // The dpm-ai-border-glow ring below lives on the outer wrapper, not the
   // inner panel div -- the inner div needs overflow-hidden to clip its own
-  // content to rounded-xl, which would also clip the glow's blurred bleed
-  // if the glow class were on that same element.
+  // content to rounded-xl, which would also clip the ring's bleed if the
+  // glow class were on that same element. No `relative` in its className --
+  // `fixed` already establishes a valid containing block for the ::before,
+  // and adding `relative` would fight that utility class in the cascade
+  // depending on stylesheet order rather than className order (bit us once
+  // already on the launcher button; see .dpm-ai-glow's comment below).
   const widget = !open ? (
     <button
       onClick={() => setOpen(true)}
       aria-label="Open MapAI assistant"
-      className="dpm-ai-glow fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-950 shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
+      className="dpm-ai-glow fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-white shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
     >
       <MessageCircle className="h-6 w-6" />
     </button>
   ) : (
     <div
       className={clsx(
-        "fixed bottom-20 right-4 z-50 h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm",
-        loading && "dpm-ai-glow-panel"
+        "fixed bottom-20 right-4 z-50 h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm rounded-xl",
+        loading && "dpm-ai-border-glow"
       )}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
@@ -209,14 +214,23 @@ export function AiChatWidget() {
       </div>
 
       <form onSubmit={sendMessage} className="flex items-center gap-2 border-t border-navy-700 p-3">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={loading}
-          placeholder="Ask a question…"
-          aria-label="Message"
-          className="flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none disabled:opacity-60"
-        />
+        <div
+          className={clsx(
+            "relative flex-1 rounded-lg",
+            inputFocused && !loading && "dpm-ai-border-glow"
+          )}
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            disabled={loading}
+            placeholder="Ask a question…"
+            aria-label="Message"
+            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none disabled:opacity-60"
+          />
+        </div>
         <button
           type="submit"
           disabled={loading || !input.trim()}

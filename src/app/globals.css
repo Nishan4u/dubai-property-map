@@ -174,16 +174,20 @@ body {
   }
 }
 
-/* Same spinning ring, sized/rounded for the open chat panel instead of the
-   round launcher bubble -- switched on only while MapAI is actively
-   generating a reply, so the glow reads as "thinking" rather than a
-   permanent decoration on the panel. */
-.dpm-ai-glow-panel::before {
+/* Crisp animated rainbow border line (not a blurred glow) -- masked down
+   to just the ring itself via mask-composite, then spun with the same
+   keyframe as the launcher bubble. Shared by the message input (while
+   focused/typing) and the open chat panel (while MapAI is replying), on
+   whichever element carries this class. Needs `position: relative` on the
+   host element and a border-radius set there (`inherit` below picks it
+   up) -- both are set inline alongside this class rather than assumed. */
+.dpm-ai-border-glow::before {
   content: "";
   position: absolute;
-  inset: -3px;
+  inset: -2px;
   z-index: -1;
-  border-radius: 1rem;
+  border-radius: inherit;
+  padding: 2px;
   background: conic-gradient(
     from 0deg,
     #eab308,
@@ -193,13 +197,16 @@ body {
     #22c55e,
     #eab308
   );
-  filter: blur(6px);
-  opacity: 0.9;
-  animation: dpm-ai-ring-spin 3.5s linear infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: dpm-ai-ring-spin 3s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dpm-ai-glow-panel::before {
+  .dpm-ai-border-glow::before {
     animation: none;
   }
 }
