@@ -148,15 +148,20 @@ export function HomeClient({
   }, [simulatedFullscreen]);
 
   // AiChatWidget lives in the root layout, outside this component tree, so
-  // it has no way to read isFullscreen directly -- it hides itself on this
-  // event instead. Needed for both fullscreen paths: native fullscreen
-  // would otherwise let the widget's fixed-position DOM node keep painting
-  // over the in-map Map/Satellite controls (it isn't a descendant of the
-  // fullscreened element, so it isn't promoted to the same top layer the
-  // browser gives the fullscreened subtree), and the simulated/CSS overlay
-  // path has the exact same visual conflict without a browser API to lean on.
+  // it has no way to read isFullscreen (or rootRef) directly -- it hears
+  // about both over this event instead. Sending the container along lets
+  // it portal itself inside rootRef while fullscreen is active, rather than
+  // just hiding: native fullscreen promotes rootRef to the browser's "top
+  // layer" and the widget's fixed-position node isn't part of that unless
+  // it's an actual DOM descendant, and the simulated/CSS overlay path has
+  // the same stacking problem without a browser API to lean on -- portaling
+  // solves both the same way.
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("dpm:map-fullscreen", { detail: isFullscreen }));
+    window.dispatchEvent(
+      new CustomEvent("dpm:map-fullscreen", {
+        detail: { active: isFullscreen, container: isFullscreen ? rootRef.current : null },
+      })
+    );
   }, [isFullscreen]);
 
   function handleFullscreenToggle() {

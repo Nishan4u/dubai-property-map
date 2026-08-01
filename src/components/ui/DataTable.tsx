@@ -1,5 +1,5 @@
 export interface Column<T> {
-  header: string;
+  header: React.ReactNode;
   render: (row: T) => React.ReactNode;
   className?: string;
 }

@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SearchableDataTable } from "@/components/admin/SearchableDataTable";
 import { DeleteSalespersonButton } from "@/components/admin/DeleteSalespersonButton";
+import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/auditLog";
 import type { SalespersonRow } from "@/types/database";
 
 export function SalespersonsTable({
@@ -10,10 +13,32 @@ export function SalespersonsTable({
 }: {
   salespersons: (SalespersonRow & { developers: { name: string } | null })[];
 }) {
+  const router = useRouter();
+
+  async function handleDeleteSelected(ids: string[]) {
+    const names = ids.map((id) => salespersons.find((s) => s.id === id)?.full_name).filter(Boolean);
+    if (
+      !window.confirm(
+        `Delete ${ids.length} salesperson${ids.length === 1 ? "" : "s"}? This removes each salesperson account permanently. This cannot be undone.\n\n${names.join(", ")}`
+      )
+    ) {
+      return;
+    }
+    const supabase = createClient();
+    for (const id of ids) {
+      const sp = salespersons.find((s) => s.id === id);
+      await logAudit("salesperson.deleted", "salesperson", id, { name: sp?.full_name });
+      await supabase.from("salespersons").delete().eq("id", id);
+    }
+    router.refresh();
+  }
+
   return (
     <SearchableDataTable
       searchPlaceholder="Search salespersons by name, email or developer..."
       searchFields={(s) => [s.full_name, s.email, s.job_title, s.developers?.name]}
+      selectable
+      onDeleteSelected={handleDeleteSelected}
       columns={[
         {
           header: "Salesperson",

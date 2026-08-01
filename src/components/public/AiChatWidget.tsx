@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle, Send, X } from "lucide-react";
@@ -37,19 +38,18 @@ export function AiChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<AssistantProjectResult[]>([]);
-  const [mapFullscreen, setMapFullscreen] = useState(false);
+  // Non-null while the map is in (native or simulated) fullscreen -- the
+  // element to portal this widget into so it stays visible and clickable
+  // instead of getting stuck behind the fullscreened map. See the dispatch
+  // site in HomeClient.tsx for why a DOM event carries this instead of
+  // React context.
+  const [fullscreenContainer, setFullscreenContainer] = useState<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // HomeClient's fullscreen map view dispatches this -- it lives outside
-  // this component's tree in the root layout, so a DOM event is the
-  // simplest way to hear about it without wiring up shared context just
-  // for this. Hiding entirely (rather than just repositioning) sidesteps
-  // native fullscreen's top-layer stacking rules, which this widget's
-  // fixed-position node isn't part of, plus it keeps the fullscreen map
-  // view distraction-free.
   useEffect(() => {
     function onFullscreenChange(e: Event) {
-      setMapFullscreen((e as CustomEvent<boolean>).detail);
+      const detail = (e as CustomEvent<{ active: boolean; container: HTMLElement | null }>).detail;
+      setFullscreenContainer(detail.active ? detail.container : null);
     }
     window.addEventListener("dpm:map-fullscreen", onFullscreenChange);
     return () => window.removeEventListener("dpm:map-fullscreen", onFullscreenChange);
@@ -59,7 +59,7 @@ export function AiChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  if (mapFullscreen || HIDDEN_PATH_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
+  if (HIDDEN_PATH_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
@@ -135,19 +135,15 @@ export function AiChatWidget() {
   // so a fixed bottom-4 right-4 widget sits exactly on top of them and
   // swallows their clicks. bottom-20 clears that ~40px-tall control row
   // with room to spare.
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Open MapAI assistant"
-        className="dpm-ai-glow fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-950 shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </button>
-    );
-  }
-
-  return (
+  const widget = !open ? (
+    <button
+      onClick={() => setOpen(true)}
+      aria-label="Open MapAI assistant"
+      className="dpm-ai-glow fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-950 shadow-2xl transition-transform hover:scale-105 hover:bg-gold-400"
+    >
+      <MessageCircle className="h-6 w-6" />
+    </button>
+  ) : (
     <div className="fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
       <div className="flex items-center justify-between border-b border-navy-700 px-4 py-3">
         <div>
@@ -220,4 +216,6 @@ export function AiChatWidget() {
       </form>
     </div>
   );
+
+  return fullscreenContainer ? createPortal(widget, fullscreenContainer) : widget;
 }
