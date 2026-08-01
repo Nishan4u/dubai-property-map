@@ -141,6 +141,12 @@ export function DubaiMap({
         touchZoomRotate: true,
         touchPitch: true,
         pitchWithRotate: true,
+        // Mapbox's default is 3px -- tight enough that ordinary finger jitter
+        // during a tap on a touchscreen gets misread as a drag attempt, which
+        // suppresses the click on whatever pin was underneath (markers with
+        // no clickTolerance of their own inherit this). 3px matches a mouse;
+        // touch needs more slack.
+        clickTolerance: 8,
       });
       map.touchZoomRotate.enableRotation();
       mapRef.current = map;
@@ -152,11 +158,16 @@ export function DubaiMap({
       });
 
       // Closes the pin-click popup on any other map click, instead of it
-      // sitting open until the user finds the explicit X button. Safe
-      // against also firing for marker clicks (community/property/upcoming
-      // pins are plain DOM elements layered over the canvas, not part of
-      // it, so they never reach this canvas-level "click" event) -- it
-      // only fires for genuine background/POI-layer clicks.
+      // sitting open until the user finds the explicit X button.
+      //
+      // Mapbox tracks mousedown/touchstart+mouseup/touchend across its whole
+      // container (not just the canvas) to tell a click from a drag, so a
+      // tap on a marker fires both the marker's own click listener AND this
+      // map-level "click" straight after, for the same gesture. Each marker
+      // is responsible for calling stopPropagation() in its own click
+      // handler so this one never sees it (the property/project pins
+      // already do this -- see below); this handler assumes that's true and
+      // only ever runs for a genuine background/POI-layer click.
       map.on("click", () => {
         if (selectedCommunityIdRef.current) onSelectCommunity(null);
       });
@@ -361,7 +372,14 @@ export function DubaiMap({
         const el = document.createElement("div");
         el.style.cssText =
           "cursor:pointer;width:48px;height:48px;display:flex;align-items:center;justify-content:center;z-index:5;";
-        el.addEventListener("click", () => {
+        el.addEventListener("click", (e) => {
+          // Without this, the click also bubbles into the map's own
+          // click-vs-drag tracking (bound to the whole container, not just
+          // the canvas), which fires the "click elsewhere closes the popup"
+          // handler below for this same tap right after this one opens it --
+          // silently cancelling every tap out. The property/project pins
+          // already do this; this cluster pin was the one missing it.
+          e.stopPropagation();
           onSelectCommunity(
             selectedCommunityIdRef.current === c.id ? null : c.id
           );
