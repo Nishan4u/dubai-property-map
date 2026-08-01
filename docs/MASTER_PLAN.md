@@ -269,7 +269,7 @@ Push Notifications, Mobile Navigation, Touch-Optimized Map.
 
 ---
 
-## Build Status Snapshot (as of 2026-07-31)
+## Build Status Snapshot (as of 2026-08-01)
 
 A quick, codebase-verified read of what's already in place vs. what's net
 new from this document — not exhaustive, but grounded in what actually
@@ -298,12 +298,29 @@ section as modules get built out.
   partial).
 - PWA basics: service worker registered (Module 28/31, partial — no full
   offline support yet).
-- AI Chat Assistant: public-site floating widget, Claude Haiku 4.5 with a
-  tool-calling loop against real listed projects, streaming responses
-  (Module 17, partial — just the buyer-facing chat assistant; AI Property
-  Search/Community Guide/Investment Advisor/Buyer Matching/Broker
-  Assistant/Sales Assistant/Project Comparison/Market Insights/
-  Recommendation Engine/Voice Assistant are still net-new).
+- AI Chat Assistant ("MapAI"): public-site floating widget, Claude Haiku
+  4.5 with a tool-calling loop against real listed projects, streaming
+  responses, animated launcher/panel styling, stays usable (portals
+  itself in) during native or simulated map fullscreen instead of
+  disappearing (Module 17, partial — just the buyer-facing chat
+  assistant; AI Property Search/Community Guide/Investment
+  Advisor/Buyer Matching/Broker Assistant/Sales Assistant/Project
+  Comparison/Market Insights/Recommendation Engine/Voice Assistant are
+  still net-new).
+- Admin panel search & bulk actions: live search added to Developers,
+  Brokers, Brokerages, Salespersons, Users, Payments, and all four
+  Subscriptions account tables; select-all + bulk delete on Developers,
+  Brokers, Brokerages, Salespersons; native filter/status dropdowns
+  restyled to match the public site's searchable dropdown component
+  (Module 4 enhancement).
+- Developer directory: 211 developers bulk-imported from an external
+  CSV source (Module 9-adjacent — directory growth, not a new module).
+- Scraped project import: 484 projects imported as `draft` status
+  across the newly-imported developers, pending per-project admin
+  review; the Projects admin table now shows a Status column and
+  approving a draft project correctly publishes it (previously
+  approval only updated the approval flag, leaving the project
+  invisible on the public site despite the "now live" message).
 
 **Not yet built (net-new from this document):**
 - Two-factor authentication, device/session management, login history
