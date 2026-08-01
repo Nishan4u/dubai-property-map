@@ -152,7 +152,16 @@ export function ShareButton({
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+          className={
+            // compact is used inside small cards (project list rows, the map
+            // popup) where the trigger sits near the top -- opening downward
+            // there covers the rest of that same card's own content (price,
+            // View Project button, etc.). Opening upward instead lets it
+            // grow into open space above the card rather than over it.
+            compact
+              ? "absolute bottom-full right-0 z-20 mb-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+              : "absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
+          }
         >
           <button
             onClick={handleCopy}
