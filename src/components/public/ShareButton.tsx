@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
+import { Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
 
@@ -172,22 +172,20 @@ export function ShareButton({
         >
           {card && (
             <div className="mb-2 overflow-hidden rounded-lg border border-navy-700 bg-navy-850">
-              <div className="relative h-28 w-full bg-navy-800">
-                {card.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <Building2 className="h-8 w-8 text-ink-600" />
-                  </div>
-                )}
-                {card.logoUrl && (
-                  <div className="absolute bottom-1.5 left-1.5 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-navy-700 bg-white/95 p-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={card.logoUrl} alt="" className="h-full w-full object-contain" />
-                  </div>
-                )}
-              </div>
+              {(card.imageUrl || card.logoUrl) && (
+                <div className="relative h-28 w-full bg-navy-800">
+                  {card.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
+                  )}
+                  {card.logoUrl && (
+                    <div className="absolute bottom-1.5 left-1.5 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-navy-700 bg-white/95 p-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={card.logoUrl} alt="" className="h-full w-full object-contain" />
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="p-2.5">
                 <p className="truncate text-sm font-semibold text-ink-100">{title}</p>
                 <p className="truncate text-xs text-ink-500">

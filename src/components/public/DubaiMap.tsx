@@ -807,8 +807,11 @@ export function DubaiMap({
 
       {/* Pin click popup — browses every property in the selected community */}
       {selectedCommunity && activeProject && (
-        <div className="absolute bottom-28 left-1/2 z-20 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl sm:left-24 sm:translate-x-0">
-          <div className="relative">
+        <div className="absolute bottom-28 left-1/2 z-20 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-navy-700 bg-navy-900 shadow-2xl sm:left-24 sm:translate-x-0">
+          {/* overflow-hidden lives here, not on the card itself -- the Share
+              button below opens a dropdown that needs to extend past the
+              card's own height, which the card clipping it would cut off. */}
+          <div className="relative overflow-hidden rounded-t-xl">
             <ProjectThumb
               gradient={activeProject.gradient}
               imageUrl={activeProject.coverImageUrl}
