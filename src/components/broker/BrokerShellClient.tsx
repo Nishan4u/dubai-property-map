@@ -2,6 +2,7 @@
 
 import { Bell, Briefcase, Building2, CreditCard, LayoutDashboard, Map, ShieldCheck, User } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
+import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
@@ -32,6 +33,13 @@ export function BrokerShellClient({
       userRole={userRole}
     >
       {children}
+      <PortalAssistantWidget
+        apiPath="/api/broker/assistant/chat"
+        title="Broker Assistant"
+        subtitle="Ask about your property requests or search listings"
+        placeholder="Ask a question…"
+        greeting="Hi! I can search live listings for your clients or summarize your own property requests -- e.g. &quot;what are my open requests?&quot; or &quot;3-bedroom villas under 3M AED&quot;."
+      />
     </DashboardShell>
   );
 }

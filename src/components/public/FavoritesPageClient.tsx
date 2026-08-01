@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { ProjectCard } from "@/components/public/ProjectCard";
+import { FavoritesRecommendations } from "@/components/public/FavoritesRecommendations";
 import { useFavorites } from "@/components/auth/FavoritesProvider";
 import { createClient } from "@/lib/supabase/client";
 import { mapProject } from "@/lib/supabase/mappers";
@@ -63,6 +64,7 @@ export function FavoritesPageClient() {
               </p>
             )}
           </div>
+          {!fetching && projects.length > 0 && <FavoritesRecommendations />}
         </>
       )}
     </div>

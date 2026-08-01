@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { formatAed } from "@/data/mock";
@@ -12,6 +13,51 @@ export function CompareClient({ projects }: { projects: Project[] }) {
   const [slugs, setSlugs] = useState<string[]>(
     projects.slice(0, 3).map((p) => p.slug)
   );
+  const [summary, setSummary] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+
+  async function getAiSummary() {
+    setSummaryLoading(true);
+    setSummaryError("");
+    setSummary("");
+    try {
+      const res = await fetch("/api/assistant/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projects: selected.map((p) => ({
+            name: p.name,
+            developer: p.developerName ?? "—",
+            community: p.communityName ?? "—",
+            priceFromAed: p.priceFromAed,
+            bedroomsFrom: p.bedroomsFrom,
+            bedroomsTo: p.bedroomsTo,
+            paymentPlan: p.paymentPlan,
+            propertyType: p.propertyType,
+            handoverQuarter: p.handoverQuarter || null,
+            handoverYear: p.handoverYear || null,
+            rating: p.rating > 0 ? p.rating : null,
+            amenityCount: p.amenities.length,
+          })),
+        }),
+      });
+      if (!res.body) throw new Error("No response body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+        setSummary(text);
+      }
+    } catch {
+      setSummaryError("Couldn't generate a summary right now -- please try again.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
 
   function updateSlot(index: number, slug: string) {
     setSlugs((prev) => {
@@ -67,15 +113,42 @@ export function CompareClient({ projects }: { projects: Project[] }) {
               Compare up to {MAX_SLOTS} projects side by side.
             </p>
           </div>
-          {selected.length < MAX_SLOTS && selected.length < projects.length && (
-            <button
-              onClick={addSlot}
-              className="rounded-lg bg-gold-500 px-3 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400"
-            >
-              + Add Project
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {selected.length >= 2 && (
+              <button
+                onClick={getAiSummary}
+                disabled={summaryLoading}
+                className="flex items-center gap-1.5 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm font-medium text-ink-100 hover:border-gold-500/60 disabled:opacity-60"
+              >
+                <Sparkles className="h-4 w-4 text-gold-400" />
+                {summaryLoading ? "Summarizing…" : "AI Summary"}
+              </button>
+            )}
+            {selected.length < MAX_SLOTS && selected.length < projects.length && (
+              <button
+                onClick={addSlot}
+                className="rounded-lg bg-gold-500 px-3 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400"
+              >
+                + Add Project
+              </button>
+            )}
+          </div>
         </div>
+
+        {(summary || summaryLoading || summaryError) && (
+          <div className="mt-4 rounded-xl border border-navy-700 bg-navy-850 p-4">
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gold-400">
+              <Sparkles className="h-3.5 w-3.5" /> AI Summary
+            </p>
+            {summaryError ? (
+              <p className="text-sm text-rose-400">{summaryError}</p>
+            ) : (
+              <p className="text-sm text-ink-200">
+                {summary || (summaryLoading ? "…" : "")}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-6 overflow-x-auto">
           <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-2">

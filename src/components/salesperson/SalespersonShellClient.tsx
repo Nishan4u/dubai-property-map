@@ -2,6 +2,7 @@
 
 import { Building2, CreditCard, LayoutDashboard, UserRound, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
+import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
@@ -30,6 +31,13 @@ export function SalespersonShellClient({
       userRole={userRole}
     >
       {children}
+      <PortalAssistantWidget
+        apiPath="/api/salesperson/assistant/chat"
+        title="Sales Assistant"
+        subtitle="Ask about your leads or search your developer's listings"
+        placeholder="Ask a question…"
+        greeting="Hi! I can search your developer's live listings or summarize your own leads -- e.g. &quot;what leads do I have open?&quot; or &quot;2-bedroom units under 2M AED&quot;."
+      />
     </DashboardShell>
   );
 }

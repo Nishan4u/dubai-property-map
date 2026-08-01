@@ -95,6 +95,11 @@ export interface AssistantProjectSearchFilters {
   tags?: string[];
   listingType?: string;
   limit?: number;
+  /** Exact developer_id match -- distinct from the name-ilike `developer`
+   * filter above. Set server-side (never from user/model input) to enforce
+   * "salesperson sees only their assigned developer's projects" in the AI
+   * Sales Assistant's search_projects call. */
+  developerId?: string;
 }
 
 export interface AssistantProjectResult {
@@ -133,6 +138,7 @@ export async function searchProjectsForAssistant(
 
   if (filters.community) query = query.ilike("communities.name", `%${filters.community}%`);
   if (filters.developer) query = query.ilike("developers.name", `%${filters.developer}%`);
+  if (filters.developerId) query = query.eq("developer_id", filters.developerId);
   if (filters.propertyType) query = query.ilike("property_type", `%${filters.propertyType}%`);
   if (filters.listingType) query = query.eq("listing_type", filters.listingType);
   if (typeof filters.bedroomsMin === "number") query = query.gte("bedrooms_to", filters.bedroomsMin);
@@ -494,6 +500,41 @@ export async function getLeadsForDeveloper(developerId: string) {
     .eq("projects.developer_id", developerId)
     .order("created_at", { ascending: false });
 
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Extracted from the inline query in src/app/broker/page.tsx so the AI
+// Broker Assistant's get_my_property_requests tool can share it. Note
+// property_requests deliberately has no client name/phone/email columns
+// (see patch_35) -- brokers submit their own requirement, not a named
+// client's details -- so nothing here is ever client-identifying.
+export async function getPropertyRequestsForBroker(brokerId: string, status?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("property_requests")
+    .select("*, projects(name), developers(name)")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Extracted from the inline query in src/app/salesperson/leads/page.tsx so
+// the AI Sales Assistant's get_my_leads tool can share it.
+export async function getPropertyRequestsForSalesperson(salespersonId: string, status?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("property_requests")
+    .select("*, brokers(full_name, brn, mobile, whatsapp, email), projects(name)")
+    .eq("salesperson_id", salespersonId)
+    .order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

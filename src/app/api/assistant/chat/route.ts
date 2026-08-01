@@ -1,26 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamAssistantReply, type ChatMessage } from "@/lib/ai/assistant";
+import { streamAssistantReply } from "@/lib/ai/assistant";
 import { isRateLimited } from "@/lib/ai/rateLimit";
-
-const MAX_MESSAGES = 20;
-const MAX_MESSAGE_LENGTH = 2000;
-
-function isValidMessages(value: unknown): value is ChatMessage[] {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.length <= MAX_MESSAGES &&
-    value.every(
-      (m) =>
-        m &&
-        typeof m === "object" &&
-        (m.role === "user" || m.role === "assistant") &&
-        typeof m.content === "string" &&
-        m.content.length > 0 &&
-        m.content.length <= MAX_MESSAGE_LENGTH
-    )
-  );
-}
+import { isValidMessages } from "@/lib/ai/shared";
 
 export async function POST(request: NextRequest) {
   const ip =
