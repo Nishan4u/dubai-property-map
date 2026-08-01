@@ -9,25 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getProjectsForDeveloper } from "@/lib/supabase/queries";
 import { mapProject, currentYear } from "@/lib/supabase/mappers";
 import type { DeveloperRow } from "@/types/database";
-import type { ApprovalStatus, ProjectStatus } from "@/types";
+import { projectStatusTone, projectApprovalTone } from "@/lib/adminBadgeTones";
 
 export const dynamic = "force-dynamic";
-
-const statusTone: Record<ProjectStatus, "neutral" | "green" | "gold" | "red" | "purple"> = {
-  draft: "neutral",
-  published: "green",
-  featured: "purple",
-  expired: "gold",
-  rejected: "red",
-  archived: "neutral",
-};
-
-const approvalTone: Record<ApprovalStatus, "gold" | "blue" | "green" | "red"> = {
-  pending: "gold",
-  review: "blue",
-  approved: "green",
-  rejected: "red",
-};
 
 export default async function AdminDeveloperDetailPage({
   params,
@@ -103,8 +87,8 @@ export default async function AdminDeveloperDetailPage({
         <DataTable
           columns={[
             { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
-            { header: "Status", render: (p) => <Badge tone={statusTone[p.status]}>{p.status}</Badge> },
-            { header: "Approval", render: (p) => <Badge tone={approvalTone[p.approvalStatus]}>{p.approvalStatus}</Badge> },
+            { header: "Status", render: (p) => <Badge tone={projectStatusTone[p.status]}>{p.status}</Badge> },
+            { header: "Approval", render: (p) => <Badge tone={projectApprovalTone[p.approvalStatus]}>{p.approvalStatus}</Badge> },
             { header: "Views", render: (p) => p.views.toLocaleString() },
           ]}
           rows={devProjects}

@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { notifyDeveloperTeam } from "@/lib/notify";
-import type { DbApprovalStatus } from "@/types/database";
+import type { DbApprovalStatus, DbProjectStatus } from "@/types/database";
 
 const approvalMessage: Record<DbApprovalStatus, (name: string) => string> = {
   approved: (name) => `Your project "${name}" has been approved and is now live.`,
@@ -21,11 +21,13 @@ export function ProjectApprovalActions({
   projectName,
   developerId,
   featured,
+  status,
 }: {
   projectId: string;
   projectName: string;
   developerId: string;
   featured: boolean;
+  status: DbProjectStatus;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,17 @@ export function ProjectApprovalActions({
   async function updateApproval(approval_status: DbApprovalStatus) {
     setLoading(true);
     const supabase = createClient();
-    await supabase.from("projects").update({ approval_status }).eq("id", projectId);
+    // A project that's still sitting in "draft" (e.g. bulk-imported for
+    // review) isn't visible on the public site at all, no matter what its
+    // approval_status says -- getPublishedProjects() only ever returns
+    // status IN (published, featured). Approving one is the admin's signal
+    // to make it live, matching what approvalMessage.approved actually
+    // tells the developer ("...is now live"), so flip status too.
+    const updates: { approval_status: DbApprovalStatus; status?: DbProjectStatus } = { approval_status };
+    if (approval_status === "approved" && status === "draft") {
+      updates.status = "published";
+    }
+    await supabase.from("projects").update(updates).eq("id", projectId);
     await logAudit(`project.${approval_status}`, "project", projectId);
     await notifyDeveloperTeam(
       developerId,

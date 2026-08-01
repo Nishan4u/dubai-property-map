@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { ProjectApprovalActions } from "@/components/admin/ProjectApprovalActions";
 import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
+import { projectStatusTone } from "@/lib/adminBadgeTones";
 import type { Project, ApprovalStatus } from "@/types";
 
 const tabs: { label: string; value: ApprovalStatus | "all" }[] = [
@@ -51,6 +52,10 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
           { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
           { header: "Developer", render: (p) => p.developerName ?? "—" },
           {
+            header: "Status",
+            render: (p) => <Badge tone={projectStatusTone[p.status]}>{p.status}</Badge>,
+          },
+          {
             header: "Approval",
             render: (p) => <Badge tone={tone[p.approvalStatus]}>{p.approvalStatus}</Badge>,
           },
@@ -64,6 +69,7 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
                   projectName={p.name}
                   developerId={p.developerId}
                   featured={p.featured}
+                  status={p.status}
                 />
                 <Link
                   href={`/admin/projects/${p.id}`}
