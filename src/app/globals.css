@@ -173,3 +173,33 @@ body {
     animation: none;
   }
 }
+
+/* Same spinning ring, sized/rounded for the open chat panel instead of the
+   round launcher bubble -- switched on only while MapAI is actively
+   generating a reply, so the glow reads as "thinking" rather than a
+   permanent decoration on the panel. */
+.dpm-ai-glow-panel::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: 1rem;
+  background: conic-gradient(
+    from 0deg,
+    #eab308,
+    #ec4899,
+    #8b5cf6,
+    #3b82f6,
+    #22c55e,
+    #eab308
+  );
+  filter: blur(6px);
+  opacity: 0.9;
+  animation: dpm-ai-ring-spin 3.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dpm-ai-glow-panel::before {
+    animation: none;
+  }
+}

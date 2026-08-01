@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { clsx } from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle, Send, X } from "lucide-react";
@@ -135,6 +136,11 @@ export function AiChatWidget() {
   // so a fixed bottom-4 right-4 widget sits exactly on top of them and
   // swallows their clicks. bottom-20 clears that ~40px-tall control row
   // with room to spare.
+  //
+  // The dpm-ai-glow-panel ring below lives on the outer wrapper, not the
+  // inner panel div -- the inner div needs overflow-hidden to clip its own
+  // content to rounded-xl, which would also clip the glow's blurred bleed
+  // if the glow class were on that same element.
   const widget = !open ? (
     <button
       onClick={() => setOpen(true)}
@@ -144,7 +150,13 @@ export function AiChatWidget() {
       <MessageCircle className="h-6 w-6" />
     </button>
   ) : (
-    <div className="fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
+    <div
+      className={clsx(
+        "fixed bottom-20 right-4 z-50 h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm",
+        loading && "dpm-ai-glow-panel"
+      )}
+    >
+      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-navy-700 bg-navy-900 shadow-2xl">
       <div className="flex items-center justify-between border-b border-navy-700 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-ink-100">MapAI</p>
@@ -214,6 +226,7 @@ export function AiChatWidget() {
           <Send className="h-4 w-4" />
         </button>
       </form>
+      </div>
     </div>
   );
 
