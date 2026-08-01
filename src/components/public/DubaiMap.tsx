@@ -351,8 +351,16 @@ export function DubaiMap({
       });
 
       communities.forEach((c) => {
+        // The visible pin is a 36px circle, just under the ~44px minimum
+        // touch target -- on mobile, where several communities can cluster
+        // close together, that made it easy to tap the map background
+        // instead and get no response. Padding the actual clickable element
+        // out to 48px (with the circle centered inside via flex) enlarges
+        // the tap target without changing how the pin looks. z-index keeps
+        // it tappable even when a "Coming Soon" pin sits at the same spot.
         const el = document.createElement("div");
-        el.style.cursor = "pointer";
+        el.style.cssText =
+          "cursor:pointer;width:48px;height:48px;display:flex;align-items:center;justify-content:center;z-index:5;";
         el.addEventListener("click", () => {
           onSelectCommunity(
             selectedCommunityIdRef.current === c.id ? null : c.id
@@ -390,7 +398,7 @@ export function DubaiMap({
         el.style.display = "none";
         return;
       }
-      el.style.display = "";
+      el.style.display = "flex";
       const isSelected = c.id === selectedCommunityId;
       el.innerHTML = `<div style="width:36px;height:36px;border-radius:9999px;background:${c.pinColor};display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;border:2px solid ${
         isSelected ? "#f2c665" : "rgba(255,255,255,0.35)"
@@ -522,7 +530,11 @@ export function DubaiMap({
     import("mapbox-gl").then((mapboxgl) => {
       upcomingProjects.forEach((u) => {
         const el = document.createElement("div");
-        el.style.cursor = "pointer";
+        // Lower than the community pins' z-index (5) -- when a "Coming
+        // Soon" pin lands at nearly the same spot as a community pin, the
+        // community pin (which opens the real project popup) should still
+        // win the tap instead of this one silently swallowing it.
+        el.style.cssText = "cursor:pointer;z-index:1;";
         el.innerHTML = `
           <div style="position:relative;width:22px;height:22px;">
             <div style="position:absolute;inset:0;border-radius:9999px;background:#38bdf8;animation:dpm-upcoming-pulse 1.8s ease-out infinite;"></div>
