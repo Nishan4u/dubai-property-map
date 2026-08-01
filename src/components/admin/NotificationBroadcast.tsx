@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
+
+const AUDIENCE_OPTIONS: { label: string; value: Audience }[] = [
+  { label: "All Buyers", value: "buyers" },
+  { label: "All Developers", value: "developers" },
+  { label: "Specific Developer", value: "developer" },
+];
 
 type Audience = "buyers" | "developers" | "developer";
 
@@ -70,34 +77,25 @@ export function NotificationBroadcast({
 
   return (
     <div className="max-w-xl space-y-4 rounded-xl border border-navy-700 bg-navy-850 p-5">
-      <div>
-        <label className="mb-1 block text-xs font-medium text-ink-400">Audience</label>
-        <select
-          value={audience}
-          onChange={(e) => setAudience(e.target.value as Audience)}
-          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-        >
-          <option value="buyers">All Buyers</option>
-          <option value="developers">All Developers</option>
-          <option value="developer">Specific Developer</option>
-        </select>
-      </div>
+      <CompactSelect
+        label="Audience"
+        placeholder="Select audience"
+        allowClear={false}
+        searchable={false}
+        value={audience}
+        onChange={(v) => setAudience(v as Audience)}
+        options={AUDIENCE_OPTIONS}
+      />
 
       {audience === "developer" && (
-        <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Developer</label>
-          <select
-            value={developerId}
-            onChange={(e) => setDeveloperId(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            {developers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CompactSelect
+          label="Developer"
+          placeholder="Select developer"
+          allowClear={false}
+          value={developerId}
+          onChange={setDeveloperId}
+          options={developers.map((d) => ({ label: d.name, value: d.id }))}
+        />
       )}
 
       <div>

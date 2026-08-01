@@ -3,8 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gift } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 type AccountType = "developer" | "broker" | "salesperson" | "broker_agency";
+
+const ACCOUNT_TYPE_OPTIONS: { label: string; value: AccountType }[] = [
+  { label: "Developer", value: "developer" },
+  { label: "Broker", value: "broker" },
+  { label: "Salesperson", value: "salesperson" },
+  { label: "Broker Agency", value: "broker_agency" },
+];
 
 interface AccountOption {
   id: string;
@@ -89,44 +97,36 @@ export function GrantSubscriptionForm({
         <Gift className="h-4 w-4 text-gold-400" /> Grant Free Subscription
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <select
+        <CompactSelect
+          label="Account type"
+          hideLabel
+          allowClear={false}
+          searchable={false}
+          placeholder="Account type"
           value={accountType}
-          onChange={(e) => {
-            setAccountType(e.target.value as AccountType);
+          onChange={(v) => {
+            setAccountType(v as AccountType);
             setAccountId("");
             setPlanKey("");
           }}
-          className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100"
-        >
-          <option value="developer">Developer</option>
-          <option value="broker">Broker</option>
-          <option value="salesperson">Salesperson</option>
-          <option value="broker_agency">Broker Agency</option>
-        </select>
-        <select
+          options={ACCOUNT_TYPE_OPTIONS}
+        />
+        <CompactSelect
+          label="Account"
+          hideLabel
+          placeholder="Select account…"
           value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100"
-        >
-          <option value="">Select account…</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.label}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={setAccountId}
+          options={accounts.map((a) => ({ label: a.label, value: a.id }))}
+        />
+        <CompactSelect
+          label="Plan"
+          hideLabel
+          placeholder="Select plan…"
           value={planKey}
-          onChange={(e) => setPlanKey(e.target.value)}
-          className="rounded-lg border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-ink-100"
-        >
-          <option value="">Select plan…</option>
-          {availablePlans.map((p) => (
-            <option key={p.key} value={p.key}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+          onChange={setPlanKey}
+          options={availablePlans.map((p) => ({ label: p.name, value: p.key }))}
+        />
         <input
           type="number"
           min={1}

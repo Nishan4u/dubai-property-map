@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 export function AdminCreateSalespersonForm({ developers }: { developers: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -20,6 +21,11 @@ export function AdminCreateSalespersonForm({ developers }: { developers: { id: s
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!developerId) {
+      setStatus("error");
+      setErrorMsg("Choose a developer.");
+      return;
+    }
     setStatus("saving");
     setErrorMsg("");
     setResultMsg(null);
@@ -68,18 +74,13 @@ export function AdminCreateSalespersonForm({ developers }: { developers: { id: s
       {open && (
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 rounded-xl border border-navy-700 bg-navy-850 p-4 sm:grid-cols-3">
           <div className="sm:col-span-3">
-            <label className="mb-1 block text-xs font-medium text-ink-400">Developer</label>
-            <select
-              required
+            <CompactSelect
+              label="Developer"
+              placeholder="Select developer…"
               value={developerId}
-              onChange={(e) => setDeveloperId(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">Select developer…</option>
-              {developers.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+              onChange={setDeveloperId}
+              options={developers.map((d) => ({ label: d.name, value: d.id }))}
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">Full Name</label>

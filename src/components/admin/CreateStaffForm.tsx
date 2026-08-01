@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Plus } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
+
+const COMMISSION_TYPE_OPTIONS = [
+  { label: "Percentage", value: "percentage" },
+  { label: "Flat Amount (AED)", value: "flat" },
+];
 
 interface CreatedStaff {
   fullName: string;
@@ -105,11 +111,15 @@ export function CreateStaffForm() {
             <input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Auto-generated if blank" className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Commission Type</label>
-            <select value={commissionType} onChange={(e) => setCommissionType(e.target.value as "percentage" | "flat")} className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none">
-              <option value="percentage">Percentage</option>
-              <option value="flat">Flat Amount (AED)</option>
-            </select>
+            <CompactSelect
+              label="Commission Type"
+              allowClear={false}
+              searchable={false}
+              placeholder="Commission Type"
+              value={commissionType}
+              onChange={(v) => setCommissionType(v as "percentage" | "flat")}
+              options={COMMISSION_TYPE_OPTIONS}
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">

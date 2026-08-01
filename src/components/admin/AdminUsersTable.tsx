@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 
@@ -17,7 +18,7 @@ interface UserRow {
   created_at: string;
 }
 
-const roles = ["buyer", "developer", "admin"] as const;
+const roles = ["buyer", "developer", "admin", "broker", "salesperson", "broker_agency"] as const;
 
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
   const [rows, setRows] = useState(users);
@@ -71,17 +72,17 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
           {
             header: "Role",
             render: (u) => (
-              <select
+              <CompactSelect
+                label="Role"
+                hideLabel
+                allowClear={false}
+                searchable={false}
+                placeholder="Role"
                 value={u.role}
-                onChange={(e) => changeRole(u.id, e.target.value)}
-                className="rounded-lg border border-navy-600 bg-navy-800 px-2 py-1 text-xs text-ink-100 focus:outline-none"
-              >
-                {roles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => changeRole(u.id, v)}
+                options={roles.map((r) => ({ label: r, value: r }))}
+                className="w-36"
+              />
             ),
           },
           {

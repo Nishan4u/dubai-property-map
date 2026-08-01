@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
+import { PropertyRequestsFilterBar } from "@/components/admin/PropertyRequestsFilterBar";
 import { createClient } from "@/lib/supabase/server";
 import { getAllDevelopersAdmin } from "@/lib/supabase/queries";
 
@@ -45,37 +46,7 @@ export default async function AdminPropertyRequestsPage({
         <p className="text-sm text-ink-400">Every broker property request across the platform. Client identity is never collected or shown.</p>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-xl border border-navy-700 bg-navy-850 p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Developer</label>
-          <select
-            name="developer"
-            defaultValue={developerFilter ?? ""}
-            className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            <option value="">All Developers</option>
-            {developers.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Status</label>
-          <select
-            name="status"
-            defaultValue={statusFilter ?? ""}
-            className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            <option value="">All Statuses</option>
-            {Object.keys(statusTone).map((s) => (
-              <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400">
-          Filter
-        </button>
-      </form>
+      <PropertyRequestsFilterBar developers={developers} statuses={Object.keys(statusTone)} />
 
       <DataTable
         columns={[

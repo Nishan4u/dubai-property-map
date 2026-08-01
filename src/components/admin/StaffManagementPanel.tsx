@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
+
+const COMMISSION_TYPE_OPTIONS = [
+  { label: "Percentage", value: "percentage" },
+  { label: "Flat (AED)", value: "flat" },
+];
 
 interface StaffRow {
   id: string;
@@ -112,10 +118,17 @@ export function StaffManagementPanel({ staff }: { staff: StaffRow }) {
       <div className="space-y-3 border-t border-navy-800 pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
         <p className="text-sm font-semibold text-ink-100">Commission</p>
         <div className="flex items-end gap-2">
-          <select value={commissionType} onChange={(e) => setCommissionType(e.target.value as "percentage" | "flat")} className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none">
-            <option value="percentage">Percentage</option>
-            <option value="flat">Flat (AED)</option>
-          </select>
+          <CompactSelect
+            label="Commission type"
+            hideLabel
+            allowClear={false}
+            searchable={false}
+            placeholder="Commission type"
+            value={commissionType}
+            onChange={(v) => setCommissionType(v as "percentage" | "flat")}
+            options={COMMISSION_TYPE_OPTIONS}
+            className="w-36"
+          />
           <input type="number" step="0.01" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} className="w-28 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none" />
           <button disabled={loading} onClick={() => runAction("set_commission", { commissionType, commissionRate })} className="rounded-lg bg-gold-500 px-3 py-2 text-xs font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-50">
             Save

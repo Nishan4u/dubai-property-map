@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmailLogActions } from "@/components/admin/EmailLogActions";
+import { EmailLogsFilterBar } from "@/components/admin/EmailLogsFilterBar";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -35,36 +36,7 @@ export default async function AdminEmailLogsPage({
         <p className="text-sm text-ink-400">Every transactional email the platform has attempted to send (broker approvals, property-request notifications, OTPs, reminders).</p>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-xl border border-navy-700 bg-navy-850 p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Search (Request ID, subject, or email)</label>
-          <input
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="REQ-000001"
-            className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Status</label>
-          <select
-            name="status"
-            defaultValue={status ?? ""}
-            className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            <option value="">All</option>
-            <option value="sent">Sent</option>
-            <option value="delivered">Delivered</option>
-            <option value="failed">Failed</option>
-            <option value="bounced">Bounced</option>
-            <option value="complained">Complained</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-        <button type="submit" className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400">
-          Filter
-        </button>
-      </form>
+      <EmailLogsFilterBar />
 
       <DataTable
         columns={[

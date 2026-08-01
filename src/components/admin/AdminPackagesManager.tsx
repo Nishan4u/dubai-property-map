@@ -5,8 +5,16 @@ import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { isPromoLive } from "@/lib/subscriptionStatus";
 import type { SubscriptionPlanFeatureLimits } from "@/types/database";
+
+const PLAN_TYPE_OPTIONS = [
+  { label: "Developer", value: "developer" },
+  { label: "Broker", value: "broker" },
+  { label: "Broker Agency", value: "broker_agency" },
+  { label: "Salesperson", value: "salesperson" },
+];
 
 interface PlanRow {
   id: string;
@@ -477,19 +485,17 @@ export function AdminPackagesManager({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Account Type</label>
-            <select
+            <CompactSelect
+              label="Account Type"
+              allowClear={false}
+              searchable={false}
+              placeholder="Account Type"
               value={newPlanType}
-              onChange={(e) =>
-                setNewPlanType(e.target.value as "developer" | "broker" | "broker_agency" | "salesperson")
+              onChange={(v) =>
+                setNewPlanType(v as "developer" | "broker" | "broker_agency" | "salesperson")
               }
-              className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="developer">Developer</option>
-              <option value="broker">Broker</option>
-              <option value="broker_agency">Broker Agency</option>
-              <option value="salesperson">Salesperson</option>
-            </select>
+              options={PLAN_TYPE_OPTIONS}
+            />
           </div>
           <button
             type="submit"

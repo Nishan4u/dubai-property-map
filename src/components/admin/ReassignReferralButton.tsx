@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 export function ReassignReferralButton({
   referralId,
@@ -51,20 +52,17 @@ export function ReassignReferralButton({
 
   return (
     <div className="flex items-center gap-1.5">
-      <select
+      <CompactSelect
+        label="Staff"
+        hideLabel
+        placeholder="Select staff…"
         value={selected}
-        onChange={(e) => setSelected(e.target.value)}
-        className="rounded-lg border border-navy-600 bg-navy-800 px-2 py-1 text-xs text-ink-100 focus:outline-none"
-      >
-        <option value="">Select staff…</option>
-        {staffOptions
+        onChange={setSelected}
+        options={staffOptions
           .filter((s) => s.id !== currentStaffId)
-          .map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.full_name}
-            </option>
-          ))}
-      </select>
+          .map((s) => ({ label: s.full_name, value: s.id }))}
+        className="w-44"
+      />
       <button disabled={loading || !selected} onClick={handleSave} className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
         Save
       </button>
