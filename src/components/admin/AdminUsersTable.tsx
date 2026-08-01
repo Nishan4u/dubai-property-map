@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DataTable } from "@/components/ui/DataTable";
+import { SearchableDataTable } from "@/components/admin/SearchableDataTable";
 import { Badge } from "@/components/ui/Badge";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { createClient } from "@/lib/supabase/client";
@@ -58,7 +58,9 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-ink-500">{rows.length} registered users</p>
-      <DataTable
+      <SearchableDataTable
+        searchPlaceholder="Search users by name or email..."
+        searchFields={(u) => [u.full_name, u.email, u.developer_name]}
         columns={[
           {
             header: "User",

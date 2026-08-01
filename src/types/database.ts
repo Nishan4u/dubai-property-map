@@ -20,7 +20,7 @@ export type DbDeveloperSubscriptionStatus =
   | "cancelled"
   | "expired"
   | "suspended";
-export type DbSalespersonStatus = "active" | "inactive";
+export type DbSalespersonStatus = "active" | "inactive" | "pending_invitation";
 export type DbBankTransferAccountType = "developer" | "broker" | "salesperson" | "broker_agency";
 export type DbBankTransferStatus = "verification_pending" | "paid" | "rejected";
 export type DbPaymentType = "stripe" | "bank_transfer" | "admin_free";

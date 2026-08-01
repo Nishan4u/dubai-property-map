@@ -1,9 +1,13 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
-import { BrokerSubscriptionActions } from "@/components/admin/BrokerSubscriptionActions";
-import { AccountSubscriptionActions } from "@/components/admin/AccountSubscriptionActions";
 import { GrantSubscriptionForm } from "@/components/admin/GrantSubscriptionForm";
 import { RevokeGrantButton } from "@/components/admin/RevokeGrantButton";
+import {
+  DevelopersSubscriptionTable,
+  BrokersSubscriptionTable,
+  SalespersonsSubscriptionTable,
+  BrokerAgenciesSubscriptionTable,
+} from "@/components/admin/SubscriptionsTables";
 import {
   getAllBankTransfersAdmin,
   getAllBrokerAgencyPaymentsAdmin,
@@ -15,40 +19,9 @@ import {
   getAllSubscriptionPlansAdmin,
   getSubscriptionGrantsAdmin,
 } from "@/lib/supabase/queries";
-import { isExpiringSoon } from "@/lib/subscriptionStatus";
-import type {
-  DbBrokerSubscriptionStatus,
-  DbDeveloperSubscriptionStatus,
-  DbPaymentType,
-  SubscriptionGrantRow,
-} from "@/types/database";
+import type { SubscriptionGrantRow } from "@/types/database";
 
 export const dynamic = "force-dynamic";
-
-const brokerStatusTone: Record<DbBrokerSubscriptionStatus, "green" | "gold" | "red" | "neutral"> = {
-  no_subscription: "neutral",
-  payment_pending: "gold",
-  active: "green",
-  expired: "red",
-  cancelled: "neutral",
-  payment_failed: "red",
-  suspended: "red",
-};
-
-const developerStatusTone: Record<DbDeveloperSubscriptionStatus, "green" | "gold" | "red" | "neutral"> = {
-  inactive: "neutral",
-  active: "green",
-  past_due: "red",
-  expired: "red",
-  cancelled: "neutral",
-  suspended: "red",
-};
-
-const paymentTypeLabel: Record<DbPaymentType, string> = {
-  stripe: "Stripe",
-  bank_transfer: "Bank Transfer",
-  admin_free: "Admin Granted",
-};
 
 type GrantRow = SubscriptionGrantRow & {
   developers: { name: string } | null;
@@ -96,136 +69,22 @@ export default async function AdminSubscriptionsPage() {
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Developers</h2>
-        <DataTable
-          columns={[
-            { header: "Developer", render: (d) => <span className="font-medium text-ink-100">{d.name}</span> },
-            { header: "Plan", render: (d) => d.plan_tier ?? "—" },
-            {
-              header: "Status",
-              render: (d) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={developerStatusTone[d.subscription_status as DbDeveloperSubscriptionStatus]}>
-                    {d.subscription_status.replace(/_/g, " ")}
-                  </Badge>
-                  {isExpiringSoon(d.subscription_status, d.subscription_expires_at) && (
-                    <Badge tone="gold">Expiring Soon</Badge>
-                  )}
-                  {pendingDeveloperIds.has(d.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
-                  {d.is_complimentary && <Badge tone="blue">complimentary</Badge>}
-                  {d.payment_type && <Badge tone="purple">{paymentTypeLabel[d.payment_type as DbPaymentType]}</Badge>}
-                </div>
-              ),
-            },
-            { header: "Expires", render: (d) => (d.subscription_expires_at ? new Date(d.subscription_expires_at).toLocaleDateString() : "—") },
-            {
-              header: "",
-              render: (d) => (
-                <AccountSubscriptionActions accountType="developer" accountId={d.id} currentStatus={d.subscription_status} autoRenew={d.auto_renew} />
-              ),
-            },
-          ]}
-          rows={developers}
-        />
+        <DevelopersSubscriptionTable developers={developers} pendingDeveloperIds={Array.from(pendingDeveloperIds) as string[]} />
       </div>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Brokers</h2>
-        <DataTable
-          columns={[
-            { header: "Broker", render: (b) => <span className="font-medium text-ink-100">{b.full_name}</span> },
-            { header: "Plan", render: (b) => b.plan_key ?? "—" },
-            {
-              header: "Status",
-              render: (b) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={brokerStatusTone[b.subscription_status as DbBrokerSubscriptionStatus]}>
-                    {b.subscription_status.replace(/_/g, " ")}
-                  </Badge>
-                  {isExpiringSoon(b.subscription_status, b.subscription_expires_at) && (
-                    <Badge tone="gold">Expiring Soon</Badge>
-                  )}
-                  {pendingBrokerIds.has(b.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
-                  {b.is_complimentary && <Badge tone="blue">complimentary</Badge>}
-                  {b.payment_type && <Badge tone="purple">{paymentTypeLabel[b.payment_type as DbPaymentType]}</Badge>}
-                </div>
-              ),
-            },
-            { header: "Expires", render: (b) => (b.subscription_expires_at ? new Date(b.subscription_expires_at).toLocaleDateString() : "—") },
-            {
-              header: "",
-              render: (b) => <BrokerSubscriptionActions brokerId={b.id} currentStatus={b.subscription_status} autoRenew={b.auto_renew} />,
-            },
-          ]}
-          rows={brokers}
-        />
+        <BrokersSubscriptionTable brokers={brokers} pendingBrokerIds={Array.from(pendingBrokerIds) as string[]} />
       </div>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Salespersons</h2>
-        <DataTable
-          columns={[
-            { header: "Salesperson", render: (s) => <span className="font-medium text-ink-100">{s.full_name}</span> },
-            { header: "Plan", render: (s) => s.plan_key ?? "—" },
-            {
-              header: "Status",
-              render: (s) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={brokerStatusTone[s.subscription_status as DbBrokerSubscriptionStatus]}>
-                    {s.subscription_status.replace(/_/g, " ")}
-                  </Badge>
-                  {isExpiringSoon(s.subscription_status, s.subscription_expires_at) && (
-                    <Badge tone="gold">Expiring Soon</Badge>
-                  )}
-                  {pendingSalespersonIds.has(s.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
-                  {s.is_complimentary && <Badge tone="blue">complimentary</Badge>}
-                  {s.payment_type && <Badge tone="purple">{paymentTypeLabel[s.payment_type as DbPaymentType]}</Badge>}
-                </div>
-              ),
-            },
-            { header: "Expires", render: (s) => (s.subscription_expires_at ? new Date(s.subscription_expires_at).toLocaleDateString() : "—") },
-            {
-              header: "",
-              render: (s) => (
-                <AccountSubscriptionActions accountType="salesperson" accountId={s.id} currentStatus={s.subscription_status} autoRenew={s.auto_renew} />
-              ),
-            },
-          ]}
-          rows={salespersons}
-        />
+        <SalespersonsSubscriptionTable salespersons={salespersons} pendingSalespersonIds={Array.from(pendingSalespersonIds) as string[]} />
       </div>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-ink-100">Broker Agencies</h2>
-        <DataTable
-          columns={[
-            { header: "Agency", render: (a) => <span className="font-medium text-ink-100">{a.name}</span> },
-            { header: "Plan", render: (a) => a.plan_key ?? "—" },
-            {
-              header: "Status",
-              render: (a) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={brokerStatusTone[a.subscription_status as DbBrokerSubscriptionStatus]}>
-                    {a.subscription_status.replace(/_/g, " ")}
-                  </Badge>
-                  {isExpiringSoon(a.subscription_status, a.subscription_expires_at) && (
-                    <Badge tone="gold">Expiring Soon</Badge>
-                  )}
-                  {pendingBrokerAgencyIds.has(a.id) && <Badge tone="gold">Pending Bank Approval</Badge>}
-                  {a.is_complimentary && <Badge tone="blue">complimentary</Badge>}
-                  {a.payment_type && <Badge tone="purple">{paymentTypeLabel[a.payment_type as DbPaymentType]}</Badge>}
-                </div>
-              ),
-            },
-            { header: "Expires", render: (a) => (a.subscription_expires_at ? new Date(a.subscription_expires_at).toLocaleDateString() : "—") },
-            {
-              header: "",
-              render: (a) => (
-                <AccountSubscriptionActions accountType="broker_agency" accountId={a.id} currentStatus={a.subscription_status} autoRenew={a.auto_renew} />
-              ),
-            },
-          ]}
-          rows={brokerAgencies}
-        />
+        <BrokerAgenciesSubscriptionTable brokerAgencies={brokerAgencies} pendingBrokerAgencyIds={Array.from(pendingBrokerAgencyIds) as string[]} />
       </div>
 
       <div>

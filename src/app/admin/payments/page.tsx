@@ -1,6 +1,5 @@
-import { Badge } from "@/components/ui/Badge";
-import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
+import { PaymentsTable } from "@/components/admin/PaymentsTable";
 import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,13 +11,6 @@ const planPrice: Record<string, number> = {
   professional: 2999,
   enterprise: 0, // custom pricing, not counted in MRR estimate
 };
-
-const planTone = {
-  free: "neutral",
-  starter: "blue",
-  professional: "gold",
-  enterprise: "green",
-} as const;
 
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
@@ -51,55 +43,7 @@ export default async function AdminPaymentsPage() {
         <StatCard label="Total Developers" value={String(rows.length)} />
       </div>
 
-      <DataTable
-        columns={[
-          { header: "Developer", render: (d) => <span className="font-medium text-ink-100">{d.name}</span> },
-          {
-            header: "Plan",
-            render: (d) => <Badge tone={planTone[d.plan_tier as keyof typeof planTone]}>{d.plan_tier}</Badge>,
-          },
-          {
-            header: "Status",
-            render: (d) => (
-              <Badge tone={d.subscription_status === "active" ? "green" : "neutral"}>
-                {d.subscription_status}
-              </Badge>
-            ),
-          },
-          {
-            header: "Subtotal",
-            render: (d) => {
-              const price = planPrice[d.plan_tier] ?? 0;
-              return price > 0 ? `AED ${price.toLocaleString()}` : "—";
-            },
-          },
-          {
-            header: "VAT (5%)",
-            render: (d) => {
-              const price = planPrice[d.plan_tier] ?? 0;
-              return price > 0 ? `AED ${(price * 0.05).toLocaleString()}` : "—";
-            },
-          },
-          {
-            header: "Total (incl. VAT)",
-            render: (d) => {
-              const price = planPrice[d.plan_tier] ?? 0;
-              return price > 0 ? (
-                <span className="font-medium text-ink-100">
-                  AED {(price * 1.05).toLocaleString()}
-                </span>
-              ) : (
-                "—"
-              );
-            },
-          },
-          {
-            header: "Stripe Customer",
-            render: (d) => d.stripe_customer_id ?? "—",
-          },
-        ]}
-        rows={rows}
-      />
+      <PaymentsTable rows={rows} />
       <p className="text-xs text-ink-500">
         Subtotal/VAT/Total reflect the developer&apos;s current plan price at
         the UAE&apos;s standard 5% VAT rate. This platform doesn&apos;t yet
