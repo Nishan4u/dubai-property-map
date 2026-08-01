@@ -873,13 +873,6 @@ export function DubaiMap({
                 title={activeProject.name}
                 path={`/projects/${activeProject.slug}`}
                 compact
-                card={{
-                  imageUrl: activeProject.coverImageUrl,
-                  logoUrl: activeProject.logoUrl ?? activeProject.developerLogoUrl,
-                  developerName: activeProject.developerName ?? getDeveloper(activeProject.developerId)?.name,
-                  communityName: selectedCommunity.name,
-                  priceLabel: formatAed(activeProject.priceFromAed),
-                }}
               />
             </h4>
             <p className="text-xs text-ink-500">

@@ -226,13 +226,6 @@ export default async function ProjectDetailsPage({
                   targetType="project"
                   targetId={project.id}
                   title={project.name}
-                  card={{
-                    imageUrl: project.coverImageUrl,
-                    logoUrl: project.logoUrl ?? project.developerLogoUrl,
-                    developerName: project.developerName ?? developer?.name,
-                    communityName: project.communityName ?? community?.name,
-                    priceLabel: formatAed(project.priceFromAed),
-                  }}
                 />
               </div>
               <p className="mt-2 text-xs text-ink-500">Starting From</p>

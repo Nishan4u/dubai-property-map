@@ -6,21 +6,12 @@ import { Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
 
-export interface ShareCardData {
-  imageUrl?: string | null;
-  logoUrl?: string | null;
-  developerName?: string;
-  communityName?: string;
-  priceLabel?: string;
-}
-
 export function ShareButton({
   targetType,
   targetId,
   title,
   path,
   compact = false,
-  card,
 }: {
   targetType: "project" | "developer";
   targetId: string;
@@ -32,11 +23,6 @@ export function ShareButton({
   path?: string;
   /** Icon-only trigger sized for a card, instead of the labeled button. */
   compact?: boolean;
-  /** Project Card fields for the rich in-app share preview (spec: Share
-   * Feature -- Project Card/Image/Logo/Name/Developer/Community/Starting
-   * Price). Omit for non-project shares (e.g. developer pages), which fall
-   * back to the plain link list. */
-  card?: ShareCardData;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -166,37 +152,8 @@ export function ShareButton({
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className={
-            card ? "absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl" : "absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
-          }
+          className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
         >
-          {card && (
-            <div className="mb-2 overflow-hidden rounded-lg border border-navy-700 bg-navy-850">
-              {(card.imageUrl || card.logoUrl) && (
-                <div className="relative h-28 w-full bg-navy-800">
-                  {card.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
-                  )}
-                  {card.logoUrl && (
-                    <div className="absolute bottom-1.5 left-1.5 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-navy-700 bg-white/95 p-1">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={card.logoUrl} alt="" className="h-full w-full object-contain" />
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="p-2.5">
-                <p className="truncate text-sm font-semibold text-ink-100">{title}</p>
-                <p className="truncate text-xs text-ink-500">
-                  {[card.developerName, card.communityName].filter(Boolean).join(" · ")}
-                </p>
-                {card.priceLabel && (
-                  <p className="mt-1 text-xs font-semibold text-gold-400">From {card.priceLabel}</p>
-                )}
-              </div>
-            </div>
-          )}
           <button
             onClick={handleCopy}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-300 hover:bg-navy-800 hover:text-ink-100"
