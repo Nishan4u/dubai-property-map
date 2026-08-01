@@ -46,10 +46,22 @@ export function PortalAssistantWidget({
   const [inputFocused, setInputFocused] = useState(false);
   const [projects, setProjects] = useState<AssistantProjectResult[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
@@ -133,6 +145,7 @@ export function PortalAssistantWidget({
 
   return (
     <div
+      ref={panelRef}
       className={clsx(
         "fixed bottom-4 right-4 z-50 h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm rounded-xl",
         loading && "dpm-ai-border-glow"

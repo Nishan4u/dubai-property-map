@@ -47,6 +47,22 @@ export function AiChatWidget() {
   // React context.
   const [fullscreenContainer, setFullscreenContainer] = useState<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    // pointerdown, not click -- fires before the click that opened the
+    // panel could ever reach here, and closes on the very next tap/click
+    // anywhere outside it (mousedown-style timing avoids a stray click
+    // sneaking in on whatever was underneath as this listener attaches).
+    function onPointerDown(e: PointerEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   useEffect(() => {
     function onFullscreenChange(e: Event) {
@@ -156,6 +172,7 @@ export function AiChatWidget() {
     </button>
   ) : (
     <div
+      ref={panelRef}
       className={clsx(
         "fixed bottom-20 right-4 z-50 h-[32rem] max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm rounded-xl",
         loading && "dpm-ai-border-glow"
