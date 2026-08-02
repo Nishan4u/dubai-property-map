@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { attributeReferral, recordCommission } from "@/lib/referrals";
+import { recordReferralPaymentSuccess, disqualifySignupOnCancellation, clawbackReferralCashback } from "@/lib/brokerReferrals";
 
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -85,6 +86,24 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        // Broker/Salesperson Referral Program -- distinct from
+        // attributeReferral/recordCommission above (the unrelated internal
+        // DPM-staff commission system). No-ops for a non-referred account.
+        if (session.metadata?.broker_referral_signup_id) {
+          await recordReferralPaymentSuccess({
+            accountType: "broker",
+            accountId: brokerId,
+            signupId: session.metadata.broker_referral_signup_id,
+            paymentSource: "stripe",
+            paymentReference: (session.invoice as string) || session.id,
+            subscriptionAmountAed: session.amount_total ? session.amount_total / 100 : 0,
+            planKey: plan ?? "broker-monthly",
+            discountPercentApplied: session.metadata.broker_referral_discount_percent
+              ? Number(session.metadata.broker_referral_discount_percent)
+              : null,
+          });
+        }
+
         const { data: broker } = await supabase.from("brokers").select("full_name, email").eq("id", brokerId).single();
         if (broker?.email) {
           await sendEmail({
@@ -131,6 +150,21 @@ export async function POST(request: NextRequest) {
             paymentId: (session.invoice as string) || session.id,
             paymentSource: "stripe",
             subscriptionAmount: session.amount_total / 100,
+          });
+        }
+
+        if (session.metadata?.broker_referral_signup_id) {
+          await recordReferralPaymentSuccess({
+            accountType: "salesperson",
+            accountId: salespersonId,
+            signupId: session.metadata.broker_referral_signup_id,
+            paymentSource: "stripe",
+            paymentReference: (session.invoice as string) || session.id,
+            subscriptionAmountAed: session.amount_total ? session.amount_total / 100 : 0,
+            planKey: plan ?? "salesperson-monthly",
+            discountPercentApplied: session.metadata.broker_referral_discount_percent
+              ? Number(session.metadata.broker_referral_discount_percent)
+              : null,
           });
         }
 
@@ -255,18 +289,37 @@ export async function POST(request: NextRequest) {
         .eq("stripe_subscription_id", subscription.id);
 
       const brokerStatus = mapStripeStatusToBrokerStatus(subscription.status);
-      await supabase
+      const { data: updatedBrokers } = await supabase
         .from("brokers")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
-        .eq("stripe_subscription_id", subscription.id);
-      await supabase
+        .eq("stripe_subscription_id", subscription.id)
+        .select("id");
+      const { data: updatedSalespersons } = await supabase
         .from("salespersons")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
-        .eq("stripe_subscription_id", subscription.id);
+        .eq("stripe_subscription_id", subscription.id)
+        .select("id");
       await supabase
         .from("brokerages")
         .update({ subscription_status: brokerStatus, subscription_expires_at: expiresAt })
         .eq("stripe_subscription_id", subscription.id);
+
+      // Broker/Salesperson Referral Program: a referred account whose
+      // subscription just got cancelled either loses its still-pending
+      // referral (never credited) or has its already-credited cashback
+      // clawed back from the referrer's wallet -- each function only acts
+      // on the state it's meant for, so calling both unconditionally is
+      // safe and doesn't require knowing which one applies in advance.
+      if (brokerStatus === "cancelled") {
+        for (const b of updatedBrokers ?? []) {
+          await disqualifySignupOnCancellation("broker", b.id, "Referred subscription was cancelled.");
+          await clawbackReferralCashback("broker", b.id, "Referred subscription was cancelled.");
+        }
+        for (const sp of updatedSalespersons ?? []) {
+          await disqualifySignupOnCancellation("salesperson", sp.id, "Referred subscription was cancelled.");
+          await clawbackReferralCashback("salesperson", sp.id, "Referred subscription was cancelled.");
+        }
+      }
       break;
     }
     case "invoice.payment_succeeded": {
@@ -479,6 +532,32 @@ export async function POST(request: NextRequest) {
             html: `<p>Hi ${agency.name},</p><p>We couldn't process your latest payment. Please update your payment method to keep your subscription active.</p>`,
           });
         }
+      }
+      break;
+    }
+    // Broker/Salesperson Referral Program: a refund can arrive without a
+    // subscription cancellation event alongside it (e.g. a one-off partial
+    // refund on an otherwise still-active subscription), so this is
+    // handled separately from customer.subscription.deleted above rather
+    // than assumed to always coincide with it. Requires charge.refunded to
+    // be enabled on the Stripe webhook endpoint's subscribed events (a
+    // Stripe Dashboard setting, not something this code can turn on).
+    case "charge.refunded": {
+      const charge = event.data.object as Stripe.Charge;
+      const customerId = typeof charge.customer === "string" ? charge.customer : charge.customer?.id;
+      if (!customerId) break;
+
+      const { data: broker } = await supabase.from("brokers").select("id").eq("stripe_customer_id", customerId).maybeSingle();
+      if (broker) {
+        await disqualifySignupOnCancellation("broker", broker.id, "Payment was refunded.");
+        await clawbackReferralCashback("broker", broker.id, "Payment was refunded.");
+        break;
+      }
+
+      const { data: salesperson } = await supabase.from("salespersons").select("id").eq("stripe_customer_id", customerId).maybeSingle();
+      if (salesperson) {
+        await disqualifySignupOnCancellation("salesperson", salesperson.id, "Payment was refunded.");
+        await clawbackReferralCashback("salesperson", salesperson.id, "Payment was refunded.");
       }
       break;
     }

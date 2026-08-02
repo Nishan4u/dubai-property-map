@@ -79,6 +79,7 @@ export function BrokerOnboarding() {
       p_mobile: mobile,
       p_whatsapp: whatsapp,
       p_brokerage_id: hasAgency === "yes" ? brokerageId : null,
+      p_referral_code: (user.user_metadata?.referral_code as string | undefined) ?? null,
     });
 
     if (error) {

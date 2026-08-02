@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { isPromoLive } from "@/lib/subscriptionStatus";
+import { applyReferralDiscountIfEligible } from "@/lib/brokerReferrals";
 
 export async function POST(request: NextRequest) {
   const { plan, referralCode } = await request.json();
@@ -74,13 +75,35 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe();
     const origin = request.headers.get("origin") ?? "http://localhost:3000";
 
+    // See the broker checkout route for why this is a fresh coupon rather
+    // than a persistent one, and why the metadata key is distinct from
+    // `referral_code` above (unrelated internal-staff commission system).
+    const eligibleReferral = await applyReferralDiscountIfEligible("salesperson", profile.salesperson_id, plan);
+    let discounts: { coupon: string }[] | undefined;
+    if (eligibleReferral) {
+      const coupon = await stripe.coupons.create({
+        percent_off: eligibleReferral.discountPercent,
+        duration: eligibleReferral.firstSubscriptionOnly ? "once" : "forever",
+        name: "Referral Discount",
+      });
+      discounts = [{ coupon: coupon.id }];
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       customer: existingCustomerId ?? undefined,
       customer_email: existingCustomerId ? undefined : user.email,
       client_reference_id: profile.salesperson_id,
-      metadata: { kind: "salesperson_subscription", salesperson_id: profile.salesperson_id, plan, referral_code: referralCode?.trim() || "" },
+      discounts,
+      metadata: {
+        kind: "salesperson_subscription",
+        salesperson_id: profile.salesperson_id,
+        plan,
+        referral_code: referralCode?.trim() || "",
+        broker_referral_signup_id: eligibleReferral?.signupId ?? "",
+        broker_referral_discount_percent: eligibleReferral ? String(eligibleReferral.discountPercent) : "",
+      },
       success_url: `${origin}/salesperson/subscription?checkout=success`,
       cancel_url: `${origin}/salesperson/subscription?checkout=cancelled`,
     });

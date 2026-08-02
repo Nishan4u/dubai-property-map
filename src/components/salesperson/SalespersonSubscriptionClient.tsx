@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Check, Landmark } from "lucide-react";
+import { Check, Gift, Landmark, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
@@ -15,12 +15,18 @@ interface Plan {
   key: string;
   name: string;
   price_label: string;
+  price_aed?: number | null;
   features: string[];
   online_payment_enabled?: boolean;
   bank_transfer_enabled?: boolean;
   promo_active?: boolean;
   promo_ends_at?: string | null;
   promo_price_label?: string | null;
+}
+
+interface PendingDiscount {
+  percent: number;
+  eligiblePlanKeys: string[] | null;
 }
 
 export function SalespersonSubscriptionClient({
@@ -32,6 +38,9 @@ export function SalespersonSubscriptionClient({
   salespersonId,
   bankDetails,
   bankTransfers,
+  walletBalance,
+  walletNewPurchaseEnabled,
+  pendingDiscount,
 }: {
   plans: Plan[];
   currentPlanKey: string | null;
@@ -41,17 +50,39 @@ export function SalespersonSubscriptionClient({
   salespersonId: string;
   bankDetails: BankDetails;
   bankTransfers: SubscriptionBankTransferRow[];
+  walletBalance: number;
+  walletNewPurchaseEnabled: boolean;
+  pendingDiscount: PendingDiscount | null;
 }) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
   const [referralCode, setReferralCode] = useState("");
+  const [walletPayingPlan, setWalletPayingPlan] = useState<string | null>(null);
 
   useEffect(() => {
     const cookieCode = getReferralCookie();
     if (cookieCode) setReferralCode(cookieCode);
   }, []);
+
+  async function handleWalletPay(plan: string) {
+    setWalletPayingPlan(plan);
+    setError("");
+    try {
+      const res = await fetch("/api/salesperson/wallet/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Wallet payment failed");
+      window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Wallet payment failed");
+      setWalletPayingPlan(null);
+    }
+  }
 
   async function handleSubscribe(plan: string) {
     setLoadingPlan(plan);
@@ -105,6 +136,13 @@ export function SalespersonSubscriptionClient({
         />
       </div>
 
+      {pendingDiscount && (
+        <p className="flex max-w-lg items-center gap-2 rounded-lg border border-gold-500/40 bg-gold-500/10 px-4 py-2 text-xs font-medium text-gold-300">
+          <Gift className="h-4 w-4 shrink-0" />
+          You have a referral discount available — {pendingDiscount.percent}% off your first subscription.
+        </p>
+      )}
+
       <BankTransferHistory transfers={bankTransfers} />
 
       {isActive && (
@@ -131,6 +169,15 @@ export function SalespersonSubscriptionClient({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {plans.map((plan) => {
           const isCurrent = plan.key === currentPlanKey && isActive;
+          const discountApplies =
+            !!pendingDiscount &&
+            (!pendingDiscount.eligiblePlanKeys || pendingDiscount.eligiblePlanKeys.includes(plan.key));
+          const isRenewalPlan = plan.key === currentPlanKey;
+          const canPayWithWallet =
+            plan.price_aed != null &&
+            walletBalance >= plan.price_aed &&
+            (isRenewalPlan || walletNewPurchaseEnabled) &&
+            !isCurrent;
           return (
             <div
               key={plan.key}
@@ -141,6 +188,12 @@ export function SalespersonSubscriptionClient({
             >
               <h3 className="text-sm font-semibold text-ink-100">{plan.name}</h3>
               <PromoPrice plan={plan} />
+              {discountApplies && plan.price_aed != null && (
+                <p className="mt-1 text-xs font-medium text-gold-400">
+                  Referral price: AED {(plan.price_aed * (1 - pendingDiscount!.percent / 100)).toFixed(2)} (
+                  {pendingDiscount!.percent}% off)
+                </p>
+              )}
               <ul className="mt-4 space-y-2 text-xs text-ink-300">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2">
@@ -171,6 +224,16 @@ export function SalespersonSubscriptionClient({
                 >
                   <Landmark className="h-3.5 w-3.5" />
                   {bankTransferPlan?.key === plan.key ? "Hide Bank Transfer" : "Pay via Bank Transfer"}
+                </button>
+              )}
+              {canPayWithWallet && (
+                <button
+                  onClick={() => handleWalletPay(plan.key)}
+                  disabled={walletPayingPlan !== null}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 py-2 text-xs font-medium text-gold-300 hover:bg-gold-500/20 disabled:opacity-60"
+                >
+                  <Wallet className="h-3.5 w-3.5" />
+                  {walletPayingPlan === plan.key ? "Processing…" : `Pay with Wallet (AED ${walletBalance.toLocaleString()})`}
                 </button>
               )}
             </div>

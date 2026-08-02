@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getBankTransferSettings,
   getBankTransfersForBroker,
+  getBrokerReferralWalletAndSettings,
   getBrokerSubscriptionPlans,
   requireBrokerProfile,
 } from "@/lib/supabase/queries";
@@ -14,7 +15,7 @@ export default async function BrokerSubscriptionPage() {
   const profile = await requireBrokerProfile();
   const supabase = await createClient();
 
-  const [plans, { data: broker }, bankDetails, bankTransfers] = await Promise.all([
+  const [plans, { data: broker }, bankDetails, bankTransfers, referralInfo] = await Promise.all([
     getBrokerSubscriptionPlans(),
     supabase
       .from("brokers")
@@ -23,6 +24,7 @@ export default async function BrokerSubscriptionPage() {
       .single(),
     getBankTransferSettings(),
     getBankTransfersForBroker(profile.broker_id),
+    getBrokerReferralWalletAndSettings("broker", profile.broker_id),
   ]);
 
   return (
@@ -48,6 +50,9 @@ export default async function BrokerSubscriptionPage() {
         brokerId={profile.broker_id}
         bankDetails={bankDetails}
         bankTransfers={bankTransfers}
+        walletBalance={referralInfo.walletBalance}
+        walletNewPurchaseEnabled={referralInfo.walletNewPurchaseEnabled}
+        pendingDiscount={referralInfo.pendingDiscount}
       />
     </div>
   );

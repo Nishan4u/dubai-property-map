@@ -21,6 +21,7 @@ interface PlanRow {
   key: string;
   name: string;
   price_label: string;
+  price_aed: number | null;
   features: string[];
   stripe_price_id: string | null;
   sort_order: number;
@@ -83,6 +84,7 @@ export function AdminPackagesManager({
       .update({
         name: row.name,
         price_label: row.price_label,
+        price_aed: row.price_aed,
         features: row.features,
         stripe_price_id: row.stripe_price_id || null,
         sort_order: row.sort_order,
@@ -206,6 +208,24 @@ export function AdminPackagesManager({
                   onChange={(e) => updateField(row.id, "price_label", e.target.value)}
                   className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Price (AED)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={row.price_aed ?? ""}
+                  onChange={(e) => updateField(row.id, "price_aed", e.target.value === "" ? null : Number(e.target.value))}
+                  placeholder="e.g. 100"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-ink-500">
+                  A real number for referral discount/wallet math -- the label above is still what
+                  subscribers actually see.
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-400">

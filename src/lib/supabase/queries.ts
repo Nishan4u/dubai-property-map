@@ -877,6 +877,157 @@ export async function getAllSubscriptionPlansAdmin() {
   return data ?? [];
 }
 
+// ---------- Broker/Salesperson Referral Program ----------
+// Deliberately separate from the unrelated internal-staff referral system
+// elsewhere in this file (getStaffReferrals etc., src/lib/referrals.ts).
+
+export async function getBrokerReferralSettings() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("broker_referral_settings").select("*").eq("id", true).single();
+  if (error) throw error;
+  return data;
+}
+
+async function getReferralSummary(accountType: "broker" | "salesperson", accountId: string) {
+  const supabase = await createClient();
+  const table = accountType === "broker" ? "brokers" : "salespersons";
+  const referrerCol = `referrer_${accountType}_id`;
+
+  const { data: account } = await supabase.from(table).select("referral_code, referral_code_status").eq("id", accountId).maybeSingle();
+  const { data: wallet } = await supabase
+    .from("broker_referral_wallets")
+    .select("id, balance_aed, total_earned_aed, total_used_aed, pending_aed")
+    .eq(`${accountType}_id`, accountId)
+    .maybeSingle();
+  const { data: referrals } = await supabase
+    .from("broker_referral_signups")
+    .select("id, status, referee_account_type, created_at")
+    .eq(referrerCol, accountId)
+    .order("created_at", { ascending: false });
+  const { data: history } = wallet
+    ? await supabase
+        .from("broker_referral_wallet_transactions")
+        .select("*")
+        .eq("wallet_id", wallet.id)
+        .order("created_at", { ascending: false })
+        .limit(50)
+    : { data: [] };
+
+  const totalReferrals = referrals?.length ?? 0;
+  const successfulReferrals = referrals?.filter((r) => r.status === "completed").length ?? 0;
+  const pendingReferrals = referrals?.filter((r) => ["pending_subscription", "paid_awaiting_activation"].includes(r.status)).length ?? 0;
+
+  return {
+    referralCode: account?.referral_code ?? null,
+    referralCodeStatus: account?.referral_code_status ?? "active",
+    wallet: wallet ?? { id: null, balance_aed: 0, total_earned_aed: 0, total_used_aed: 0, pending_aed: 0 },
+    totalReferrals,
+    successfulReferrals,
+    pendingReferrals,
+    history: history ?? [],
+  };
+}
+
+export async function getBrokerReferralSummary(brokerId: string) {
+  return getReferralSummary("broker", brokerId);
+}
+
+export async function getSalespersonReferralSummary(salespersonId: string) {
+  return getReferralSummary("salesperson", salespersonId);
+}
+
+// Lean fetch for the Subscription page: just the wallet balance + the bits
+// of settings needed to decide whether to show "Pay with Wallet" and a
+// referral-discount banner. Separate from getReferralSummary above, which
+// also pulls full referral/history lists the Subscription page doesn't need.
+export async function getBrokerReferralWalletAndSettings(accountType: "broker" | "salesperson", accountId: string) {
+  const supabase = await createClient();
+  const [{ data: settings }, { data: wallet }, { data: pendingSignup }] = await Promise.all([
+    supabase
+      .from("broker_referral_settings")
+      .select("program_enabled, discount_enabled, discount_percent, discount_eligible_plan_keys, wallet_new_purchase_enabled")
+      .eq("id", true)
+      .maybeSingle(),
+    supabase.from("broker_referral_wallets").select("balance_aed").eq(`${accountType}_id`, accountId).maybeSingle(),
+    supabase
+      .from("broker_referral_signups")
+      .select("id")
+      .eq(`referee_${accountType}_id`, accountId)
+      .eq("status", "pending_subscription")
+      .maybeSingle(),
+  ]);
+
+  return {
+    walletBalance: Number(wallet?.balance_aed ?? 0),
+    walletNewPurchaseEnabled: !!settings?.wallet_new_purchase_enabled,
+    pendingDiscount:
+      settings?.program_enabled && settings?.discount_enabled && pendingSignup
+        ? {
+            percent: Number(settings.discount_percent),
+            eligiblePlanKeys: (settings.discount_eligible_plan_keys as string[] | null) ?? null,
+          }
+        : null,
+  };
+}
+
+export async function getAdminReferralProgramStats() {
+  const supabase = await createClient();
+
+  const { count: totalCodes } = await supabase
+    .from("brokers")
+    .select("id", { count: "exact", head: true })
+    .not("referral_code", "is", null);
+  const { count: totalCodesSp } = await supabase
+    .from("salespersons")
+    .select("id", { count: "exact", head: true })
+    .not("referral_code", "is", null);
+
+  const { data: signups } = await supabase.from("broker_referral_signups").select("status, discount_amount_aed, cashback_amount_aed, cashback_reversed_at");
+  const successfulReferrals = signups?.filter((s) => s.status === "completed").length ?? 0;
+  const pendingReferrals = signups?.filter((s) => ["pending_subscription", "paid_awaiting_activation"].includes(s.status)).length ?? 0;
+  const totalDiscountGiven = (signups ?? []).reduce((sum, s) => sum + Number(s.discount_amount_aed ?? 0), 0);
+  const totalCashbackPaid = (signups ?? [])
+    .filter((s) => s.cashback_amount_aed && !s.cashback_reversed_at)
+    .reduce((sum, s) => sum + Number(s.cashback_amount_aed ?? 0), 0);
+  const conversionRate = signups?.length ? (successfulReferrals / signups.length) * 100 : 0;
+
+  const { data: wallets } = await supabase.from("broker_referral_wallets").select("balance_aed");
+  const totalWalletBalances = (wallets ?? []).reduce((sum, w) => sum + Number(w.balance_aed), 0);
+
+  const { data: topReferrerRows } = await supabase
+    .from("broker_referral_signups")
+    .select("referrer_account_type, referrer_broker_id, referrer_salesperson_id")
+    .eq("status", "completed");
+  const counts = new Map<string, { accountType: string; accountId: string; count: number }>();
+  for (const r of topReferrerRows ?? []) {
+    const accountId = r.referrer_account_type === "broker" ? r.referrer_broker_id : r.referrer_salesperson_id;
+    if (!accountId) continue;
+    const key = `${r.referrer_account_type}:${accountId}`;
+    const existing = counts.get(key);
+    if (existing) existing.count += 1;
+    else counts.set(key, { accountType: r.referrer_account_type, accountId, count: 1 });
+  }
+  const topReferrerEntries = [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 10);
+  const topReferrers = await Promise.all(
+    topReferrerEntries.map(async (entry) => {
+      const table = entry.accountType === "broker" ? "brokers" : "salespersons";
+      const { data } = await supabase.from(table).select("full_name, referral_code").eq("id", entry.accountId).maybeSingle();
+      return { ...entry, name: data?.full_name ?? "Unknown", referralCode: data?.referral_code ?? "" };
+    })
+  );
+
+  return {
+    totalReferralCodes: (totalCodes ?? 0) + (totalCodesSp ?? 0),
+    successfulReferrals,
+    pendingReferrals,
+    totalCashbackPaid,
+    totalWalletBalances,
+    totalDiscountGiven,
+    conversionRate,
+    topReferrers,
+  };
+}
+
 export async function getPlanSubscriberCounts() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("developers").select("plan_tier");

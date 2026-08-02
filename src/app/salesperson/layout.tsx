@@ -34,6 +34,7 @@ export default async function SalespersonLayout({
       job_title?: string;
       mobile?: string;
       whatsapp?: string;
+      referral_code?: string;
     };
 
     if (!meta.developer_id) {
@@ -47,6 +48,7 @@ export default async function SalespersonLayout({
       p_employee_id: null,
       p_mobile: meta.mobile ?? null,
       p_whatsapp: meta.whatsapp ?? null,
+      p_referral_code: meta.referral_code ?? null,
     });
 
     if (claimError) {

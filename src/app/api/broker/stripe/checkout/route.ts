@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { isPromoLive } from "@/lib/subscriptionStatus";
+import { applyReferralDiscountIfEligible } from "@/lib/brokerReferrals";
 
 export async function POST(request: NextRequest) {
   const { plan, referralCode } = await request.json();
@@ -71,13 +72,38 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe();
     const origin = request.headers.get("origin") ?? "http://localhost:3000";
 
+    // Broker/Salesperson Referral Program discount -- a distinct concept
+    // from the `referral_code` metadata field above (that's the unrelated
+    // internal-staff commission system, src/lib/referrals.ts). A coupon is
+    // created fresh here rather than reused, since the discount % is
+    // admin-configurable at any time and a Stripe Coupon's percent_off is
+    // immutable once created.
+    const eligibleReferral = await applyReferralDiscountIfEligible("broker", profile.broker_id, plan);
+    let discounts: { coupon: string }[] | undefined;
+    if (eligibleReferral) {
+      const coupon = await stripe.coupons.create({
+        percent_off: eligibleReferral.discountPercent,
+        duration: eligibleReferral.firstSubscriptionOnly ? "once" : "forever",
+        name: "Referral Discount",
+      });
+      discounts = [{ coupon: coupon.id }];
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       customer: existingCustomerId ?? undefined,
       customer_email: existingCustomerId ? undefined : user.email,
       client_reference_id: profile.broker_id,
-      metadata: { kind: "broker_subscription", broker_id: profile.broker_id, plan, referral_code: referralCode?.trim() || "" },
+      discounts,
+      metadata: {
+        kind: "broker_subscription",
+        broker_id: profile.broker_id,
+        plan,
+        referral_code: referralCode?.trim() || "",
+        broker_referral_signup_id: eligibleReferral?.signupId ?? "",
+        broker_referral_discount_percent: eligibleReferral ? String(eligibleReferral.discountPercent) : "",
+      },
       success_url: `${origin}/broker/subscription?checkout=success`,
       cancel_url: `${origin}/broker/subscription?checkout=cancelled`,
     });

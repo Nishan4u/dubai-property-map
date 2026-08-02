@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { sendEmail } from "@/lib/email";
 import { attributeReferral, recordCommission } from "@/lib/referrals";
+import { recordReferralPaymentSuccess } from "@/lib/brokerReferrals";
 
 type Action = "approve" | "reject";
 
@@ -131,6 +132,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         paymentSource: "bank_transfer",
         subscriptionAmount: Number(transfer.amount_aed),
       });
+      await recordReferralPaymentSuccess({
+        accountType: "broker",
+        accountId: transfer.broker_id,
+        paymentSource: "bank_transfer",
+        paymentReference: id,
+        subscriptionAmountAed: Number(transfer.amount_aed),
+        planKey: transfer.plan_key,
+      });
     } else if (transfer.account_type === "salesperson" && transfer.salesperson_id) {
       const { error } = await admin
         .from("salespersons")
@@ -152,6 +161,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         paymentId: id,
         paymentSource: "bank_transfer",
         subscriptionAmount: Number(transfer.amount_aed),
+      });
+      await recordReferralPaymentSuccess({
+        accountType: "salesperson",
+        accountId: transfer.salesperson_id,
+        paymentSource: "bank_transfer",
+        paymentReference: id,
+        subscriptionAmountAed: Number(transfer.amount_aed),
+        planKey: transfer.plan_key,
       });
     } else if (transfer.account_type === "broker_agency" && transfer.brokerage_id) {
       const { error } = await admin

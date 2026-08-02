@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
   const agencyPhone = body.agencyPhone as string | undefined;
   const contactPerson = body.contactPerson as string | undefined;
   const officeDetails = body.officeDetails as string | undefined;
+  const referralCode = (body.referralCode as string | undefined)?.trim();
 
   if (!fullName || !email || password.length < 6) {
     return NextResponse.json({ error: "Full name, email and a password (6+ characters) are required." }, { status: 400 });
@@ -34,6 +35,17 @@ export async function POST(request: NextRequest) {
   }
 
   const userMetadata: Record<string, unknown> = { full_name: fullName, role };
+
+  // Referral Program (Section 3): only brokers/salespersons can be
+  // referred, and only at initial registration -- captured into
+  // user_metadata now, consumed later by claim_broker_profile /
+  // claim_salesperson_profile once the actual brokers/salespersons row is
+  // created (broker registration is a two-step flow: this route only
+  // creates the bare auth account, the real row comes from the
+  // onboarding wizard on first dashboard visit).
+  if (referralCode && (role === "broker" || role === "salesperson")) {
+    userMetadata.referral_code = referralCode;
+  }
 
   if (role === "salesperson") {
     if (!developerId) {

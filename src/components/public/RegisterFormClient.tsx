@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -16,8 +17,19 @@ interface DeveloperOption {
 export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: string[] }) {
   const allTypes = ["buyer", "developer", "broker", "broker_agency", "salesperson"] as const;
   const enabledTypes = allTypes.filter((t) => !disabledTypes.includes(t));
+  // Referral Program: a shared link like /register?ref=BRK1001 should land
+  // on the right role tab already selected -- the code's prefix tells us
+  // which (any other prefix falls back to the normal default, since the
+  // code itself gets validated properly once picked up below regardless).
+  const searchParams = useSearchParams();
+  const refParam = searchParams.get("ref");
+  const roleFromRef = refParam?.toUpperCase().startsWith("SP")
+    ? "salesperson"
+    : refParam?.toUpperCase().startsWith("BRK")
+      ? "broker"
+      : null;
   const [role, setRole] = useState<"buyer" | "developer" | "broker" | "broker_agency" | "salesperson">(
-    enabledTypes[0] ?? "buyer"
+    (roleFromRef && enabledTypes.includes(roleFromRef) ? roleFromRef : null) ?? enabledTypes[0] ?? "buyer"
   );
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +51,14 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
   const [contactPerson, setContactPerson] = useState("");
   const [officeDetails, setOfficeDetails] = useState("");
 
+  // Referral Program (Section 3): optional, broker/salesperson only.
+  // Pre-filled from a shared link like /register?ref=BRK1001, but always
+  // editable -- someone can still type a different code by hand.
+  const [referralCode, setReferralCode] = useState(refParam ?? "");
+  const [referralCheck, setReferralCheck] = useState<{ status: "idle" | "checking" | "valid" | "invalid"; name?: string }>(
+    () => (refParam ? { status: "checking" } : { status: "idle" })
+  );
+
   useEffect(() => {
     if (role !== "salesperson" || developers.length > 0) return;
     const supabase = createClient();
@@ -58,6 +78,27 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
     const timer = setInterval(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  // Live "valid code from X" / "code not found" feedback (spec item 3:
+  // "validates it before payment") -- debounced so it isn't firing an RPC
+  // on every keystroke. The idle/checking state flip happens in the
+  // input's onChange (a user event, not an effect body) specifically so
+  // this effect only ever calls setState from inside the async timeout
+  // callback, not synchronously in the effect body itself.
+  useEffect(() => {
+    if (referralCheck.status !== "checking" || (role !== "broker" && role !== "salesperson")) return;
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const { data } = await supabase.rpc("check_broker_referral_code", { p_code: referralCode.trim() });
+      setReferralCheck(data ? { status: "valid", name: data as string } : { status: "invalid" });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [referralCode, role, referralCheck.status]);
+
+  function handleReferralCodeChange(value: string) {
+    setReferralCode(value);
+    setReferralCheck(value.trim() ? { status: "checking" } : { status: "idle" });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +140,7 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
         role,
         ...(role === "salesperson" ? { developerId, jobTitle, mobile, whatsapp } : {}),
         ...(role === "broker_agency" ? { agencyPhone, contactPerson, officeDetails } : {}),
+        ...((role === "broker" || role === "salesperson") && referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
       }),
     });
     const data = await res.json();
@@ -321,6 +363,31 @@ export function RegisterFormClient({ disabledTypes = [] }: { disabledTypes?: str
                 </p>
               )}
             </div>
+
+            {(role === "broker" || role === "salesperson") && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Referral Code <span className="text-ink-500">(Optional)</span>
+                </label>
+                <input
+                  value={referralCode}
+                  onChange={(e) => handleReferralCodeChange(e.target.value)}
+                  placeholder="e.g. BRK1001"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm uppercase text-ink-100 placeholder:text-ink-500 placeholder:normal-case focus:outline-none"
+                />
+                {referralCheck.status === "checking" && (
+                  <p className="mt-1 text-[11px] text-ink-500">Checking code…</p>
+                )}
+                {referralCheck.status === "valid" && (
+                  <p className="mt-1 text-[11px] text-emerald-400">Valid code from {referralCheck.name}.</p>
+                )}
+                {referralCheck.status === "invalid" && (
+                  <p className="mt-1 text-[11px] text-rose-400">
+                    We couldn&apos;t find that code — you can still register without it.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-400">
