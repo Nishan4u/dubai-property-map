@@ -305,9 +305,21 @@ section as modules get built out.
   are all built on a shared tool-loop core (`src/lib/ai/core.ts`),
   each with its own streaming chat route and floating widget mounted
   in the relevant portal. Stays usable (portals itself in) during
-  native or simulated map fullscreen instead of disappearing (Module
-  17, partial — AI Investment Advisor, AI Buyer Matching, AI Market
-  Insights, and AI Voice Assistant are still net-new).
+  native or simulated map fullscreen instead of disappearing. MapAI
+  now also covers AI Market Insights (real aggregate stats — price
+  range/average, off-plan vs. ready split, bedroom mix, top
+  developers/tags — Dubai-wide or scoped to one community), AI
+  Investment Advisor (built for the existing Buyer role rather than a
+  separate Investor account, which doesn't exist in this system —
+  reasons about one project's price vs. its own community's live
+  market, handover timeline, and escrow status; never states an ROI
+  or rental-yield figure since no such data exists anywhere in this
+  schema, and "high-roi"-style tags are surfaced explicitly as the
+  listing's own marketing claim, not a computed return), and AI Buyer
+  Matching (personalized recommendations from a signed-in buyer's own
+  favorited projects, with a graceful "sign in / favorite something
+  first" fallback) (Module 17, partial — only AI Voice Assistant is
+  still net-new).
 - Referral & Commission System (Module 18) — now substantially
   complete: the pre-existing staff referral-code/commission-tracking/
   monthly-target/performance-dashboard system is joined by a new
@@ -348,9 +360,8 @@ section as modules get built out.
   WhatsApp history yet), Connect-Any-CRM integrations, ERP/marketing/
   storage/payment integrations beyond Stripe (Module 15).
 - Live inventory sync automation (Module 16).
-- AI Investment Advisor, AI Buyer Matching, AI Market Insights, AI Voice
-  Assistant (rest of Module 17 — see "Substantially built" above for
-  what's already done).
+- AI Voice Assistant (last remaining item in Module 17 — see
+  "Substantially built" above for everything else, which is now done).
 - Business-intelligence-grade reports beyond what's in admin/reports
   today (Module 19).
 - Marketing campaign tooling (push/email/SMS campaigns, landing pages)

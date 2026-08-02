@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamAssistantReply } from "@/lib/ai/assistant";
 import { isRateLimited } from "@/lib/ai/rateLimit";
 import { isValidMessages } from "@/lib/ai/shared";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
+  // Soft/optional -- MapAI is used by signed-out guests too, so this must
+  // never gate the route. Only get_matched_projects (personalized
+  // recommendations) actually needs a buyer id; everything else works
+  // identically whether this resolves or not.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const buyerId = user?.id ?? null;
+
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
@@ -32,7 +43,7 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const chunk of streamAssistantReply(messages)) {
+        for await (const chunk of streamAssistantReply(messages, buyerId)) {
           controller.enqueue(encoder.encode(chunk));
         }
       } catch {

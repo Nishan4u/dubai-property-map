@@ -186,6 +186,195 @@ export async function searchProjectsForAssistant(
   });
 }
 
+// ---------- AI Market Insights / Investment Advisor / Buyer Matching ----------
+// Deliberately built only from real columns that exist on `projects` today
+// (price_from_aed, handover_year, tags, escrow_status) -- there is no ROI,
+// rental yield, or investment-score field anywhere in this schema, and
+// none of this should ever fabricate one. "high-roi" etc. in `tags` is the
+// listing's own marketing claim, surfaced as such, never presented as a
+// computed return figure.
+
+export interface MarketInsightsResult {
+  scope: string;
+  totalProjects: number;
+  priceRangeAed: { minAed: number; maxAed: number; avgAed: number } | null;
+  offPlanCount: number;
+  readyCount: number;
+  bedroomBreakdown: Record<string, number>;
+  topDevelopersByCount: { name: string; count: number }[];
+  topTags: { tag: string; count: number }[];
+}
+
+export async function getMarketInsights(communityName?: string): Promise<MarketInsightsResult> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("projects")
+    .select("price_from_aed, bedrooms_from, bedrooms_to, handover_year, tags, developers!inner(name), communities!inner(name)")
+    .in("status", ["published", "featured"]);
+  if (communityName) query = query.ilike("communities.name", `%${communityName}%`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  type Row = {
+    price_from_aed: number;
+    bedrooms_from: number;
+    bedrooms_to: number;
+    handover_year: number | null;
+    tags: string[];
+    developers: { name: string } | { name: string }[];
+  };
+  const rows = (data ?? []) as unknown as Row[];
+
+  const prices = rows.map((r) => r.price_from_aed).filter((p) => typeof p === "number" && p > 0);
+  const currentYear = new Date().getFullYear();
+  const offPlanCount = rows.filter((r) => (r.handover_year ?? currentYear) > currentYear).length;
+
+  const bedroomBreakdown: Record<string, number> = {};
+  const devCounts = new Map<string, number>();
+  const tagCounts = new Map<string, number>();
+  for (const r of rows) {
+    for (let b = r.bedrooms_from; b <= r.bedrooms_to; b++) {
+      bedroomBreakdown[String(b)] = (bedroomBreakdown[String(b)] ?? 0) + 1;
+    }
+    const devName = Array.isArray(r.developers) ? r.developers[0]?.name : r.developers?.name;
+    if (devName) devCounts.set(devName, (devCounts.get(devName) ?? 0) + 1);
+    for (const t of r.tags ?? []) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  }
+
+  return {
+    scope: communityName ?? "Dubai-wide (all live listings)",
+    totalProjects: rows.length,
+    priceRangeAed: prices.length
+      ? {
+          minAed: Math.min(...prices),
+          maxAed: Math.max(...prices),
+          avgAed: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+        }
+      : null,
+    offPlanCount,
+    readyCount: rows.length - offPlanCount,
+    bedroomBreakdown,
+    topDevelopersByCount: [...devCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count })),
+    topTags: [...tagCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag, count })),
+  };
+}
+
+export type InvestmentAnalysisResult =
+  | { found: false; message: string }
+  | {
+      found: true;
+      project: {
+        name: string;
+        priceFromAed: number;
+        handoverYear: number | null;
+        handoverQuarter: string | null;
+        escrowStatus: string | null;
+        tags: string[];
+        communityName: string | null;
+      };
+      yearsToHandover: number | null;
+      communityMarketStats: MarketInsightsResult;
+      note: string;
+    };
+
+export async function getInvestmentAnalysisForProject(slug: string): Promise<InvestmentAnalysisResult> {
+  if (!slug) return { found: false, message: "No project specified." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("name, price_from_aed, handover_year, handover_quarter, escrow_status, tags, communities(name)")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return { found: false, message: `No project with slug "${slug}" found.` };
+
+  type Row = Omit<typeof data, "communities"> & { communities: { name: string } | { name: string }[] | null };
+  const row = data as unknown as Row;
+  const communityName = Array.isArray(row.communities) ? row.communities[0]?.name : row.communities?.name;
+  const marketStats = await getMarketInsights(communityName ?? undefined);
+  const currentYear = new Date().getFullYear();
+
+  return {
+    found: true,
+    project: {
+      name: data.name,
+      priceFromAed: data.price_from_aed,
+      handoverYear: data.handover_year,
+      handoverQuarter: data.handover_quarter,
+      escrowStatus: data.escrow_status,
+      tags: data.tags,
+      communityName: communityName ?? null,
+    },
+    yearsToHandover: data.handover_year != null ? data.handover_year - currentYear : null,
+    communityMarketStats: marketStats,
+    note: "Tags such as 'high-roi' are the listing's own marketing claim, not a verified or computed return figure -- this platform has no historical rental or resale data to calculate real ROI or rental yield.",
+  };
+}
+
+export type MatchedProjectsResult =
+  | { hasSignal: false; message: string; favoriteCount: number }
+  | { hasSignal: true; favoriteCount: number; projects: AssistantProjectResult[] };
+
+export async function getMatchedProjectsForBuyer(buyerId: string): Promise<MatchedProjectsResult> {
+  const supabase = await createClient();
+  const { data: favRows } = await supabase
+    .from("favorites")
+    .select("projects!inner(slug, price_from_aed, bedrooms_from, bedrooms_to, tags, communities(name))")
+    .eq("user_id", buyerId);
+
+  type FavRow = {
+    projects:
+      | { slug: string; price_from_aed: number; bedrooms_from: number; bedrooms_to: number; tags: string[]; communities: { name: string } | { name: string }[] | null }
+      | { slug: string; price_from_aed: number; bedrooms_from: number; bedrooms_to: number; tags: string[]; communities: { name: string } | { name: string }[] | null }[];
+  };
+  const favorites = ((favRows ?? []) as unknown as FavRow[]).map((r) => (Array.isArray(r.projects) ? r.projects[0] : r.projects));
+
+  if (!favorites.length) {
+    return {
+      hasSignal: false,
+      favoriteCount: 0,
+      message: "This visitor has no favorited projects yet, so there's nothing to personalize from -- suggest favoriting a few they like first.",
+    };
+  }
+
+  const prices = favorites.map((f) => f.price_from_aed).filter((p) => p > 0);
+  const avgPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : undefined;
+
+  const bedroomCounts = new Map<number, number>();
+  const communityCounts = new Map<string, number>();
+  const tagCounts = new Map<string, number>();
+  const favoritedSlugs = new Set(favorites.map((f) => f.slug));
+  for (const f of favorites) {
+    for (let b = f.bedrooms_from; b <= f.bedrooms_to; b++) bedroomCounts.set(b, (bedroomCounts.get(b) ?? 0) + 1);
+    const communityName = Array.isArray(f.communities) ? f.communities[0]?.name : f.communities?.name;
+    if (communityName) communityCounts.set(communityName, (communityCounts.get(communityName) ?? 0) + 1);
+    for (const t of f.tags ?? []) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  }
+  const topCommunity = [...communityCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topBedroom = [...bedroomCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+
+  const candidates = await searchProjectsForAssistant({
+    community: topCommunity,
+    bedroomsMin: topBedroom,
+    bedroomsMax: topBedroom,
+    priceMaxAed: avgPrice ? Math.round(avgPrice * 1.3) : undefined,
+    tags: topTags.length ? topTags : undefined,
+    limit: 8,
+  });
+
+  const projects = candidates.filter((c) => !favoritedSlugs.has(c.path.replace(/^\/projects\//, ""))).slice(0, 5);
+
+  return { hasSignal: true, favoriteCount: favorites.length, projects };
+}
+
 // A logged-in Developer or Salesperson account only ever sees their own
 // developer's projects on the main map/search/filters — everything else
 // (areas, communities) stays visible. Salespersons don't carry developer_id
