@@ -71,8 +71,30 @@ export function AuthStatus() {
     );
   }
 
+  // Every portal role needs its own base path here -- previously only
+  // admin/developer were handled and everything else (broker, broker
+  // agency, salesperson) silently fell through to "/account" (the buyer
+  // account page), so clicking your name/account link never reached your
+  // actual dashboard.
   const dashboardHref =
-    role === "admin" ? "/admin" : role === "developer" ? "/dashboard" : "/account";
+    role === "admin"
+      ? "/admin"
+      : role === "developer"
+        ? "/dashboard"
+        : role === "broker"
+          ? "/broker"
+          : role === "broker_agency"
+            ? "/broker-agency"
+            : role === "salesperson"
+              ? "/salesperson"
+              : "/account";
+
+  const dashboardLabel =
+    role === "admin"
+      ? "Admin Panel"
+      : role === "developer" || role === "broker" || role === "broker_agency" || role === "salesperson"
+        ? "Dashboard"
+        : "My Account";
 
   return (
     <>
@@ -86,7 +108,7 @@ export function AuthStatus() {
         href={dashboardHref}
         className="rounded-lg bg-gold-500 px-3 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400"
       >
-        {role === "admin" ? "Admin Panel" : role === "developer" ? "Dashboard" : "My Account"}
+        {dashboardLabel}
       </Link>
       <SignOutButton className="rounded-lg border border-navy-700 px-3 py-2 text-sm font-medium text-ink-300 hover:text-ink-100" />
     </>

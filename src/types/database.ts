@@ -1,4 +1,4 @@
-export type UserRole = "buyer" | "developer" | "admin" | "broker" | "salesperson";
+export type UserRole = "buyer" | "developer" | "admin" | "broker" | "broker_agency" | "salesperson";
 export type DbBrokerAccountStatus =
   | "pending_verification"
   | "approved"

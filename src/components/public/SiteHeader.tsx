@@ -9,8 +9,14 @@ import { formatAed } from "@/data/mock";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import type { ListingType, Project } from "@/types";
 
+// Label only -- the underlying value stays "buy" (matches the DB's
+// listing_type enum and every existing query/filter that keys off it).
+// This tab is also the de-facto "browse everything" default (see
+// HomeClient.tsx's filteredProjects: activeTab === "buy" skips the
+// listingType filter entirely), so renaming the value itself would be a
+// much larger, riskier change than what was actually asked for.
 const tabs: { label: string; value: ListingType }[] = [
-  { label: "Buy", value: "buy" },
+  { label: "Sell", value: "buy" },
   { label: "Rent", value: "rent" },
   { label: "Off Plan", value: "off-plan" },
   { label: "Ready", value: "ready" },

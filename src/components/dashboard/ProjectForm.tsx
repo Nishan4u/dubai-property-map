@@ -214,6 +214,7 @@ export function ProjectForm({
       name,
       community_id: String(formData.get("community_id")),
       property_type: String(formData.get("property_type")),
+      listing_type: String(formData.get("listing_type") || "off-plan"),
       price_from_aed: Number(formData.get("price_from_aed")) || 0,
       payment_plan: String(formData.get("payment_plan") ?? ""),
       escrow_status: String(formData.get("escrow_status") ?? "").trim() || null,
@@ -262,7 +263,6 @@ export function ProjectForm({
       const finalizePayload = {
         ...payload,
         slug,
-        listing_type: "off-plan",
         status: "published",
         approval_status: developerOptions ? "approved" : "pending",
         gradient: gradients[Math.floor(Math.random() * gradients.length)],
@@ -352,6 +352,17 @@ export function ProjectForm({
               label: v,
               value: v,
             }))}
+          />
+          <SelectField
+            label="Listing Type"
+            name="listing_type"
+            defaultValue={project?.listingType ?? "off-plan"}
+            options={[
+              { label: "Sell", value: "buy" },
+              { label: "Rent", value: "rent" },
+              { label: "Off Plan", value: "off-plan" },
+              { label: "Ready", value: "ready" },
+            ]}
           />
         </div>
         {!project && activeUpcomingProjects.length > 0 && (
