@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
     .select("id, balance_aed, total_used_aed")
     .eq("salesperson_id", salespersonId)
     .maybeSingle();
+  // price_aed already includes VAT (this platform doesn't collect it as a
+  // separate line item from subscribers), so wallet payment simply charges
+  // it as-is -- no addition on top.
   const priceAed = Number(planRow.price_aed);
   if (!wallet || Number(wallet.balance_aed) < priceAed) {
     return NextResponse.json({ error: "Insufficient wallet balance." }, { status: 400 });

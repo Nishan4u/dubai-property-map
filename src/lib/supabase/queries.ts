@@ -982,13 +982,18 @@ export async function getAdminReferralProgramStats() {
     .select("id", { count: "exact", head: true })
     .not("referral_code", "is", null);
 
-  const { data: signups } = await supabase.from("broker_referral_signups").select("status, discount_amount_aed, cashback_amount_aed, cashback_reversed_at");
+  const { data: signups } = await supabase
+    .from("broker_referral_signups")
+    .select("status, discount_amount_aed, cashback_amount_aed, cashback_reversed_at, subscription_amount_aed");
   const successfulReferrals = signups?.filter((s) => s.status === "completed").length ?? 0;
   const pendingReferrals = signups?.filter((s) => ["pending_subscription", "paid_awaiting_activation"].includes(s.status)).length ?? 0;
   const totalDiscountGiven = (signups ?? []).reduce((sum, s) => sum + Number(s.discount_amount_aed ?? 0), 0);
   const totalCashbackPaid = (signups ?? [])
     .filter((s) => s.cashback_amount_aed && !s.cashback_reversed_at)
     .reduce((sum, s) => sum + Number(s.cashback_amount_aed ?? 0), 0);
+  const totalReferralRevenue = (signups ?? [])
+    .filter((s) => s.status === "completed")
+    .reduce((sum, s) => sum + Number(s.subscription_amount_aed ?? 0), 0);
   const conversionRate = signups?.length ? (successfulReferrals / signups.length) * 100 : 0;
 
   const { data: wallets } = await supabase.from("broker_referral_wallets").select("balance_aed");
@@ -1023,8 +1028,84 @@ export async function getAdminReferralProgramStats() {
     totalCashbackPaid,
     totalWalletBalances,
     totalDiscountGiven,
+    totalReferralRevenue,
     conversionRate,
     topReferrers,
+  };
+}
+
+// Broker + salesperson plans only, for the "Eligible Subscription Plans"
+// checklist on the Referral Program settings page.
+export async function getReferralEligiblePlans() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_plans")
+    .select("key, name, plan_type")
+    .in("plan_type", ["broker", "salesperson"])
+    .order("plan_type")
+    .order("sort_order");
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Combined revenue/payment-method overview across all four account types,
+// for the "Payments & Revenue" admin page. Estimated MRR uses each plan's
+// real price_aed (not the label text) -- accounts on a plan with no
+// price_aed set (e.g. Enterprise/custom pricing) just don't contribute to
+// the total rather than guessing a number.
+export async function getPaymentsOverviewStats() {
+  const supabase = await createClient();
+
+  const [{ data: plans }, { data: brokers }, { data: salespersons }, { data: developers }, { data: brokerages }, { data: bankTransfers }, { data: walletTx }] =
+    await Promise.all([
+      supabase.from("subscription_plans").select("key, price_aed"),
+      supabase.from("brokers").select("plan_key, subscription_status"),
+      supabase.from("salespersons").select("plan_key, subscription_status"),
+      supabase.from("developers").select("plan_tier, subscription_status"),
+      supabase.from("brokerages").select("plan_key, subscription_status"),
+      supabase.from("subscription_bank_transfers").select("amount_aed").eq("status", "paid"),
+      supabase
+        .from("broker_referral_wallet_transactions")
+        .select("amount_aed")
+        .in("type", ["used_for_renewal", "used_for_new_subscription"]),
+    ]);
+
+  const priceByKey = new Map((plans ?? []).map((p) => [p.key, p.price_aed != null ? Number(p.price_aed) : null]));
+
+  let totalActiveSubscriptions = 0;
+  let estimatedMrr = 0;
+  for (const row of brokers ?? []) {
+    if (row.subscription_status !== "active") continue;
+    totalActiveSubscriptions += 1;
+    estimatedMrr += (row.plan_key && priceByKey.get(row.plan_key)) || 0;
+  }
+  for (const row of salespersons ?? []) {
+    if (row.subscription_status !== "active") continue;
+    totalActiveSubscriptions += 1;
+    estimatedMrr += (row.plan_key && priceByKey.get(row.plan_key)) || 0;
+  }
+  for (const row of developers ?? []) {
+    if (row.subscription_status !== "active") continue;
+    totalActiveSubscriptions += 1;
+    estimatedMrr += (row.plan_tier && priceByKey.get(row.plan_tier)) || 0;
+  }
+  for (const row of brokerages ?? []) {
+    if (row.subscription_status !== "active") continue;
+    totalActiveSubscriptions += 1;
+    estimatedMrr += (row.plan_key && priceByKey.get(row.plan_key)) || 0;
+  }
+
+  return {
+    totalActiveSubscriptions,
+    estimatedMrr,
+    totalDevelopers: developers?.length ?? 0,
+    totalBrokers: brokers?.length ?? 0,
+    totalSalespersons: salespersons?.length ?? 0,
+    totalBrokerages: brokerages?.length ?? 0,
+    totalBankTransfersApproved: bankTransfers?.length ?? 0,
+    totalBankTransferAmount: (bankTransfers ?? []).reduce((sum, t) => sum + Number(t.amount_aed), 0),
+    totalWalletPayments: walletTx?.length ?? 0,
+    totalWalletPaymentAmount: (walletTx ?? []).reduce((sum, t) => sum + Number(t.amount_aed), 0),
   };
 }
 

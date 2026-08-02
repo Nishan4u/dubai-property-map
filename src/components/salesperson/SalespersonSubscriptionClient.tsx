@@ -16,6 +16,7 @@ interface Plan {
   name: string;
   price_label: string;
   price_aed?: number | null;
+  vat_percent?: number | null;
   features: string[];
   online_payment_enabled?: boolean;
   bank_transfer_enabled?: boolean;
@@ -173,6 +174,13 @@ export function SalespersonSubscriptionClient({
             !!pendingDiscount &&
             (!pendingDiscount.eligiblePlanKeys || pendingDiscount.eligiblePlanKeys.includes(plan.key));
           const isRenewalPlan = plan.key === currentPlanKey;
+          // price_aed already includes VAT (not collected as a separate
+          // line item from subscribers) -- this backs the VAT portion out
+          // of that inclusive price for display only, it isn't added on top.
+          const vatAmount =
+            plan.price_aed != null && plan.vat_percent
+              ? plan.price_aed - plan.price_aed / (1 + plan.vat_percent / 100)
+              : null;
           const canPayWithWallet =
             plan.price_aed != null &&
             walletBalance >= plan.price_aed &&
@@ -192,6 +200,11 @@ export function SalespersonSubscriptionClient({
                 <p className="mt-1 text-xs font-medium text-gold-400">
                   Referral price: AED {(plan.price_aed * (1 - pendingDiscount!.percent / 100)).toFixed(2)} (
                   {pendingDiscount!.percent}% off)
+                </p>
+              )}
+              {!!plan.vat_percent && vatAmount != null && (
+                <p className="mt-1 text-xs text-ink-500">
+                  Includes {plan.vat_percent}% VAT (AED {vatAmount.toFixed(2)})
                 </p>
               )}
               <ul className="mt-4 space-y-2 text-xs text-ink-300">
@@ -233,7 +246,7 @@ export function SalespersonSubscriptionClient({
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 py-2 text-xs font-medium text-gold-300 hover:bg-gold-500/20 disabled:opacity-60"
                 >
                   <Wallet className="h-3.5 w-3.5" />
-                  {walletPayingPlan === plan.key ? "Processing…" : `Pay with Wallet (AED ${walletBalance.toLocaleString()})`}
+                  {walletPayingPlan === plan.key ? "Processing…" : `Pay with Wallet (AED ${plan.price_aed!.toFixed(2)})`}
                 </button>
               )}
             </div>

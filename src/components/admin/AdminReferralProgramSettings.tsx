@@ -13,13 +13,21 @@ interface SettingsRow {
   discount_enabled: boolean;
   discount_percent: number;
   discount_first_subscription_only: boolean;
+  discount_eligible_plan_keys: string[] | null;
   cashback_enabled: boolean;
   cashback_amount_aed: number;
   cashback_min_subscription_amount_aed: number | null;
+  cashback_eligible_account_types: string[];
   wallet_new_purchase_enabled: boolean;
 }
 
-export function AdminReferralProgramSettings({ initial }: { initial: SettingsRow }) {
+interface EligiblePlan {
+  key: string;
+  name: string;
+  plan_type: string;
+}
+
+export function AdminReferralProgramSettings({ initial, plans }: { initial: SettingsRow; plans: EligiblePlan[] }) {
   const [settings, setSettings] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -145,6 +153,39 @@ export function AdminReferralProgramSettings({ initial }: { initial: SettingsRow
             </label>
           </div>
         </div>
+
+        <div className="mt-3 border-t border-navy-700 pt-3">
+          <label className="flex items-center gap-1.5 text-xs font-medium text-ink-400">
+            <input
+              type="checkbox"
+              checked={settings.discount_eligible_plan_keys === null}
+              onChange={(e) => update("discount_eligible_plan_keys", e.target.checked ? null : plans.map((p) => p.key))}
+              className="accent-emerald-500"
+            />
+            Apply to all broker/salesperson plans
+          </label>
+          {settings.discount_eligible_plan_keys !== null && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+              {plans.map((p) => (
+                <label key={p.key} className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={settings.discount_eligible_plan_keys!.includes(p.key)}
+                    onChange={(e) => {
+                      const cur = settings.discount_eligible_plan_keys ?? [];
+                      update(
+                        "discount_eligible_plan_keys",
+                        e.target.checked ? [...cur, p.key] : cur.filter((k) => k !== p.key)
+                      );
+                    }}
+                    className="accent-emerald-500"
+                  />
+                  {p.name} <span className="capitalize text-ink-500">({p.plan_type})</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
@@ -182,6 +223,30 @@ export function AdminReferralProgramSettings({ initial }: { initial: SettingsRow
               placeholder="No minimum"
               className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
             />
+          </div>
+        </div>
+
+        <div className="mt-3 border-t border-navy-700 pt-3">
+          <p className="mb-1.5 text-xs font-medium text-ink-400">Eligible User Types (who can earn cashback)</p>
+          <div className="flex gap-4">
+            {(["broker", "salesperson"] as const).map((type) => (
+              <label key={type} className="flex items-center gap-1.5 text-xs capitalize text-ink-300">
+                <input
+                  type="checkbox"
+                  checked={settings.cashback_eligible_account_types.includes(type)}
+                  onChange={(e) =>
+                    update(
+                      "cashback_eligible_account_types",
+                      e.target.checked
+                        ? [...settings.cashback_eligible_account_types, type]
+                        : settings.cashback_eligible_account_types.filter((t) => t !== type)
+                    )
+                  }
+                  className="accent-emerald-500"
+                />
+                {type}s
+              </label>
+            ))}
           </div>
         </div>
       </div>

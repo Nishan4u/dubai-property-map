@@ -8,9 +8,11 @@ import { AdminReferralProgramDashboard } from "@/components/admin/AdminReferralP
 export function AdminReferralProgramTabs({
   settings,
   stats,
+  plans,
 }: {
   settings: React.ComponentProps<typeof AdminReferralProgramSettings>["initial"];
   stats: React.ComponentProps<typeof AdminReferralProgramDashboard>["stats"];
+  plans: React.ComponentProps<typeof AdminReferralProgramSettings>["plans"];
 }) {
   const [tab, setTab] = useState<"overview" | "settings">("overview");
 
@@ -30,7 +32,11 @@ export function AdminReferralProgramTabs({
           </button>
         ))}
       </div>
-      {tab === "overview" ? <AdminReferralProgramDashboard stats={stats} /> : <AdminReferralProgramSettings initial={settings} />}
+      {tab === "overview" ? (
+        <AdminReferralProgramDashboard stats={stats} />
+      ) : (
+        <AdminReferralProgramSettings initial={settings} plans={plans} />
+      )}
     </div>
   );
 }

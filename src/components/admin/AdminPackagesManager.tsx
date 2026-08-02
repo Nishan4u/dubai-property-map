@@ -22,6 +22,7 @@ interface PlanRow {
   name: string;
   price_label: string;
   price_aed: number | null;
+  vat_percent: number | null;
   features: string[];
   stripe_price_id: string | null;
   sort_order: number;
@@ -85,6 +86,7 @@ export function AdminPackagesManager({
         name: row.name,
         price_label: row.price_label,
         price_aed: row.price_aed,
+        vat_percent: row.vat_percent,
         features: row.features,
         stripe_price_id: row.stripe_price_id || null,
         sort_order: row.sort_order,
@@ -225,6 +227,25 @@ export function AdminPackagesManager({
                 <p className="mt-1 text-xs text-ink-500">
                   A real number for referral discount/wallet math -- the label above is still what
                   subscribers actually see.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  VAT % (blank = not applicable)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={row.vat_percent ?? ""}
+                  onChange={(e) => updateField(row.id, "vat_percent", e.target.value === "" ? null : Number(e.target.value))}
+                  placeholder="e.g. 5"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-ink-500">
+                  VAT is already included in the price above, not charged separately. This just shows the
+                  breakdown (e.g. &ldquo;Includes 5% VAT&rdquo;) on the Subscription page and in the
+                  payments export for VAT filing -- it doesn&apos;t change what&apos;s actually charged.
                 </p>
               </div>
               <div>

@@ -1,29 +1,23 @@
 import { StatCard } from "@/components/ui/StatCard";
 import { PaymentsTable } from "@/components/admin/PaymentsTable";
+import { PaymentsExportButton } from "@/components/admin/PaymentsExportButton";
 import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getPaymentsOverviewStats } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
-const planPrice: Record<string, number> = {
-  free: 0,
-  starter: 999,
-  professional: 2999,
-  enterprise: 0, // custom pricing, not counted in MRR estimate
-};
-
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
-  const { data: developers } = await supabase
-    .from("developers")
-    .select("id, name, plan_tier, subscription_status, stripe_customer_id")
-    .order("name");
+  const [{ data: developers }, stats] = await Promise.all([
+    supabase
+      .from("developers")
+      .select("id, name, plan_tier, subscription_status, stripe_customer_id")
+      .order("name"),
+    getPaymentsOverviewStats(),
+  ]);
 
   const rows = developers ?? [];
-  const mrr = rows
-    .filter((d) => d.subscription_status === "active")
-    .reduce((sum, d) => sum + (planPrice[d.plan_tier] ?? 0), 0);
-  const activeCount = rows.filter((d) => d.subscription_status === "active").length;
 
   return (
     <div className="space-y-6 p-6">
@@ -32,23 +26,34 @@ export default async function AdminPaymentsPage() {
           <Wallet className="h-5 w-5 text-gold-400" /> Payments & Revenue
         </h1>
         <p className="text-sm text-ink-400">
-          Subscription status per developer, synced live from Stripe via
-          webhook once configured (Settings page).
+          Across developers, brokers, salespersons, and broker agencies — synced live from Stripe via
+          webhook, plus bank transfer and Referral Wallet payments.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Estimated MRR" value={`AED ${mrr.toLocaleString()}`} />
-        <StatCard label="Active Subscriptions" value={String(activeCount)} />
-        <StatCard label="Total Developers" value={String(rows.length)} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <StatCard label="Estimated Combined MRR" value={`AED ${stats.estimatedMrr.toLocaleString()}`} />
+        <StatCard label="Total Active Subscriptions" value={stats.totalActiveSubscriptions.toLocaleString()} />
+        <StatCard label="Developers / Brokers / Salespersons / Agencies" value={`${stats.totalDevelopers} / ${stats.totalBrokers} / ${stats.totalSalespersons} / ${stats.totalBrokerages}`} />
+        <StatCard
+          label="Bank Transfers Approved"
+          value={stats.totalBankTransfersApproved.toLocaleString()}
+          delta={`AED ${stats.totalBankTransferAmount.toLocaleString()}`}
+        />
+        <StatCard
+          label="Wallet Payments"
+          value={stats.totalWalletPayments.toLocaleString()}
+          delta={`AED ${stats.totalWalletPaymentAmount.toLocaleString()}`}
+        />
       </div>
+
+      <PaymentsExportButton />
 
       <PaymentsTable rows={rows} />
       <p className="text-xs text-ink-500">
-        Subtotal/VAT/Total reflect the developer&apos;s current plan price at
-        the UAE&apos;s standard 5% VAT rate. This platform doesn&apos;t yet
-        store historical per-invoice line items — that requires syncing
-        Stripe&apos;s Invoice API once billing is active.
+        The table below shows developer subscriptions only, at the UAE&apos;s standard 5% VAT rate for
+        display purposes. Use the export above for a full cross-account-type payment report with each
+        plan&apos;s actual configured VAT rate.
       </p>
     </div>
   );

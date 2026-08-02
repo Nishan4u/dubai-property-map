@@ -7,6 +7,7 @@ interface Stats {
   totalCashbackPaid: number;
   totalWalletBalances: number;
   totalDiscountGiven: number;
+  totalReferralRevenue: number;
   conversionRate: number;
   topReferrers: { accountType: string; accountId: string; count: number; name: string; referralCode: string }[];
 }
@@ -31,6 +32,7 @@ export function AdminReferralProgramDashboard({ stats }: { stats: Stats }) {
         <StatCard label="Total Cashback Paid" value={`AED ${stats.totalCashbackPaid.toLocaleString()}`} />
         <StatCard label="Total Wallet Balances" value={`AED ${stats.totalWalletBalances.toLocaleString()}`} />
         <StatCard label="Total Discount Given" value={`AED ${stats.totalDiscountGiven.toLocaleString()}`} />
+        <StatCard label="Total Referral Revenue" value={`AED ${stats.totalReferralRevenue.toLocaleString()}`} />
       </div>
 
       <SectionCard title="Top Referrers">
