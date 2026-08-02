@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
 import QRCode from "qrcode";
@@ -30,6 +30,23 @@ export function ShareButton({
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  // compact's default (open upward, away from this same card's own content
+  // below) flips to downward when there isn't actually room above -- e.g.
+  // the first card in a list, near the top of the screen -- so the menu
+  // never gets cut off against the top of the viewport.
+  const [openUpward, setOpenUpward] = useState(compact);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   useEffect(() => {
     const directUrl = path ? new URL(path, window.location.origin).toString() : window.location.href;
@@ -131,11 +148,19 @@ export function ShareButton({
   function handleTriggerClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    if (compact) {
+      // ~320px covers the menu's full option list without the QR code
+      // panel -- good enough for a yes/no fit check, no need to measure
+      // the actual (not-yet-rendered) menu.
+      const MENU_HEIGHT_ESTIMATE = 320;
+      const spaceAbove = e.currentTarget.getBoundingClientRect().top;
+      setOpenUpward(spaceAbove >= MENU_HEIGHT_ESTIMATE);
+    }
     setOpen((o) => !o);
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapperRef}>
       <button
         onClick={handleTriggerClick}
         title="Share"
@@ -156,9 +181,12 @@ export function ShareButton({
             // compact is used inside small cards (project list rows, the map
             // popup) where the trigger sits near the top -- opening downward
             // there covers the rest of that same card's own content (price,
-            // View Project button, etc.). Opening upward instead lets it
-            // grow into open space above the card rather than over it.
-            compact
+            // View Project button, etc.), so it prefers opening upward. But
+            // for a card near the very top of the screen (openUpward is
+            // computed per-click in handleTriggerClick), there isn't room
+            // above either, so it falls back to downward there instead of
+            // getting cut off against the top of the viewport.
+            openUpward
               ? "absolute bottom-full right-0 z-20 mb-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
               : "absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
           }
