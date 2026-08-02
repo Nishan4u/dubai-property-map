@@ -269,7 +269,7 @@ Push Notifications, Mobile Navigation, Touch-Optimized Map.
 
 ---
 
-## Build Status Snapshot (as of 2026-08-01)
+## Build Status Snapshot (as of 2026-08-02)
 
 A quick, codebase-verified read of what's already in place vs. what's net
 new from this document — not exhaustive, but grounded in what actually
@@ -298,15 +298,30 @@ section as modules get built out.
   partial).
 - PWA basics: service worker registered (Module 28/31, partial — no full
   offline support yet).
-- AI Chat Assistant ("MapAI"): public-site floating widget, Claude Haiku
-  4.5 with a tool-calling loop against real listed projects, streaming
-  responses, animated launcher/panel styling, stays usable (portals
-  itself in) during native or simulated map fullscreen instead of
-  disappearing (Module 17, partial — just the buyer-facing chat
-  assistant; AI Property Search/Community Guide/Investment
-  Advisor/Buyer Matching/Broker Assistant/Sales Assistant/Project
-  Comparison/Market Insights/Recommendation Engine/Voice Assistant are
-  still net-new).
+- AI Platform: public-site "MapAI" chat widget (Claude Haiku 4.5,
+  tool-calling loop against real listed projects — covers AI Property
+  Search — plus a Community Guide tool), AI Project Comparison, AI
+  Recommendation Engine, AI Broker Assistant, and AI Sales Assistant
+  are all built on a shared tool-loop core (`src/lib/ai/core.ts`),
+  each with its own streaming chat route and floating widget mounted
+  in the relevant portal. Stays usable (portals itself in) during
+  native or simulated map fullscreen instead of disappearing (Module
+  17, partial — AI Investment Advisor, AI Buyer Matching, AI Market
+  Insights, and AI Voice Assistant are still net-new).
+- Referral & Commission System (Module 18) — now substantially
+  complete: the pre-existing staff referral-code/commission-tracking/
+  monthly-target/performance-dashboard system is joined by a new
+  configurable Broker/Salesperson Referral Program — automatic unique
+  codes (BRK1001/SP2001-style), referral link + QR, optional capture
+  at registration with live validation, admin-configurable discount
+  applied via a fresh Stripe coupon at checkout, admin-configurable
+  cashback credited to a Referral Wallet only after registration +
+  email-verified + paid + activated, wallet spendable on renewals
+  (and new purchases if admin allows), self-referral guard, automatic
+  clawback on cancellation/refund, admin Settings + Analytics
+  dashboard (incl. eligible-plans/eligible-account-types restriction
+  and a Total Referral Revenue stat), and a VAT-aware cross-account
+  payments CSV export for filing.
 - Admin panel search & bulk actions: live search added to Developers,
   Brokers, Brokerages, Salespersons, Users, Payments, and all four
   Subscriptions account tables; select-all + bulk delete on Developers,
@@ -333,11 +348,9 @@ section as modules get built out.
   WhatsApp history yet), Connect-Any-CRM integrations, ERP/marketing/
   storage/payment integrations beyond Stripe (Module 15).
 - Live inventory sync automation (Module 16).
-- Rest of the AI Platform (Module 17) beyond the buyer chat assistant —
-  see the "Substantially built" note above for the full remaining list.
-- Referral & commission system with payouts/targets (some referral-code
-  scaffolding exists per staff invites, but no commission engine) (Module
-  18).
+- AI Investment Advisor, AI Buyer Matching, AI Market Insights, AI Voice
+  Assistant (rest of Module 17 — see "Substantially built" above for
+  what's already done).
 - Business-intelligence-grade reports beyond what's in admin/reports
   today (Module 19).
 - Marketing campaign tooling (push/email/SMS campaigns, landing pages)
