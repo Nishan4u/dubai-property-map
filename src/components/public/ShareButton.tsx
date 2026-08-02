@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Share2, Copy, Mail, Check, QrCode, Scale } from "lucide-react";
 import QRCode from "qrcode";
@@ -30,22 +31,48 @@ export function ShareButton({
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
-  // compact's default (open upward, away from this same card's own content
-  // below) flips to downward when there isn't actually room above -- e.g.
-  // the first card in a list, near the top of the screen -- so the menu
-  // never gets cut off against the top of the viewport.
-  const [openUpward, setOpenUpward] = useState(compact);
+  // Computed fresh at click time from the trigger's real on-screen position
+  // (see computeMenuPosition) -- fixed-positioned and clamped to the
+  // viewport on every side, rather than a CSS `absolute` anchor relative to
+  // the trigger's own tiny wrapper. The old approach only checked whether
+  // there was room between the trigger and the top of the *viewport*, so it
+  // had no way to know other floating chrome (e.g. a featured-project card)
+  // occupied that space and would open straight over it. Measuring real
+  // available space in each direction and capping maxHeight (scrollable if
+  // still short on room) fixes that class of bug on every breakpoint at
+  // once instead of special-casing one more layout.
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // The menu itself is rendered via a portal straight to document.body (see
+  // the return statement) -- once ported out, it's no longer a DOM
+  // descendant of wrapperRef, so the outside-click check below needs to
+  // treat clicks inside the portaled menu as "inside" too, or every click
+  // on a menu item would immediately close the menu before its own onClick
+  // ever ran.
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    // Closes rather than trying to re-track position: a fixed-position menu
+    // would otherwise visually detach from its trigger the instant the page
+    // (or a scrollable list/card container) scrolls underneath it. `true`
+    // for capture so this also fires for scrolling inside a nested
+    // container, not just the window/document itself.
+    function onScroll() {
+      setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("scroll", onScroll, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -139,23 +166,53 @@ export function ShareButton({
     setShowQr((v) => !v);
   }
 
+  const MENU_WIDTH = 224; // w-56
+  const VIEWPORT_MARGIN = 8;
+
+  // Measures the trigger's actual on-screen position and picks whichever
+  // direction has more real room, clamped so the menu can never render
+  // outside the viewport on any side -- works the same for a button near
+  // the top, bottom, or either edge of the screen, on any breakpoint.
+  function computeMenuPosition(triggerEl: HTMLElement): React.CSSProperties {
+    const rect = triggerEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const left = Math.min(
+      Math.max(rect.right - MENU_WIDTH, VIEWPORT_MARGIN),
+      vw - MENU_WIDTH - VIEWPORT_MARGIN
+    );
+    const spaceBelow = vh - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN;
+
+    if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+      return {
+        position: "fixed",
+        left,
+        top: rect.bottom + VIEWPORT_MARGIN,
+        width: MENU_WIDTH,
+        maxHeight: Math.max(spaceBelow, 120),
+      };
+    }
+    return {
+      position: "fixed",
+      left,
+      bottom: vh - rect.top + VIEWPORT_MARGIN,
+      width: MENU_WIDTH,
+      maxHeight: Math.max(spaceAbove, 120),
+    };
+  }
+
   // Previously tried navigator.share() first and fell back to this dropdown
   // -- but that API is also available on desktop Safari/Chrome (not just
   // mobile), so it could open the OS share sheet *and* this dropdown at
   // once depending on timing. Always using the same in-app menu everywhere
   // is simpler, consistent across devices, and is what actually lets us
   // offer Compare/auto-close/etc. below.
-  function handleTriggerClick(e: React.MouseEvent) {
+  function handleTriggerClick(e: React.MouseEvent<HTMLElement>) {
     e.preventDefault();
     e.stopPropagation();
-    if (compact) {
-      // ~320px covers the menu's full option list without the QR code
-      // panel -- good enough for a yes/no fit check, no need to measure
-      // the actual (not-yet-rendered) menu.
-      const MENU_HEIGHT_ESTIMATE = 320;
-      const spaceAbove = e.currentTarget.getBoundingClientRect().top;
-      setOpenUpward(spaceAbove >= MENU_HEIGHT_ESTIMATE);
-    }
+    setMenuStyle(computeMenuPosition(e.currentTarget));
     setOpen((o) => !o);
   }
 
@@ -174,22 +231,12 @@ export function ShareButton({
         {!compact && "Share"}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={menuRef}
           onClick={(e) => e.stopPropagation()}
-          className={
-            // compact is used inside small cards (project list rows, the map
-            // popup) where the trigger sits near the top -- opening downward
-            // there covers the rest of that same card's own content (price,
-            // View Project button, etc.), so it prefers opening upward. But
-            // for a card near the very top of the screen (openUpward is
-            // computed per-click in handleTriggerClick), there isn't room
-            // above either, so it falls back to downward there instead of
-            // getting cut off against the top of the viewport.
-            openUpward
-              ? "absolute bottom-full right-0 z-20 mb-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
-              : "absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
-          }
+          style={menuStyle}
+          className="z-50 overflow-y-auto rounded-xl border border-navy-700 bg-navy-900 p-2 shadow-2xl"
         >
           <button
             onClick={handleCopy}
@@ -254,7 +301,8 @@ export function ShareButton({
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
