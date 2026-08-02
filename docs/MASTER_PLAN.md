@@ -269,7 +269,7 @@ Push Notifications, Mobile Navigation, Touch-Optimized Map.
 
 ---
 
-## Build Status Snapshot (as of 2026-08-02)
+## Build Status Snapshot (as of 2026-08-03)
 
 A quick, codebase-verified read of what's already in place vs. what's net
 new from this document — not exhaustive, but grounded in what actually
@@ -363,6 +363,18 @@ section as modules get built out.
   approving a draft project correctly publishes it (previously
   approval only updated the approval flag, leaving the project
   invisible on the public site despite the "now live" message).
+- Developer listing model refined: the admin/developer project form's
+  Listing Type field is now a two-step choice (Sell/Rent, then, only when
+  Sell is picked, Off Plan/Ready) that still resolves to the same
+  `listing_type` enum. Developers pay no subscription for listing at
+  all — project creation is free/unlimited via the pre-existing Global
+  Free Access "Developer" toggle (`free_access_settings`, patch_88) — and
+  the only paid developer action is a flat AED 50 / 15-day "Feature a
+  Project" boost (`/dashboard/packages`, new
+  `/api/developer/feature-project-checkout` route) that sets the
+  project's own `featured` flag with a `featured_until` expiry checked at
+  read time (mirrors the pre-existing `ad_placements` date-range pattern
+  — no background job), independent of plan tier.
 
 **Not yet built (net-new from this document):**
 - Two-factor authentication, device/session management, login history

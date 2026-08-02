@@ -16,7 +16,11 @@ export function mapProject(row: ProjectWithRelations): Project {
     listingType: row.listing_type,
     status: row.status,
     approvalStatus: row.approval_status,
-    featured: row.featured,
+    // featured_until is optional -- null means no expiry (every existing
+    // admin-set featured project keeps working exactly as before); a real
+    // timestamp is a paid boost (see patch_99) that lapses once it's past,
+    // without needing a background job to flip the boolean back.
+    featured: row.featured && (!row.featured_until || new Date(row.featured_until) > new Date()),
     priceFromAed: row.price_from_aed,
     paymentPlan: row.payment_plan ?? "",
     bedroomsFrom: row.bedrooms_from,

@@ -232,6 +232,7 @@ export interface ProjectRow {
   status: DbProjectStatus;
   approval_status: DbApprovalStatus;
   featured: boolean;
+  featured_until: string | null;
   price_from_aed: number;
   payment_plan: string | null;
   bedrooms_from: number;

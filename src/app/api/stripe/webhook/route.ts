@@ -49,6 +49,20 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      if (session.metadata?.kind === "project_featured" && developerId) {
+        const projectId = session.metadata.project_id;
+        if (projectId) {
+          const featuredUntil = new Date();
+          featuredUntil.setDate(featuredUntil.getDate() + 15);
+          await supabase
+            .from("projects")
+            .update({ featured: true, featured_until: featuredUntil.toISOString() })
+            .eq("id", projectId)
+            .eq("developer_id", developerId);
+        }
+        break;
+      }
+
       if (session.metadata?.kind === "broker_subscription") {
         const brokerId = session.metadata.broker_id;
         const plan = session.metadata.plan;

@@ -1,5 +1,6 @@
 import { PlanCards } from "@/components/dashboard/PlanCards";
 import { AdRequestSection } from "@/components/dashboard/AdRequestSection";
+import { FeatureProjectSection } from "@/components/dashboard/FeatureProjectSection";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAdPlacementsForDeveloper,
@@ -42,6 +43,16 @@ export default async function DeveloperPackagesPage() {
         currentPlan={developer?.plan_tier ?? "free"}
         developerId={developerId}
         bankDetails={bankDetails}
+      />
+
+      <FeatureProjectSection
+        projects={projects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          featured: p.featured,
+          featured_until: p.featured_until,
+        }))}
       />
 
       <AdRequestSection

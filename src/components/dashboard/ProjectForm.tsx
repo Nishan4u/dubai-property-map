@@ -94,6 +94,19 @@ export function ProjectForm({
   });
   const [linkedUpcomingId, setLinkedUpcomingId] = useState("");
 
+  // listing_type in the DB is still a single flat value (buy/rent/off-plan/
+  // ready -- see schema.sql) -- this just presents it as a friendlier
+  // two-step choice (Sell/Rent, then Off Plan/Ready when selling) and
+  // resolves back to one of the same four values on submit, rather than
+  // introducing a second DB column.
+  const [transactionType, setTransactionType] = useState<"sell" | "rent">(
+    project?.listingType === "rent" ? "rent" : "sell"
+  );
+  const [saleStatus, setSaleStatus] = useState<"off-plan" | "ready">(
+    project?.listingType === "ready" ? "ready" : "off-plan"
+  );
+  const listingType = transactionType === "rent" ? "rent" : saleStatus;
+
   function handleLinkUpcoming(id: string) {
     setLinkedUpcomingId(id);
     const match = activeUpcomingProjects.find((u) => u.id === id);
@@ -214,7 +227,7 @@ export function ProjectForm({
       name,
       community_id: String(formData.get("community_id")),
       property_type: String(formData.get("property_type")),
-      listing_type: String(formData.get("listing_type") || "off-plan"),
+      listing_type: listingType,
       price_from_aed: Number(formData.get("price_from_aed")) || 0,
       payment_plan: String(formData.get("payment_plan") ?? ""),
       escrow_status: String(formData.get("escrow_status") ?? "").trim() || null,
@@ -353,17 +366,30 @@ export function ProjectForm({
               value: v,
             }))}
           />
-          <SelectField
-            label="Listing Type"
-            name="listing_type"
-            defaultValue={project?.listingType ?? "off-plan"}
-            options={[
-              { label: "Sell", value: "buy" },
-              { label: "Rent", value: "rent" },
-              { label: "Off Plan", value: "off-plan" },
-              { label: "Ready", value: "ready" },
-            ]}
-          />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">Listing Type</label>
+            <select
+              value={transactionType}
+              onChange={(e) => setTransactionType(e.target.value as "sell" | "rent")}
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            >
+              <option value="sell">Sell</option>
+              <option value="rent">Rent</option>
+            </select>
+          </div>
+          {transactionType === "sell" && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-400">Sale Status</label>
+              <select
+                value={saleStatus}
+                onChange={(e) => setSaleStatus(e.target.value as "off-plan" | "ready")}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+              >
+                <option value="off-plan">Off Plan</option>
+                <option value="ready">Ready</option>
+              </select>
+            </div>
+          )}
         </div>
         {!project && activeUpcomingProjects.length > 0 && (
           <div className="mt-4">
