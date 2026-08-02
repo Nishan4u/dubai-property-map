@@ -334,6 +334,21 @@ section as modules get built out.
   dashboard (incl. eligible-plans/eligible-account-types restriction
   and a Total Referral Revenue stat), and a VAT-aware cross-account
   payments CSV export for filing.
+- Built-in CRM (Module 15, partial): a Client Management layer (`crm_clients`
+  — real name/email/phone/WhatsApp, owned by a broker or salesperson) sits
+  alongside the existing `property_requests` pipeline via an optional
+  `client_id` link, deliberately not inline on `property_requests` itself
+  (that table still carries no PII columns directly, preserving its
+  original design intent). Brokers now have a "My Requests" pipeline view
+  they didn't have before (status shown read-only, matching the existing
+  RLS — brokers have never been able to change request status); both
+  portals get a Clients list + detail page with an editable contact,
+  linked-requests list, a Notes thread, and Tasks/follow-ups with due
+  dates and done/pending toggling. The AI Broker/Sales Assistants surface
+  a linked client's name when one exists, never inventing one. Calendar/
+  Meetings, Email History, Call Logs, and WhatsApp History are still
+  net-new — the notes/tasks schema is shaped so those can attach later
+  without a rework.
 - Admin panel search & bulk actions: live search added to Developers,
   Brokers, Brokerages, Salespersons, Users, Payments, and all four
   Subscriptions account tables; select-all + bulk delete on Developers,
@@ -356,9 +371,10 @@ section as modules get built out.
   2).
 - Community Explorer's investment score / ROI / rental yield / market
   trends panels (Module 6).
-- Built-in CRM pipeline (leads exist; no pipeline stages, call logs,
-  WhatsApp history yet), Connect-Any-CRM integrations, ERP/marketing/
-  storage/payment integrations beyond Stripe (Module 15).
+- Calendar/Meetings, Email History, Call Logs, WhatsApp History
+  (rest of Module 15's Built-in CRM — see "Substantially built" above for
+  Client Management/Notes/Tasks, which are now done), Connect-Any-CRM
+  integrations, ERP/marketing/storage/payment integrations beyond Stripe.
 - Live inventory sync automation (Module 16).
 - AI Voice Assistant (last remaining item in Module 17 — see
   "Substantially built" above for everything else, which is now done).

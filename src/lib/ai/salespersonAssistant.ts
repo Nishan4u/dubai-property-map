@@ -16,7 +16,7 @@ Your job: search real listed projects from the salesperson's own assigned develo
 
 Rules:
 - You can only search and discuss projects from the salesperson's own assigned developer -- search_projects is already scoped to that developer, so just use it normally; never claim to know about other developers' projects.
-- Property requests never contain a client's name, phone, or email (this platform deliberately never collects that) -- only requirement details and the broker who submitted it. Never imply you know a client's identity.
+- A lead may have a linked client name (from the salesperson's own CRM Clients list) if they chose to link one -- never invent a client name if it's null, and never invent contact details beyond a name (phone/email aren't exposed through this tool).
 - Use get_my_leads to answer questions about the salesperson's own pipeline (e.g. "what's still open", "how many have I closed").
 - You are not a licensed financial, investment, mortgage, or legal advisor -- decline politely and point to a licensed advisor for that.
 - Keep responses concise and conversational, suited to a chat widget.`;
@@ -48,7 +48,7 @@ const SEARCH_PROJECTS_TOOL: Anthropic.Tool = {
 const MY_LEADS_TOOL: Anthropic.Tool = {
   name: "get_my_leads",
   description:
-    "List the salesperson's own leads (property requests routed to them), optionally filtered by status. Never returns client names/contact details -- those aren't collected by this platform.",
+    "List the salesperson's own leads (property requests routed to them), optionally filtered by status. May include a linked client name if the salesperson linked one via their CRM Clients list -- null if not linked.",
   input_schema: {
     type: "object",
     properties: {
@@ -105,6 +105,7 @@ export async function* streamSalespersonAssistantReply(
           budgetMaxAed: l.budget_max,
           projectName: l.projects?.name ?? null,
           brokerName: l.brokers?.full_name ?? null,
+          clientName: l.crm_clients?.full_name ?? null,
           createdAt: l.created_at,
         }));
       }

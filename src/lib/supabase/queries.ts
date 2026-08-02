@@ -702,7 +702,7 @@ export async function getPropertyRequestsForBroker(brokerId: string, status?: st
   const supabase = await createClient();
   let query = supabase
     .from("property_requests")
-    .select("*, projects(name), developers(name)")
+    .select("*, projects(name), developers(name), crm_clients(id, full_name, phone, email)")
     .eq("broker_id", brokerId)
     .order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
@@ -718,7 +718,7 @@ export async function getPropertyRequestsForSalesperson(salespersonId: string, s
   const supabase = await createClient();
   let query = supabase
     .from("property_requests")
-    .select("*, brokers(full_name, brn, mobile, whatsapp, email), projects(name)")
+    .select("*, brokers(full_name, brn, mobile, whatsapp, email), projects(name), crm_clients(id, full_name, phone, email)")
     .eq("salesperson_id", salespersonId)
     .order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
@@ -726,6 +726,86 @@ export async function getPropertyRequestsForSalesperson(salespersonId: string, s
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+// ---------- Built-in CRM: Clients, Notes, Tasks ----------
+// Layered on top of property_requests (patch_98) rather than replacing it
+// -- property_requests itself still carries no client PII columns; contact
+// info lives here, reachable only via the opaque client_id join.
+
+export interface CrmClientRow {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  source: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getCrmClientsForBroker(brokerId: string): Promise<CrmClientRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_clients")
+    .select("id, full_name, email, phone, whatsapp, source, status, created_at, updated_at")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getCrmClientsForSalesperson(salespersonId: string): Promise<CrmClientRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_clients")
+    .select("id, full_name, email, phone, whatsapp, source, status, created_at, updated_at")
+    .eq("salesperson_id", salespersonId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id", ownerId: string, clientId: string) {
+  const supabase = await createClient();
+  const { data: client, error } = await supabase
+    .from("crm_clients")
+    .select("*")
+    .eq("id", clientId)
+    .eq(ownerColumn, ownerId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!client) return null;
+
+  const [{ data: requests }, { data: notes }, { data: tasks }] = await Promise.all([
+    supabase
+      .from("property_requests")
+      .select("id, request_id, status, property_type, budget_min, budget_max, created_at, projects(name)")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false }),
+    supabase.from("crm_notes").select("id, body, created_at, created_by").eq("client_id", clientId).order("created_at", { ascending: false }),
+    supabase
+      .from("crm_tasks")
+      .select("id, title, due_at, status, created_at")
+      .eq("client_id", clientId)
+      .order("due_at", { ascending: true, nullsFirst: false }),
+  ]);
+
+  return {
+    client,
+    requests: requests ?? [],
+    notes: notes ?? [],
+    tasks: tasks ?? [],
+  };
+}
+
+export async function getCrmClientDetailForBroker(clientId: string, brokerId: string) {
+  return getCrmClientDetail("broker_id", brokerId, clientId);
+}
+
+export async function getCrmClientDetailForSalesperson(clientId: string, salespersonId: string) {
+  return getCrmClientDetail("salesperson_id", salespersonId, clientId);
 }
 
 export async function getBookingsForDeveloper(developerId: string) {

@@ -16,7 +16,7 @@ Your job: search real listed projects on the platform for the broker's clients, 
 
 Rules:
 - Brokers see every project on the platform -- use search_projects freely, never invent project names, prices, or developers.
-- Property requests never contain a client's name, phone, or email (this platform deliberately never collects that) -- only requirement details (budget, bedrooms, property type, status, matched project/developer if any). Never imply you know who the client is; refer to requests by their request ID or requirement summary.
+- A property request may have a linked client name (from the broker's own CRM Clients list) if the broker chose to link one -- never invent a client name if it's null, and never invent contact details beyond a name (phone/email aren't exposed through this tool).
 - Use get_my_property_requests to answer questions about the broker's own pipeline (e.g. "what's still open", "how many have I closed").
 - You are not a licensed financial, investment, mortgage, or legal advisor -- decline politely and point to a licensed advisor for that.
 - Keep responses concise and conversational, suited to a chat widget.`;
@@ -49,7 +49,7 @@ const SEARCH_PROJECTS_TOOL: Anthropic.Tool = {
 const MY_PROPERTY_REQUESTS_TOOL: Anthropic.Tool = {
   name: "get_my_property_requests",
   description:
-    "List the broker's own property requests (their pipeline), optionally filtered by status. Never returns client names/contact details -- those aren't collected by this platform.",
+    "List the broker's own property requests (their pipeline), optionally filtered by status. May include a linked client name if the broker linked one via their CRM Clients list -- null if not linked.",
   input_schema: {
     type: "object",
     properties: {
@@ -93,8 +93,9 @@ export async function* streamBrokerAssistantReply(
       if (name === "get_my_property_requests") {
         const status = typeof input.status === "string" ? input.status : undefined;
         const requests = await getPropertyRequestsForBroker(brokerId, status);
-        // Lean, non-identifying shape -- no client info exists to leak, but
-        // trim the row down anyway rather than handing raw DB rows to the model.
+        // Lean shape rather than handing raw DB rows to the model --
+        // clientName is only ever what the broker themselves linked via
+        // their CRM Clients list, never invented.
         return requests.map((r) => ({
           requestId: r.request_id,
           status: r.status,
@@ -104,6 +105,7 @@ export async function* streamBrokerAssistantReply(
           budgetMaxAed: r.budget_max,
           projectName: r.projects?.name ?? null,
           developerName: r.developers?.name ?? null,
+          clientName: r.crm_clients?.full_name ?? null,
           createdAt: r.created_at,
         }));
       }

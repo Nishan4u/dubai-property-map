@@ -1,7 +1,7 @@
 import { UserRound } from "lucide-react";
 import { MyLeadsTable } from "@/components/salesperson/MyLeadsTable";
 import { createClient } from "@/lib/supabase/server";
-import { requireSalespersonProfile } from "@/lib/supabase/queries";
+import { requireSalespersonProfile, getCrmClientsForSalesperson } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +11,11 @@ export default async function SalespersonLeadsPage() {
 
   const { data: leads } = await supabase
     .from("property_requests")
-    .select("*, brokers(full_name, brn, mobile, whatsapp, email), projects(name)")
+    .select("*, brokers(full_name, brn, mobile, whatsapp, email), projects(name), crm_clients(id, full_name, phone, email)")
     .eq("salesperson_id", profile.salesperson_id)
     .order("created_at", { ascending: false });
+
+  const clients = await getCrmClientsForSalesperson(profile.salesperson_id);
 
   return (
     <div className="space-y-4 p-6">
@@ -23,7 +25,7 @@ export default async function SalespersonLeadsPage() {
         </h1>
         <p className="text-sm text-ink-400">Property requests assigned to you.</p>
       </div>
-      <MyLeadsTable leads={leads ?? []} />
+      <MyLeadsTable leads={leads ?? []} clients={clients} />
     </div>
   );
 }

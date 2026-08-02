@@ -6,6 +6,7 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import type { CrmClientRow } from "@/lib/supabase/queries";
 
 const statusOptions = [
   "new",
@@ -44,12 +45,13 @@ interface LeadRow {
   budget_min: number | null;
   budget_max: number | null;
   broker_notes: string | null;
+  client_id: string | null;
   created_at: string;
   brokers: { full_name: string; brn: string; mobile: string; whatsapp: string; email: string } | null;
   projects: { name: string } | null;
 }
 
-export function MyLeadsTable({ leads }: { leads: LeadRow[] }) {
+export function MyLeadsTable({ leads, clients }: { leads: LeadRow[]; clients: CrmClientRow[] }) {
   const router = useRouter();
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -68,6 +70,22 @@ export function MyLeadsTable({ leads }: { leads: LeadRow[] }) {
       changed_by: user?.id ?? null,
     });
 
+    router.refresh();
+    setSavingId(null);
+  }
+
+  // Unlike the broker side, no dedicated route is needed here -- the
+  // existing "salesperson updates assigned" RLS policy on property_requests
+  // has no column restriction (it's the same policy handleStatusChange
+  // above already relies on), so setting client_id is just another direct
+  // update.
+  async function handleClientChange(lead: LeadRow, nextClientId: string) {
+    setSavingId(lead.id);
+    const supabase = createClient();
+    await supabase
+      .from("property_requests")
+      .update({ client_id: nextClientId || null, updated_at: new Date().toISOString() })
+      .eq("id", lead.id);
     router.refresh();
     setSavingId(null);
   }
@@ -125,6 +143,24 @@ export function MyLeadsTable({ leads }: { leads: LeadRow[] }) {
                 ))}
               </select>
             </div>
+          ),
+        },
+        {
+          header: "Client",
+          render: (l) => (
+            <select
+              disabled={savingId === l.id}
+              value={l.client_id ?? ""}
+              onChange={(e) => handleClientChange(l, e.target.value)}
+              className="rounded-md border border-navy-600 bg-navy-800 px-1.5 py-1 text-[11px] text-ink-300 focus:outline-none"
+            >
+              <option value="">Unlinked</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name}
+                </option>
+              ))}
+            </select>
           ),
         },
         { header: "Date", render: (l) => new Date(l.created_at).toLocaleDateString() },
