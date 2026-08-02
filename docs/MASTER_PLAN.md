@@ -375,6 +375,19 @@ section as modules get built out.
   project's own `featured` flag with a `featured_until` expiry checked at
   read time (mirrors the pre-existing `ad_placements` date-range pattern
   — no background job), independent of plan tier.
+- Calculators Suite (Module 24) — the pre-existing Mortgage Calculator is
+  joined by ROI, Rental Yield, DLD Fee, Currency Converter, Area
+  Converter, Payment Plan, and Affordability calculators
+  (`src/components/public/calculators/`). A public `/calculators` hub
+  page hosts all eight; the project detail page's sidebar (previously a
+  single standalone Mortgage Calculator card) is now a tabbed
+  `ProjectCalculatorsPanel` defaulting to the same Mortgage tab as before,
+  with ROI/Yield/DLD Fee/Payment Plan tabs added alongside it, prefilled
+  from that project's own price and payment plan. All of them are pure
+  calculators over the user's own inputs (or, for DLD Fee, published
+  government fee rates) — none state or imply an actual ROI/yield figure
+  for a specific listing, consistent with the AI Investment Advisor's
+  same rule.
 
 **Not yet built (net-new from this document):**
 - Two-factor authentication, device/session management, login history

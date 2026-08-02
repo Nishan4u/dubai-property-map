@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, Building2, Download, FileText, MapPin, Play, Star } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
-import { MortgageCalculator } from "@/components/public/MortgageCalculator";
+import { ProjectCalculatorsPanel } from "@/components/public/ProjectCalculatorsPanel";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { GatedDetailPlaceholder } from "@/components/public/GatedDetailPlaceholder";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
@@ -558,12 +558,7 @@ export default async function ProjectDetailsPage({
               developerPhone={developer?.phone}
             />
 
-            <div className="rounded-xl border border-navy-700 bg-navy-850 p-5">
-              <p className="mb-3 text-sm font-semibold text-ink-100">
-                Mortgage Calculator
-              </p>
-              <MortgageCalculator priceAed={project.priceFromAed} />
-            </div>
+            <ProjectCalculatorsPanel priceAed={project.priceFromAed} paymentPlanDetails={project.paymentPlanDetails} />
 
             <div className="rounded-xl border border-navy-700 bg-navy-850 p-5">
               <p className="mb-2 text-sm font-semibold text-ink-100">Developer</p>
