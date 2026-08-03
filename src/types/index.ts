@@ -36,6 +36,7 @@ export interface Developer {
   phone?: string | null;
   website?: string | null;
   logoUrl?: string | null;
+  featured: boolean;
 }
 
 export interface Community {
@@ -51,6 +52,7 @@ export interface Community {
   lng: number;
   lat: number;
   pinColor: string;
+  featured: boolean;
 }
 
 export interface Project {

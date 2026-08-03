@@ -30,6 +30,7 @@ export default async function CommunitiesPage() {
       pinColor: c.pin_color,
       projectsCount: stat?.count ?? 0,
       avgPrice: stat ? stat.totalPrice / stat.count : 0,
+      featured: c.featured,
     };
   });
 

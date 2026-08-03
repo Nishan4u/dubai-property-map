@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck, Search } from "lucide-react";
+import { BadgeCheck, Search, Star } from "lucide-react";
 
 interface DeveloperWithCount {
   id: string;
@@ -15,6 +15,7 @@ interface DeveloperWithCount {
   verified: boolean;
   founded: number | null;
   projectsCount: number;
+  featured: boolean;
 }
 
 export function DevelopersPageClient({
@@ -55,8 +56,15 @@ export function DevelopersPageClient({
           <Link
             key={dev.id}
             href={`/developers/${dev.slug}`}
-            className="rounded-xl border border-navy-700 bg-navy-850 p-5 transition-colors hover:border-gold-500/40"
+            className={`relative rounded-xl border p-5 transition-colors hover:border-gold-500/40 ${
+              dev.featured ? "border-gold-500/50 bg-gold-500/[0.03]" : "border-navy-700 bg-navy-850"
+            }`}
           >
+            {dev.featured && (
+              <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-gold-500/15 px-2 py-0.5 text-[10px] font-semibold text-gold-400">
+                <Star className="h-3 w-3 fill-gold-400" /> Featured
+              </span>
+            )}
             <div className="flex items-center gap-3">
               {dev.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

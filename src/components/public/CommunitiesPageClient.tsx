@@ -12,6 +12,7 @@ interface CommunityWithStats {
   pinColor: string;
   projectsCount: number;
   avgPrice: number;
+  featured: boolean;
 }
 
 export function CommunitiesPageClient({
@@ -58,6 +59,7 @@ export function CommunitiesPageClient({
             pinColor={c.pinColor}
             projectsCount={c.projectsCount}
             avgPrice={c.avgPrice}
+            featured={c.featured}
           />
         ))}
         {filtered.length === 0 && (

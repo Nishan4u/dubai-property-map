@@ -98,6 +98,7 @@ export function mapDeveloper(
     phone: row.phone ?? null,
     website: row.website ?? null,
     logoUrl: row.logo_url ?? null,
+    featured: row.featured,
   };
 }
 
@@ -118,6 +119,7 @@ export function mapCommunity(
     lng: Number(row.lng ?? 0),
     lat: Number(row.lat ?? 0),
     pinColor: row.pin_color,
+    featured: row.featured,
   };
 }
 

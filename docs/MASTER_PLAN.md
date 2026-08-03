@@ -388,6 +388,20 @@ section as modules get built out.
   government fee rates) — none state or imply an actual ROI/yield figure
   for a specific listing, consistent with the AI Investment Advisor's
   same rule.
+- Marketing Platform, content-driven pass (Module 20): Homepage Banners
+  turned out to already be substantially built end-to-end (`ad_placements`
+  schema, developer self-request, admin approve/reject, public render) —
+  the one real gap, admin's inability to originate a banner directly
+  without a developer request, is closed by a new "Create Banner" form on
+  `/admin/ads` that publishes any placement type immediately as `active`.
+  Featured Developers and Sponsored Communities are genuinely new: a plain
+  `featured` boolean (patch_100, mirroring `projects.featured`) on
+  `developers` and `communities`, an admin toggle in each existing
+  edit/manage UI, featured-first ordering in `getDevelopers()`/
+  `getCommunities()`, and a small gold badge/star wherever they're listed
+  (partner developer ticker, Developers directory, Communities grid) —
+  every developer and community still shows exactly as before, just
+  reordered and badged.
 
 **Not yet built (net-new from this document):**
 - Two-factor authentication, device/session management, login history
@@ -405,8 +419,9 @@ section as modules get built out.
   "Substantially built" above for everything else, which is now done).
 - Business-intelligence-grade reports beyond what's in admin/reports
   today (Module 19).
-- Marketing campaign tooling (push/email/SMS campaigns, landing pages)
-  (Module 20).
+- Push/Email/SMS marketing campaigns and standalone landing pages (rest of
+  Module 20 — see "Substantially built" above for Homepage Banners,
+  Featured Developers, and Sponsored Communities, which are now done).
 - Digital contracts / e-signatures (Module 25).
 - Formal analytics/tracking integrations, heatmaps, conversion tracking
   (Module 26).

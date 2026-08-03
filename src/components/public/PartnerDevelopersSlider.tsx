@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import type { Developer } from "@/types";
 
 // Guests get redirected to login on click; Developer/Salesperson accounts
@@ -42,6 +43,7 @@ export function PartnerDevelopersSlider({
               <span className="whitespace-nowrap text-xs font-medium text-ink-300">
                 {dev.name}
               </span>
+              {dev.featured && <Star className="h-3 w-3 shrink-0 fill-gold-400 text-gold-400" />}
             </span>
           );
 

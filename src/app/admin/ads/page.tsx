@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { AdPlacementActions } from "@/components/admin/AdPlacementActions";
-import { getAllAdPlacementsAdmin } from "@/lib/supabase/queries";
+import { AdminCreateBannerForm } from "@/components/admin/AdminCreateBannerForm";
+import { getAllAdPlacementsAdmin, getAllProjectsAdmin, getCommunities, getDevelopers } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,12 @@ const placementLabel: Record<string, string> = {
 };
 
 export default async function AdminAdsPage() {
-  const placements = await getAllAdPlacementsAdmin();
+  const [placements, developers, communities, projects] = await Promise.all([
+    getAllAdPlacementsAdmin(),
+    getDevelopers(),
+    getCommunities(),
+    getAllProjectsAdmin(),
+  ]);
 
   return (
     <div className="space-y-4 p-6">
@@ -35,6 +41,14 @@ export default async function AdminAdsPage() {
           fields are on the Settings page, ready whenever you have one.
         </p>
       </div>
+
+      {developers.length > 0 && (
+        <AdminCreateBannerForm
+          developers={developers.map((d) => ({ id: d.id, name: d.name }))}
+          communities={communities.map((c) => ({ id: c.id, name: c.name }))}
+          projects={projects.map((p) => ({ id: p.id, name: p.name, developerId: p.developer_id }))}
+        />
+      )}
 
       <DataTable
         columns={[

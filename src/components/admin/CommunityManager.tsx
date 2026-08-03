@@ -25,6 +25,7 @@ const emptyDraft = {
   meta_title: "",
   meta_description: "",
   boundary_radius_km: "",
+  featured: false,
 };
 
 export function CommunityManager({
@@ -57,6 +58,7 @@ export function CommunityManager({
       meta_title: c.meta_title ?? "",
       meta_description: c.meta_description ?? "",
       boundary_radius_km: c.boundary_radius_km?.toString() ?? "",
+      featured: c.featured,
     });
     setShowForm(true);
   }
@@ -73,6 +75,7 @@ export function CommunityManager({
       meta_title: draft.meta_title || null,
       meta_description: draft.meta_description || null,
       boundary_radius_km: draft.boundary_radius_km ? Number(draft.boundary_radius_km) : null,
+      featured: draft.featured,
     };
 
     if (editing) {
@@ -193,6 +196,15 @@ export function CommunityManager({
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs text-ink-300">
+            <input
+              type="checkbox"
+              checked={draft.featured}
+              onChange={(e) => setDraft((d) => ({ ...d, featured: e.target.checked }))}
+              className="accent-gold-500"
+            />
+            Sponsored — shown first with a badge on the Communities page
+          </label>
           <div className="flex gap-2">
             <button
               onClick={handleSave}
@@ -233,6 +245,10 @@ export function CommunityManager({
           {
             header: "SEO",
             render: (c) => (c.meta_title ? "✓" : "—"),
+          },
+          {
+            header: "Sponsored",
+            render: (c) => (c.featured ? "✓" : "—"),
           },
           {
             header: "",

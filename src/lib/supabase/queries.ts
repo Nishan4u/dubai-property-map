@@ -616,6 +616,7 @@ export async function getDevelopers() {
     .from("developers")
     .select("*")
     .eq("status", "active")
+    .order("featured", { ascending: false })
     .order("name");
 
   if (error) throw error;
@@ -639,6 +640,7 @@ export async function getCommunities() {
   const { data, error } = await supabase
     .from("communities")
     .select("*")
+    .order("featured", { ascending: false })
     .order("name");
 
   if (error) throw error;

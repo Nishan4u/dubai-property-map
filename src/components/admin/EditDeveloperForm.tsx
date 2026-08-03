@@ -19,6 +19,7 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
   const [description, setDescription] = useState(developer.description ?? "");
   const [approvedEmailDomain, setApprovedEmailDomain] = useState(developer.approved_email_domain ?? "");
   const [logoUrl, setLogoUrl] = useState(developer.logo_url ?? "");
+  const [featured, setFeatured] = useState(developer.featured);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPercent, setLogoPercent] = useState(0);
   const [logoError, setLogoError] = useState("");
@@ -76,6 +77,7 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
         founded: founded ? Number(founded) : null,
         description: description || null,
         approved_email_domain: approvedEmailDomain.trim() ? approvedEmailDomain.trim().replace(/^@/, "").toLowerCase() : null,
+        featured,
       })
       .eq("id", developer.id);
 
@@ -168,6 +170,17 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
           onChange={(e) => setDescription(e.target.value)}
           className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
         />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="flex items-center gap-2 text-xs text-ink-300">
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={(e) => setFeatured(e.target.checked)}
+            className="accent-gold-500"
+          />
+          Featured developer — shown first in the partner developers strip and the Developers directory
+        </label>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
         <button

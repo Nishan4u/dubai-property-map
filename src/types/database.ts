@@ -138,6 +138,7 @@ export interface DeveloperRow {
   stripe_subscription_id: string | null;
   payment_type: DbPaymentType | null;
   last_reminder_sent_days: number | null;
+  featured: boolean;
   created_at: string;
 }
 
@@ -218,6 +219,7 @@ export interface CommunityRow {
   meta_title: string | null;
   meta_description: string | null;
   boundary_radius_km: number | null;
+  featured: boolean;
   created_at: string;
 }
 

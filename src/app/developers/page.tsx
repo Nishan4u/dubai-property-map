@@ -37,6 +37,7 @@ export default async function DevelopersPage() {
     verified: dev.verified,
     founded: dev.founded,
     projectsCount: projectCounts.get(dev.id) ?? 0,
+    featured: dev.featured,
   }));
 
   return (
