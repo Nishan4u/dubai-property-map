@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
+import { SalespersonReservationsSection } from "@/components/salesperson/SalespersonReservationsSection";
 import type { getCrmClientDetailForSalesperson } from "@/lib/supabase/queries";
 
 type ClientDetail = NonNullable<Awaited<ReturnType<typeof getCrmClientDetailForSalesperson>>>;
@@ -16,9 +17,15 @@ type ClientDetail = NonNullable<Awaited<ReturnType<typeof getCrmClientDetailForS
 // context. Kept as its own copy rather than a shared component since
 // broker/salesperson portals are otherwise fully separate component trees
 // in this codebase.
-export function SalespersonClientDetailClient({ detail }: { detail: ClientDetail }) {
+export function SalespersonClientDetailClient({
+  detail,
+  projects,
+}: {
+  detail: ClientDetail;
+  projects: { id: string; name: string }[];
+}) {
   const router = useRouter();
-  const { client, requests, notes, tasks } = detail;
+  const { client, requests, notes, tasks, reservations } = detail;
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(client.full_name);
@@ -180,6 +187,8 @@ export function SalespersonClientDetailClient({ detail }: { detail: ClientDetail
           </div>
         )}
       </SectionCard>
+
+      <SalespersonReservationsSection clientId={client.id} reservations={reservations} projects={projects} />
 
       <SectionCard title="Tasks & Follow-ups">
         <form onSubmit={handleAddTask} className="mb-3 flex flex-wrap items-end gap-2">

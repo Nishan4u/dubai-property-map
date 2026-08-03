@@ -462,6 +462,35 @@ section as modules get built out.
   A design-review pass caught and fixed a redirect-loop bug before this
   shipped (the naive path match would have caught the new
   `/admin-ip-blocked` block page itself).
+- Unit Reservation + Digital Contract (core) (Modules 14 + 25): research
+  found the existing `bookings` table is only a site-visit scheduler —
+  Module 14's actual Unit Reservation/Booking Approval/Payment Tracking
+  never existed despite being listed as done. Given the choice, the user
+  picked building a real reservation system rather than bolting a
+  signature step onto the viewing scheduler, since a reservation
+  agreement genuinely is the contract in practice. `crm_clients` (patch_98)
+  is extended to a 3-way owner (broker/salesperson/**developer**, additive
+  — existing broker/salesperson rows and RLS are unaffected), since
+  developers had no client-tracking mechanism at all. A new
+  `unit_reservations` table (patch_104) is the reservation *and* the
+  contract in one record — no separate contract entity — with ownership
+  derived via the linked client (same pattern as `crm_notes`/`crm_tasks`,
+  no redundant owner column). E-signature is in-house: typed or
+  hand-drawn-on-canvas (`SignatureCapture`, no new npm dependency), with
+  the exact contract text frozen into `contract_snapshot_html` at
+  send-time so it can never retroactively change. Buyers sign via a
+  public, tokenized `/sign/[token]` link emailed to them (no account
+  required — genuinely new territory, no anonymous-signer precedent
+  existed before this) with a full IP/user-agent/timestamp audit trail.
+  Broker and salesperson get a Reservations section on their existing
+  Client detail pages; developers (who have no client UI at all) get a
+  new `/dashboard/reservations` page that captures buyer contact info and
+  creates the reservation together in one form; admin gets a read-only
+  `/admin/reservations` list. No PDF library is installed, so the signed
+  contract is styled HTML with print CSS rather than a generated PDF —
+  browser print-to-PDF covers it for this pass. Individual numbered-unit
+  inventory tracking (Module 16 "Live Inventory") still doesn't exist, so
+  a reservation's unit number is free text with no availability locking.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -491,7 +520,6 @@ section as modules get built out.
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
   Module 20 — see "Substantially built" above for Homepage Banners,
   Featured Developers, and Sponsored Communities, which are now done).
-- Digital contracts / e-signatures (Module 25).
 - Formal analytics/tracking integrations, heatmaps, conversion tracking
   (Module 26).
 - Multi-language / Arabic / RTL support (Module 29).

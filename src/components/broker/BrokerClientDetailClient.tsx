@@ -8,13 +8,20 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
+import { BrokerReservationsSection } from "@/components/broker/BrokerReservationsSection";
 import type { getCrmClientDetailForBroker } from "@/lib/supabase/queries";
 
 type ClientDetail = NonNullable<Awaited<ReturnType<typeof getCrmClientDetailForBroker>>>;
 
-export function BrokerClientDetailClient({ detail }: { detail: ClientDetail }) {
+export function BrokerClientDetailClient({
+  detail,
+  projects,
+}: {
+  detail: ClientDetail;
+  projects: { id: string; name: string }[];
+}) {
   const router = useRouter();
-  const { client, requests, notes, tasks } = detail;
+  const { client, requests, notes, tasks, reservations } = detail;
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(client.full_name);
@@ -176,6 +183,8 @@ export function BrokerClientDetailClient({ detail }: { detail: ClientDetail }) {
           </div>
         )}
       </SectionCard>
+
+      <BrokerReservationsSection clientId={client.id} reservations={reservations} projects={projects} />
 
       <SectionCard title="Tasks & Follow-ups">
         <form onSubmit={handleAddTask} className="mb-3 flex flex-wrap items-end gap-2">

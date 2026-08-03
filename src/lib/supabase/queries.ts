@@ -769,7 +769,39 @@ export async function getCrmClientsForSalesperson(salespersonId: string): Promis
   return data ?? [];
 }
 
-async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id", ownerId: string, clientId: string) {
+export async function getCrmClientsForDeveloper(developerId: string): Promise<CrmClientRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_clients")
+    .select("id, full_name, email, phone, whatsapp, source, status, created_at, updated_at")
+    .eq("developer_id", developerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getReservationsForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("unit_reservations")
+    .select("*, projects(name), crm_clients!inner(full_name, email, phone, developer_id)")
+    .eq("crm_clients.developer_id", developerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getAllReservationsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("unit_reservations")
+    .select("*, projects(name), crm_clients(full_name, email, phone)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string, clientId: string) {
   const supabase = await createClient();
   const { data: client, error } = await supabase
     .from("crm_clients")
@@ -780,7 +812,7 @@ async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id", o
   if (error) throw error;
   if (!client) return null;
 
-  const [{ data: requests }, { data: notes }, { data: tasks }] = await Promise.all([
+  const [{ data: requests }, { data: notes }, { data: tasks }, { data: reservations }] = await Promise.all([
     supabase
       .from("property_requests")
       .select("id, request_id, status, property_type, budget_min, budget_max, created_at, projects(name)")
@@ -792,6 +824,11 @@ async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id", o
       .select("id, title, due_at, status, created_at")
       .eq("client_id", clientId)
       .order("due_at", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("unit_reservations")
+      .select("*, projects(name)")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false }),
   ]);
 
   return {
@@ -799,6 +836,7 @@ async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id", o
     requests: requests ?? [],
     notes: notes ?? [],
     tasks: tasks ?? [],
+    reservations: reservations ?? [],
   };
 }
 
@@ -808,6 +846,10 @@ export async function getCrmClientDetailForBroker(clientId: string, brokerId: st
 
 export async function getCrmClientDetailForSalesperson(clientId: string, salespersonId: string) {
   return getCrmClientDetail("salesperson_id", salespersonId, clientId);
+}
+
+export async function getCrmClientDetailForDeveloper(clientId: string, developerId: string) {
+  return getCrmClientDetail("developer_id", developerId, clientId);
 }
 
 export async function getBookingsForDeveloper(developerId: string) {
