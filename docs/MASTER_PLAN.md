@@ -444,11 +444,37 @@ section as modules get built out.
   it stops password brute-forcing but can't stop a malicious caller
   deliberately locking someone else's account out; this pass doesn't try
   to close that, it's inherent to the pattern.
+- IP Restrictions (Module 27): an admin-configurable IP allowlist gating `/admin/*` and
+  `/api/admin/*`, exact-match only (no CIDR ranges), off by default.
+  Enforced in `src/proxy.ts` (this project's `middleware.ts` renamed per
+  Next.js 16 convention) via a new cached fetcher reading two new tables
+  (patch_103) with the service-role key — unlike the pre-existing
+  `site_access_settings` precedent, these have no public RLS read policy
+  at all, since they list which IPs bypass admin-panel protection.
+  `/admin/settings` is deliberately exempted from the gate so a
+  super-admin can never fully lock themselves out — it stays reachable
+  regardless of the allowlist (still gated by the existing role check and
+  by `is_super_admin()` RLS on any actual write), while `/api/admin/*` is
+  included since those routes don't go through the page-level role check
+  at all. A new `IpRestrictionsPanel` on `/admin/settings` shows the
+  viewing admin's own current IP and manages the list, mirroring
+  `NavLinksManager`'s add/delete pattern with `logAudit` on every change.
+  A design-review pass caught and fixed a redirect-loop bug before this
+  shipped (the naive path match would have caught the new
+  `/admin-ip-blocked` block page itself).
 
 **Not yet built (net-new from this document):**
-- IP restrictions, activity/audit-log surfacing beyond the existing admin
-  Audit Log (rest of Module 27 — see "Substantially built" above for
-  2FA/Login History/Devices/Account Lockout, which are now done).
+- Module 27 "Security" — 2FA, Device Tracking, Login History, Account
+  Lockout, and IP Restrictions are now built (see "Substantially built"
+  above); Activity Logs and Audit Logs already existed before this
+  session (`admin_audit_log` + `/admin/audit-log`); Data Encryption and
+  Backup & Recovery are Supabase/infra-level (TLS, managed Postgres
+  backups), not app features to build. API Security and Role Security
+  aren't distinct dedicated features anywhere in this codebase — every
+  API route does its own auth check and every table's RLS policy is the
+  de facto "role security" layer, but there's no single dedicated
+  admin-facing surface for either, so calling them "done" would overstate
+  it.
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
 - Community Explorer's investment score / ROI / rental yield / market

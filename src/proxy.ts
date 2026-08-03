@@ -29,6 +29,37 @@ async function getRedirects() {
   return redirectsCache;
 }
 
+interface AdminIpCache {
+  enabled: boolean;
+  allowedIps: Set<string>;
+}
+let ipCache: AdminIpCache | null = null;
+let ipCachedAt = 0;
+
+// Uses the service-role key, not the anon key -- this table lists which
+// IPs bypass admin-panel protection, so unlike getRedirects() it must
+// never be publicly readable (no "public read" RLS policy exists on it).
+// Same 60s cache TTL as getRedirects(): staleness only ever makes a
+// just-enabled restriction or a just-removed IP take up to 60s to take
+// effect, never the reverse, and /admin/settings stays reachable
+// regardless of cache state.
+async function getAdminIpRestrictions(): Promise<AdminIpCache> {
+  if (ipCache && Date.now() - ipCachedAt < CACHE_TTL_MS) {
+    return ipCache;
+  }
+  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const [{ data: settings }, { data: entries }] = await Promise.all([
+    admin.from("admin_ip_restrictions_settings").select("enabled").eq("id", true).maybeSingle(),
+    admin.from("admin_ip_allowlist").select("ip_address"),
+  ]);
+  ipCache = {
+    enabled: settings?.enabled ?? false,
+    allowedIps: new Set((entries ?? []).map((e) => e.ip_address as string)),
+  };
+  ipCachedAt = Date.now();
+  return ipCache;
+}
+
 const LAST_ACTIVE_THROTTLE_MS = 5 * 60 * 1000;
 
 // One-device-per-broker enforcement. Runs after updateSession() so the
@@ -100,6 +131,23 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname === "/broker" || pathname.startsWith("/broker/")) {
     return checkBrokerDevice(request, response);
+  }
+
+  // /admin/settings is deliberately exempted so a super-admin can always
+  // reach it to fix a misconfigured allowlist -- it's still gated by the
+  // existing admin/layout.tsx role check regardless of IP, and only a
+  // super-admin can write to these tables at all (RLS). /api/admin/* is
+  // included since those routes don't go through admin/layout.tsx's
+  // check the way page routes do.
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  if ((isAdminPath && pathname !== "/admin/settings") || pathname.startsWith("/api/admin")) {
+    const { enabled, allowedIps } = await getAdminIpRestrictions();
+    if (enabled) {
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? null;
+      if (!ip || !allowedIps.has(ip)) {
+        return NextResponse.redirect(new URL("/admin-ip-blocked", request.url));
+      }
+    }
   }
 
   return response;
