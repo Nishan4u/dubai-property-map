@@ -13,17 +13,30 @@ alter table crm_clients add column if not exists developer_id uuid references de
 -- inline column check, so Postgres assigned its own name rather than a
 -- declared one -- looked up dynamically rather than guessed, same as
 -- patch_96's brokers/salespersons payment_type widening.
+--
+-- The lookup must exclude crm_clients_owner_match: that constraint's own
+-- definition also mentions "owner_type" repeatedly (in its OR
+-- conditions), so a plain ilike '%owner_type%' match is ambiguous and can
+-- pick either constraint depending on pg_constraint's scan order. Excluding
+-- definitions that also mention "broker_id" isolates the plain column
+-- check. Also idempotent: does nothing if a prior run already widened it.
 do $$
 declare
   v_conname text;
+  v_condef text;
 begin
-  select conname into v_conname from pg_constraint
-    where conrelid = 'crm_clients'::regclass and contype = 'c' and pg_get_constraintdef(oid) ilike '%owner_type%';
-  if v_conname is not null then
+  select conname, pg_get_constraintdef(oid) into v_conname, v_condef
+    from pg_constraint
+    where conrelid = 'crm_clients'::regclass and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%owner_type%'
+      and pg_get_constraintdef(oid) not ilike '%broker_id%'
+    limit 1;
+
+  if v_conname is not null and v_condef not ilike '%developer%' then
     execute format('alter table crm_clients drop constraint %I', v_conname);
+    alter table crm_clients add constraint crm_clients_owner_type_check
+      check (owner_type in ('broker', 'salesperson', 'developer'));
   end if;
-  alter table crm_clients add constraint crm_clients_owner_type_check
-    check (owner_type in ('broker', 'salesperson', 'developer'));
 end;
 $$;
 
