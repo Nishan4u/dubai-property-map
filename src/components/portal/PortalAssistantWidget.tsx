@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import Link from "next/link";
-import { MessageCircle, Send, X } from "lucide-react";
+import { Mic, MessageCircle, Send, Volume2, VolumeX, X } from "lucide-react";
 import { PROJECTS_TRAILER_MARKER } from "@/lib/ai/shared";
+import { useSpeechRecognition, useSpeechSynthesis } from "@/lib/ai/useVoice";
 import type { AssistantProjectResult } from "@/lib/supabase/queries";
 
 interface ChatMessage {
@@ -45,8 +46,26 @@ export function PortalAssistantWidget({
   const [loading, setLoading] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [projects, setProjects] = useState<AssistantProjectResult[]>([]);
+  const [voiceMuted, setVoiceMuted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Only a voice-initiated turn gets read back aloud -- typed questions
+  // always get a silent, text-only reply, matching how voice assistants
+  // conventionally pair "spoke to it" with "it speaks back".
+  const lastTurnWasVoiceRef = useRef(false);
+
+  const { speak } = useSpeechSynthesis();
+  const {
+    supported: sttSupported,
+    listening,
+    interimText,
+    start: startListening,
+    stop: stopListening,
+  } = useSpeechRecognition((finalText) => {
+    lastTurnWasVoiceRef.current = true;
+    setInput(finalText);
+    submit(finalText);
+  });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -63,10 +82,16 @@ export function PortalAssistantWidget({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  async function sendMessage(e: React.FormEvent) {
+  function sendMessage(e: React.FormEvent) {
     e.preventDefault();
-    const text = input.trim();
+    submit(input);
+  }
+
+  async function submit(rawText: string) {
+    const text = rawText.trim();
     if (!text || loading) return;
+    const voiceTurn = lastTurnWasVoiceRef.current;
+    lastTurnWasVoiceRef.current = false;
 
     const nextMessages: ChatMessage[] = [...messages, { role: "user", content: text }];
     setMessages(nextMessages);
@@ -110,6 +135,10 @@ export function PortalAssistantWidget({
             return copy;
           });
         }
+      }
+
+      if (voiceTurn && !voiceMuted && displayText.trim()) {
+        speak(displayText);
       }
 
       if (markerFound) {
@@ -157,13 +186,19 @@ export function PortalAssistantWidget({
             <p className="text-sm font-semibold text-ink-100">{title}</p>
             <p className="text-xs text-ink-500">{subtitle}</p>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            aria-label="Close"
-            className="shrink-0 text-ink-500 hover:text-ink-200"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => setVoiceMuted((v) => !v)}
+              aria-label={voiceMuted ? "Unmute voice replies" : "Mute voice replies"}
+              title={voiceMuted ? "Voice replies muted" : "Voice replies on for spoken questions"}
+              className="text-ink-500 hover:text-ink-200"
+            >
+              {voiceMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+            <button onClick={() => setOpen(false)} aria-label="Close" className="text-ink-500 hover:text-ink-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -206,19 +241,35 @@ export function PortalAssistantWidget({
             )}
           >
             <input
-              value={input}
+              value={listening ? interimText : input}
               onChange={(e) => setInput(e.target.value)}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
-              disabled={loading}
-              placeholder={placeholder}
+              disabled={loading || listening}
+              placeholder={listening ? "Listening…" : placeholder}
               aria-label="Message"
               className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none disabled:opacity-60"
             />
           </div>
+          {sttSupported && (
+            <button
+              type="button"
+              onClick={() => (listening ? stopListening() : startListening())}
+              disabled={loading}
+              aria-label={listening ? "Stop listening" : "Ask by voice"}
+              className={clsx(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border disabled:opacity-50",
+                listening
+                  ? "animate-pulse border-rose-500/60 bg-rose-500/15 text-rose-400"
+                  : "border-navy-600 text-ink-300 hover:text-ink-100"
+              )}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || listening}
             aria-label="Send"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gold-500 text-navy-950 hover:bg-gold-400 disabled:opacity-50"
           >

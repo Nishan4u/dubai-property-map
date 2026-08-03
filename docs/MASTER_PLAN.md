@@ -318,8 +318,17 @@ section as modules get built out.
   listing's own marketing claim, not a computed return), and AI Buyer
   Matching (personalized recommendations from a signed-in buyer's own
   favorited projects, with a graceful "sign in / favorite something
-  first" fallback) (Module 17, partial — only AI Voice Assistant is
-  still net-new).
+  first" fallback), and AI Voice Assistant (browser-native Web Speech
+  API — speech-to-text for asking by voice, text-to-speech for the
+  reply — layered onto the existing chat widgets via a shared
+  `src/lib/ai/useVoice.ts` hook, no paid third-party voice API or new
+  npm dependency; feature-detected, so the mic button simply doesn't
+  render in unsupported browsers like Firefox. A voice reply only ever
+  follows a voice question — typed questions stay silent text-only —
+  with a mute toggle in each widget's header. Landed in both
+  `AiChatWidget` (public MapAI) and the shared `PortalAssistantWidget`
+  (AI Broker/Sales Assistants), covering all three surfaces in one
+  change) (Module 17 now fully done).
 - Referral & Commission System (Module 18) — now substantially
   complete: the pre-existing staff referral-code/commission-tracking/
   monthly-target/performance-dashboard system is joined by a new
@@ -513,8 +522,6 @@ section as modules get built out.
   Client Management/Notes/Tasks, which are now done), Connect-Any-CRM
   integrations, ERP/marketing/storage/payment integrations beyond Stripe.
 - Live inventory sync automation (Module 16).
-- AI Voice Assistant (last remaining item in Module 17 — see
-  "Substantially built" above for everything else, which is now done).
 - Business-intelligence-grade reports beyond what's in admin/reports
   today (Module 19).
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
