@@ -1468,6 +1468,202 @@ export async function getPaymentsOverviewStats() {
   };
 }
 
+function monthKey(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+// Real month-by-month revenue only where a timestamped payment ledger
+// exists (broker/agency Stripe payments, approved bank transfers) --
+// salesperson subscriptions (webhook updates subscription_status
+// directly, no payment row) and developer flat fees (ad_placement /
+// project_featured checkouts write no payment row either) have no
+// historical ledger, so they're only reflected in the current-state
+// totals from getPaymentsOverviewStats, not this trend. Stated in the
+// UI rather than fabricated.
+export async function getRevenueReportAdmin() {
+  const supabase = await createClient();
+  const [{ data: brokerPayments }, { data: agencyPayments }, { data: bankTransfers }, overview] = await Promise.all([
+    supabase.from("broker_payments").select("amount, paid_at").eq("status", "paid").not("paid_at", "is", null),
+    supabase.from("broker_agency_payments").select("amount, paid_at").eq("status", "paid").not("paid_at", "is", null),
+    supabase.from("subscription_bank_transfers").select("amount_aed, reviewed_at").eq("status", "paid").not("reviewed_at", "is", null),
+    getPaymentsOverviewStats(),
+  ]);
+
+  const byMonth = new Map<string, number>();
+  for (const p of brokerPayments ?? []) {
+    const key = monthKey(p.paid_at!);
+    byMonth.set(key, (byMonth.get(key) ?? 0) + Number(p.amount));
+  }
+  for (const p of agencyPayments ?? []) {
+    const key = monthKey(p.paid_at!);
+    byMonth.set(key, (byMonth.get(key) ?? 0) + Number(p.amount));
+  }
+  for (const t of bankTransfers ?? []) {
+    const key = monthKey(t.reviewed_at!);
+    byMonth.set(key, (byMonth.get(key) ?? 0) + Number(t.amount_aed));
+  }
+
+  const revenueTrend = Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, amount]) => ({ date: monthLabel(key), amount: Math.round(amount) }));
+
+  return { revenueTrend, overview };
+}
+
+export async function getSubscriptionReportAdmin() {
+  const supabase = await createClient();
+  const [{ data: brokers }, { data: salespersons }, { data: developers }, { data: brokerages }] = await Promise.all([
+    supabase.from("brokers").select("plan_key, subscription_status"),
+    supabase.from("salespersons").select("plan_key, subscription_status"),
+    supabase.from("developers").select("plan_tier, subscription_status"),
+    supabase.from("brokerages").select("plan_key, subscription_status"),
+  ]);
+
+  function statusCounts(rows: { subscription_status: string | null }[] | null) {
+    const counts = new Map<string, number>();
+    for (const r of rows ?? []) {
+      const status = r.subscription_status ?? "none";
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+    }
+    return Object.fromEntries(counts);
+  }
+
+  return {
+    broker: { total: brokers?.length ?? 0, byStatus: statusCounts(brokers) },
+    salesperson: { total: salespersons?.length ?? 0, byStatus: statusCounts(salespersons) },
+    developer: { total: developers?.length ?? 0, byStatus: statusCounts(developers) },
+    brokerage: { total: brokerages?.length ?? 0, byStatus: statusCounts(brokerages) },
+  };
+}
+
+// unit_reservations.status = 'signed' is the real closing/sale record in
+// this schema (see patch_104) -- price_aed and signed_at give a genuine
+// deal-value trend, unlike property_requests' 'closed_won' status which
+// carries no captured transaction value.
+export async function getSalesReportAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("unit_reservations")
+    .select("id, price_aed, signed_at, projects(name), crm_clients(full_name, broker_id, salesperson_id, developer_id)")
+    .eq("status", "signed")
+    .order("signed_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Ranked, platform-wide broker performance -- client count (crm_clients),
+// leads handled (property_requests.broker_id), and signed deals/value
+// (via crm_clients, since unit_reservations carries no broker_id of its
+// own). getAgencyAnalyticsAdmin rolls this same data up by brokerage_id
+// rather than re-querying it.
+export async function getBrokerAnalyticsAdmin() {
+  const supabase = await createClient();
+  const [brokers, { data: clients }, { data: requests }, { data: reservations }] = await Promise.all([
+    getAllBrokersAdmin(),
+    supabase.from("crm_clients").select("broker_id").not("broker_id", "is", null),
+    supabase.from("property_requests").select("broker_id"),
+    supabase
+      .from("unit_reservations")
+      .select("price_aed, crm_clients!inner(broker_id)")
+      .eq("status", "signed")
+      .not("crm_clients.broker_id", "is", null),
+  ]);
+
+  const clientCounts = new Map<string, number>();
+  for (const c of clients ?? []) clientCounts.set(c.broker_id, (clientCounts.get(c.broker_id) ?? 0) + 1);
+
+  const leadCounts = new Map<string, number>();
+  for (const r of requests ?? []) leadCounts.set(r.broker_id, (leadCounts.get(r.broker_id) ?? 0) + 1);
+
+  const salesStats = new Map<string, { count: number; value: number }>();
+  for (const r of reservations ?? []) {
+    const client = Array.isArray(r.crm_clients) ? r.crm_clients[0] : r.crm_clients;
+    const brokerId = client?.broker_id;
+    if (!brokerId) continue;
+    const entry = salesStats.get(brokerId) ?? { count: 0, value: 0 };
+    entry.count += 1;
+    entry.value += Number(r.price_aed);
+    salesStats.set(brokerId, entry);
+  }
+
+  return brokers
+    .map((b) => ({
+      id: b.id,
+      full_name: b.full_name,
+      brokerage_id: b.brokerage_id,
+      brokerageName: (Array.isArray(b.brokerages) ? b.brokerages[0] : b.brokerages)?.name ?? null,
+      clientCount: clientCounts.get(b.id) ?? 0,
+      leadCount: leadCounts.get(b.id) ?? 0,
+      salesCount: salesStats.get(b.id)?.count ?? 0,
+      salesValue: salesStats.get(b.id)?.value ?? 0,
+    }))
+    .sort((a, b) => b.salesValue - a.salesValue);
+}
+
+export async function getAgencyAnalyticsAdmin() {
+  const [brokerages, brokerStats] = await Promise.all([getAllBrokeragesAdmin(), getBrokerAnalyticsAdmin()]);
+
+  return brokerages
+    .map((agency) => {
+      const ownBrokers = brokerStats.filter((b) => b.brokerage_id === agency.id);
+      return {
+        id: agency.id,
+        name: agency.name,
+        brokerCount: ownBrokers.length,
+        clientCount: ownBrokers.reduce((sum, b) => sum + b.clientCount, 0),
+        leadCount: ownBrokers.reduce((sum, b) => sum + b.leadCount, 0),
+        salesCount: ownBrokers.reduce((sum, b) => sum + b.salesCount, 0),
+        salesValue: ownBrokers.reduce((sum, b) => sum + b.salesValue, 0),
+      };
+    })
+    .sort((a, b) => b.salesValue - a.salesValue);
+}
+
+// login_history (patch_101) already logs every successful login --
+// never surfaced as a report before now. profiles.created_at gives a
+// real signup trend alongside it.
+export async function getUserActivityReportAdmin() {
+  const supabase = await createClient();
+  const [{ data: logins }, { data: profileRows }] = await Promise.all([
+    supabase.from("login_history").select("email, created_at").eq("success", true).order("created_at", { ascending: false }),
+    supabase.from("profiles").select("created_at"),
+  ]);
+
+  const loginsByMonth = new Map<string, number>();
+  const loginsByUser = new Map<string, number>();
+  for (const l of logins ?? []) {
+    const key = monthKey(l.created_at);
+    loginsByMonth.set(key, (loginsByMonth.get(key) ?? 0) + 1);
+    loginsByUser.set(l.email, (loginsByUser.get(l.email) ?? 0) + 1);
+  }
+
+  const signupsByMonth = new Map<string, number>();
+  for (const p of profileRows ?? []) {
+    const key = monthKey(p.created_at);
+    signupsByMonth.set(key, (signupsByMonth.get(key) ?? 0) + 1);
+  }
+
+  return {
+    loginsTrend: Array.from(loginsByMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({ date: monthLabel(key), logins: count })),
+    signupsTrend: Array.from(signupsByMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({ date: monthLabel(key), signups: count })),
+    topUsers: Array.from(loginsByUser.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([email, count]) => ({ email, count })),
+  };
+}
+
 export async function getPlanSubscriberCounts() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("developers").select("plan_tier");

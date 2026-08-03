@@ -355,9 +355,9 @@ section as modules get built out.
   linked-requests list, a Notes thread, and Tasks/follow-ups with due
   dates and done/pending toggling. The AI Broker/Sales Assistants surface
   a linked client's name when one exists, never inventing one. Calendar/
-  Meetings, Email History, Call Logs, and WhatsApp History are still
-  net-new — the notes/tasks schema is shaped so those can attach later
-  without a rework.
+  Meetings/Appointments were added in the Module 23 pass (`crm_appointments`)
+  — see "Meeting & Collaboration" below. Email History, Call Logs, and
+  WhatsApp History are still net-new.
 - Admin panel search & bulk actions: live search added to Developers,
   Brokers, Brokerages, Salespersons, Users, Payments, and all four
   Subscriptions account tables; select-all + bulk delete on Developers,
@@ -556,6 +556,33 @@ section as modules get built out.
   explicit non-goal for this pass — no chat/threading/mentions primitive
   exists anywhere in this codebase to extend, and the term is too broad
   to scope safely without one.
+- Business Intelligence Reports, core (Module 19): `/admin/reports` —
+  previously a single flat page already covering Lead/Community/Project/
+  Download Reports with real data — is restructured into a tabbed
+  interface (mirroring the referral program's tab pattern) adding
+  Revenue, Subscriptions, Sales, People (Developer/Broker/Agency
+  Analytics), and Activity, without changing the existing Overview tab's
+  content at all (relocated byte-identical into its own component). Six
+  of the seven new report types aggregate data that already existed but
+  was never surfaced: Revenue reuses the existing
+  `getPaymentsOverviewStats()` for current-state totals and adds a real
+  month-by-month trend from `broker_payments`/`broker_agency_payments`
+  (Stripe ledgers) and approved `subscription_bank_transfers` — the UI
+  states plainly that salesperson subscriptions and developer flat fees
+  have no historical payment ledger to trend, rather than fabricating
+  one. Sales is genuinely new: `unit_reservations` where `status =
+  'signed'` is the real closing/deal-value record in this schema.
+  Developer/Broker/Agency Analytics are ranked `DataTable`s built from
+  existing tables (`crm_clients`, `property_requests`, signed
+  reservations, `brokers.brokerage_id`). User Activity surfaces
+  `login_history` (built in the Security pass, never reported on before)
+  as a logins-over-time trend and most-active-users list, alongside a
+  signups-over-time trend from `profiles.created_at`. Search Analytics
+  and AI Usage Reports are explicit non-goals — neither has any tracking
+  anywhere in this codebase, and building either means instrumenting
+  live, already-shipped components (the public search/filter UI, and
+  the shared AI tool-loop core used by three assistants) rather than
+  just aggregating what exists.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -573,12 +600,13 @@ section as modules get built out.
   2).
 - Community Explorer's investment score / ROI / rental yield / market
   trends panels (Module 6).
-- Calendar/Meetings, Email History, Call Logs, WhatsApp History
-  (rest of Module 15's Built-in CRM — see "Substantially built" above for
-  Client Management/Notes/Tasks, which are now done), Connect-Any-CRM
+- Email History, Call Logs, WhatsApp History (rest of Module 15's
+  Built-in CRM — see "Substantially built" above for Client Management/
+  Notes/Tasks/Calendar/Appointments, which are now done), Connect-Any-CRM
   integrations, ERP/marketing/storage/payment integrations beyond Stripe.
-- Business-intelligence-grade reports beyond what's in admin/reports
-  today (Module 19).
+- Search Analytics and AI Usage Reports (rest of Module 19 — see
+  "Substantially built" above for Revenue/Subscription/Sales/Developer/
+  Broker/Agency/User Activity Reports, which are now done).
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
   Module 20 — see "Substantially built" above for Homepage Banners,
   Featured Developers, and Sponsored Communities, which are now done).
