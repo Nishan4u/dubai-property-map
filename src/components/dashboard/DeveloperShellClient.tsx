@@ -14,6 +14,7 @@ import {
   Package,
   Rocket,
   Settings,
+  ShieldCheck,
   User,
   Users,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const navItems = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Security", href: "/security", icon: ShieldCheck },
 ];
 
 export function DeveloperShellClient({

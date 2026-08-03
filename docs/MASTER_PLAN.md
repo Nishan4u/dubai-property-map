@@ -402,10 +402,34 @@ section as modules get built out.
   (partner developer ticker, Developers directory, Communities grid) —
   every developer and community still shows exactly as before, just
   reordered and badged.
+- Security: 2FA, Login History, Device Management (rest of Module 1 +
+  core of Module 27), for all six real user roles (buyer, developer,
+  broker, broker agency, salesperson, admin) — staff login is a separate,
+  unrelated internal system and stays out of scope. Two-Factor
+  Authentication is Supabase's own native MFA (`auth.mfa.*`, TOTP), not a
+  custom implementation: an inline 6-digit challenge step is inserted
+  into the single shared `LoginFormClient.tsx` right after password
+  sign-in, before the existing role-based redirect (unchanged for
+  accounts with no factor enrolled). A new `login_history` table
+  (patch_101, owner-plus-admin-read RLS) logs every successful login
+  (IP + user agent) via a new `/api/auth/login-history` route. A shared
+  `SecurityPanel` component (2FA enroll/manage, Login History table, and
+  a Devices section with "Sign Out of All Other Devices" /
+  "Sign Out Everywhere") is mounted in a new Security tab on the buyer's
+  `/account` page and four new portal pages
+  (`/admin/security`, `/broker-agency/security`, `/dashboard/security`,
+  `/salesperson/security`, each with a new nav link). Brokers already had
+  their own single-device-session `/broker/security` page (patch_34) —
+  left completely untouched, with the new 2FA + Login History sections
+  added alongside it (Devices section hidden there since it would
+  duplicate what brokers already have). Failed-login tracking, account
+  lockout, and IP restrictions stay pending — this pass only covers
+  successful-login history.
 
 **Not yet built (net-new from this document):**
-- Two-factor authentication, device/session management, login history
-  (rest of Module 1), IP restrictions (Module 27).
+- Account lockout / failed-login tracking, IP restrictions (rest of
+  Module 27 — see "Substantially built" above for 2FA/Login
+  History/Devices, which are now done).
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
 - Community Explorer's investment score / ROI / rental yield / market

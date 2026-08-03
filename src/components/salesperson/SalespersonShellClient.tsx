@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Contact, CreditCard, Gift, LayoutDashboard, UserRound, Users } from "lucide-react";
+import { Building2, Contact, CreditCard, Gift, LayoutDashboard, ShieldCheck, UserRound, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
@@ -12,6 +12,7 @@ const navItems = [
   { label: "My Developer", href: "/developer", icon: Building2 },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
   { label: "Referral", href: "/referral", icon: Gift },
+  { label: "Security", href: "/security", icon: ShieldCheck },
 ];
 
 export function SalespersonShellClient({

@@ -1,5 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import { BrokerSecurityClient } from "@/components/broker/BrokerSecurityClient";
+import { SecurityPanel } from "@/components/account/SecurityPanel";
 import { createClient } from "@/lib/supabase/server";
 import { requireBrokerProfile } from "@/lib/supabase/queries";
 
@@ -21,6 +22,7 @@ export default async function BrokerSecurityPage() {
         <ShieldCheck className="h-5 w-5 text-gold-400" /> Security
       </h1>
       <BrokerSecurityClient session={session} />
+      <SecurityPanel showDeviceManagement={false} />
     </div>
   );
 }

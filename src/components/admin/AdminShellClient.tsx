@@ -16,6 +16,7 @@ import {
   Search,
   Settings,
   Shield,
+  ShieldCheck,
   Tags,
   Menu as MenuIcon,
   Users,
@@ -57,6 +58,7 @@ const navItems = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Security", href: "/security", icon: ShieldCheck },
   { label: "Audit Log", href: "/audit-log", icon: Shield },
 ];
 

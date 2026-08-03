@@ -8,6 +8,7 @@ import {
   Download,
   Heart,
   Search,
+  ShieldCheck,
   User,
   CalendarClock,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import { ViewingRequestsTab } from "@/components/account/ViewingRequestsTab";
 import { SavedSearchesTab } from "@/components/account/SavedSearchesTab";
 import { BrochuresTab } from "@/components/account/BrochuresTab";
 import { NotificationsTab } from "@/components/account/NotificationsTab";
+import { SecurityPanel } from "@/components/account/SecurityPanel";
 import { createClient } from "@/lib/supabase/client";
 import { mapProject } from "@/lib/supabase/mappers";
 import type { Project } from "@/types";
@@ -31,6 +33,7 @@ const tabs = [
   { key: "searches", label: "Saved Searches", icon: Search },
   { key: "brochures", label: "Downloaded Brochures", icon: Download },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "security", label: "Security", icon: ShieldCheck },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -182,8 +185,12 @@ export function AccountPageClient() {
           <SavedSearchesTab userId={userId} />
         ) : active === "brochures" ? (
           <BrochuresTab userId={userId} />
-        ) : (
+        ) : active === "notifications" ? (
           <NotificationsTab userId={userId} />
+        ) : (
+          <div className="p-6">
+            <SecurityPanel />
+          </div>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building, CreditCard, LayoutDashboard, UserRound, Users } from "lucide-react";
+import { Building, CreditCard, LayoutDashboard, ShieldCheck, UserRound, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { label: "My Brokers", href: "/brokers", icon: Users },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
   { label: "My Profile", href: "/profile", icon: UserRound },
+  { label: "Security", href: "/security", icon: ShieldCheck },
 ];
 
 export function BrokerAgencyShellClient({
