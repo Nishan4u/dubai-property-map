@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Briefcase, Building2, ClipboardList, CreditCard, Gift, LayoutDashboard, Map, ShieldCheck, User, Users } from "lucide-react";
+import { Bell, Briefcase, Building2, CalendarDays, ClipboardList, CreditCard, FolderOpen, Gift, LayoutDashboard, Map, ShieldCheck, User, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
@@ -9,6 +9,8 @@ const navItems = [
   { label: "Property Map", href: "/", icon: Map, absolute: true },
   { label: "My Requests", href: "/requests", icon: ClipboardList },
   { label: "Clients", href: "/clients", icon: Users },
+  { label: "Calendar", href: "/calendar", icon: CalendarDays },
+  { label: "Collections", href: "/collections", icon: FolderOpen },
   { label: "My Agency", href: "/agency", icon: Building2 },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
   { label: "Referral", href: "/referral", icon: Gift },

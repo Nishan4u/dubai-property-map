@@ -528,6 +528,34 @@ section as modules get built out.
   to sync with) and Payment Plan Updates (already covered by the
   existing project-level payment-plan editing) are explicit non-goals,
   not gaps.
+- Meeting & Collaboration, core (Module 23): two new capabilities on the
+  established `crm_clients` 3-way owner pattern (patch_98/patch_104),
+  covering Calendar, Appointment Booking, Video Meetings, Shared
+  Collections, and Client Presentation Mode — Internal Notes was already
+  built (`crm_notes`/`crm_tasks`, patch_98). A new `crm_appointments`
+  table (patch_106) is a genuine internal broker/salesperson/developer
+  calendar, distinct from the pre-existing `bookings` table (the public
+  buyer-facing site-visit scheduler, untouched). Unlike notes/tasks, an
+  appointment's `client_id` is optional with no "must link to something"
+  constraint, since a personal calendar block is meaningful on its own.
+  "Video Meetings" is a plain `meeting_link` URL field, not embedded
+  video — no new paid dependency, same principle as the AI Voice
+  Assistant pass. Each of the three portals gets its own "Calendar" nav
+  page (`/broker/calendar`, `/salesperson/calendar`,
+  `/dashboard/calendar`) built on a new generic `MonthCalendar` shared
+  primitive (extracted from, not modifying, the existing
+  `BookingsTableClient`'s inline calendar view). Shared Collections /
+  Client Presentation Mode is a new `crm_collections` +
+  `crm_collection_items` pair (same 3-way owner pattern; no public RLS
+  policy at all) letting a broker/salesperson/developer curate a named
+  shortlist of projects and share it via a public, tokenized
+  `/present/[token]` link (mirrors `unit_reservations.sign_token`'s
+  precedent exactly) — no login required, reuses the existing QR-code
+  helper (`generateReferralQrCode`). A new "Collections" nav page per
+  portal handles creation/sharing/deletion. Team Collaboration is an
+  explicit non-goal for this pass — no chat/threading/mentions primitive
+  exists anywhere in this codebase to extend, and the term is too broad
+  to scope safely without one.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

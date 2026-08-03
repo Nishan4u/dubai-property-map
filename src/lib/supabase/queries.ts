@@ -801,6 +801,52 @@ export async function getAllReservationsAdmin() {
   return data ?? [];
 }
 
+async function getAppointments(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_appointments")
+    .select("*, crm_clients(full_name)")
+    .eq(ownerColumn, ownerId)
+    .order("scheduled_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getAppointmentsForBroker(brokerId: string) {
+  return getAppointments("broker_id", brokerId);
+}
+
+export async function getAppointmentsForSalesperson(salespersonId: string) {
+  return getAppointments("salesperson_id", salespersonId);
+}
+
+export async function getAppointmentsForDeveloper(developerId: string) {
+  return getAppointments("developer_id", developerId);
+}
+
+async function getCollections(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_collections")
+    .select("*, crm_clients(full_name), crm_collection_items(count)")
+    .eq(ownerColumn, ownerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getCollectionsForBroker(brokerId: string) {
+  return getCollections("broker_id", brokerId);
+}
+
+export async function getCollectionsForSalesperson(salespersonId: string) {
+  return getCollections("salesperson_id", salespersonId);
+}
+
+export async function getCollectionsForDeveloper(developerId: string) {
+  return getCollections("developer_id", developerId);
+}
+
 async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string, clientId: string) {
   const supabase = await createClient();
   const { data: client, error } = await supabase
