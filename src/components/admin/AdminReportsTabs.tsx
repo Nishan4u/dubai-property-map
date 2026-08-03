@@ -10,8 +10,23 @@ import { AdminPeopleAnalytics } from "@/components/admin/AdminPeopleAnalytics";
 import { AdminUserActivityReport } from "@/components/admin/AdminUserActivityReport";
 import { AdminSearchAnalytics } from "@/components/admin/AdminSearchAnalytics";
 import { AdminAiUsageReport } from "@/components/admin/AdminAiUsageReport";
+import { AdminConversionReport } from "@/components/admin/AdminConversionReport";
+import { AdminEngagementHeatmap } from "@/components/admin/AdminEngagementHeatmap";
+import { SectionCard } from "@/components/ui/SectionCard";
+import type { getProjectEngagementPointsAdmin } from "@/lib/supabase/queries";
 
-const tabs = ["Overview", "Revenue", "Subscriptions", "Sales", "People", "Activity", "Search", "AI Usage"] as const;
+const tabs = [
+  "Overview",
+  "Revenue",
+  "Subscriptions",
+  "Sales",
+  "People",
+  "Activity",
+  "Search",
+  "AI Usage",
+  "Conversion",
+  "Map Analytics",
+] as const;
 type Tab = (typeof tabs)[number];
 
 export function AdminReportsTabs({
@@ -23,6 +38,8 @@ export function AdminReportsTabs({
   activity,
   search,
   aiUsage,
+  conversion,
+  engagementPoints,
 }: {
   overview: React.ComponentProps<typeof AdminReportsOverview>;
   revenue: React.ComponentProps<typeof AdminRevenueReport>;
@@ -32,6 +49,8 @@ export function AdminReportsTabs({
   activity: React.ComponentProps<typeof AdminUserActivityReport>;
   search: React.ComponentProps<typeof AdminSearchAnalytics>;
   aiUsage: React.ComponentProps<typeof AdminAiUsageReport>;
+  conversion: React.ComponentProps<typeof AdminConversionReport>;
+  engagementPoints: Awaited<ReturnType<typeof getProjectEngagementPointsAdmin>>;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
 
@@ -59,6 +78,16 @@ export function AdminReportsTabs({
       {tab === "Activity" && <AdminUserActivityReport {...activity} />}
       {tab === "Search" && <AdminSearchAnalytics {...search} />}
       {tab === "AI Usage" && <AdminAiUsageReport {...aiUsage} />}
+      {tab === "Conversion" && <AdminConversionReport {...conversion} />}
+      {tab === "Map Analytics" && (
+        <SectionCard title="Project Engagement Heatmap">
+          <AdminEngagementHeatmap points={engagementPoints} />
+          <p className="mt-3 text-xs text-ink-500">
+            Weighted by each project&apos;s real view count — geographic
+            density of actual interest, not a fabricated hot-area claim.
+          </p>
+        </SectionCard>
+      )}
     </div>
   );
 }

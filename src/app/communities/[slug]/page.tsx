@@ -167,7 +167,7 @@ export default async function CommunityPage({
 
         {communityBanner && (
           <Link
-            href={communityBanner.target_url ?? "#"}
+            href={communityBanner.target_url ? `/api/ads/click/${communityBanner.id}` : "#"}
             className="mt-4 block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
           >
             <p className="text-xs font-semibold text-gold-400">Sponsored</p>

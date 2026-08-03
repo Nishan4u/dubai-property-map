@@ -27,6 +27,7 @@ import type { Community, Developer, ListingType, Project, ProjectTag } from "@/t
 import type { UpcomingProjectPublicRow } from "@/types/database";
 
 interface HomepageBanner {
+  id: string;
   title: string;
   targetUrl: string | null;
   developerName?: string;
@@ -356,7 +357,7 @@ export function HomeClient({
       {banner && bannerOpen && (
         <div className="flex items-center justify-between gap-3 bg-gold-500/15 px-6 py-2 text-xs">
           <Link
-            href={banner.targetUrl ?? "#"}
+            href={banner.targetUrl ? `/api/ads/click/${banner.id}` : "#"}
             className="flex-1 truncate text-ink-200 hover:text-gold-300"
           >
             <span className="font-semibold text-gold-400">Sponsored</span>{" "}

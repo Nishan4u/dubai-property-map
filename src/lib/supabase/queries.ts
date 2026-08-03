@@ -1747,6 +1747,93 @@ export async function getAiUsageReportAdmin() {
   };
 }
 
+// Chains every real funnel stage already captured somewhere in this
+// schema -- no new tracking, pure aggregation, mirroring the Sales/
+// Revenue Reports' pattern from the BI Reports batch. projects.views is
+// a plain counter with no timestamp (patch_17), so it's reported as a
+// current total only, never a fabricated trend.
+export async function getConversionFunnelAdmin() {
+  const supabase = await createClient();
+  const [
+    { data: projectViews },
+    { data: events },
+    { data: leadRows },
+    { data: requestRows },
+    { data: bookingRows },
+    { data: reservationRows },
+  ] = await Promise.all([
+    supabase.from("projects").select("views"),
+    supabase.from("project_events").select("event_type, created_at").eq("event_type", "click"),
+    supabase.from("leads").select("created_at"),
+    supabase.from("property_requests").select("created_at"),
+    supabase.from("bookings").select("created_at"),
+    supabase.from("unit_reservations").select("price_aed, signed_at").eq("status", "signed"),
+  ]);
+
+  const totalViews = (projectViews ?? []).reduce((sum, p) => sum + (p.views ?? 0), 0);
+
+  const signedByMonth = new Map<string, { count: number; value: number }>();
+  for (const r of reservationRows ?? []) {
+    if (!r.signed_at) continue;
+    const key = monthKey(r.signed_at);
+    const entry = signedByMonth.get(key) ?? { count: 0, value: 0 };
+    entry.count += 1;
+    entry.value += Number(r.price_aed);
+    signedByMonth.set(key, entry);
+  }
+
+  return {
+    totalViews,
+    totalClicks: events?.length ?? 0,
+    totalLeads: (leadRows?.length ?? 0) + (requestRows?.length ?? 0),
+    totalBookings: bookingRows?.length ?? 0,
+    totalSignedDeals: reservationRows?.length ?? 0,
+    totalSignedValue: (reservationRows ?? []).reduce((sum, r) => sum + Number(r.price_aed), 0),
+    signedDealsTrend: Array.from(signedByMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, v]) => ({ date: monthLabel(key), value: Math.round(v.value), count: v.count })),
+  };
+}
+
+export async function getAdPlacementPerformanceAdmin() {
+  const supabase = await createClient();
+  const [placements, { data: clickRows }] = await Promise.all([
+    getAllAdPlacementsAdmin(),
+    supabase.from("ad_placement_events").select("placement_id").eq("event_type", "click"),
+  ]);
+
+  const clickCounts = new Map<string, number>();
+  for (const c of clickRows ?? []) {
+    clickCounts.set(c.placement_id, (clickCounts.get(c.placement_id) ?? 0) + 1);
+  }
+
+  return placements
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      placementType: p.placement_type,
+      status: p.status,
+      clicks: clickCounts.get(p.id) ?? 0,
+    }))
+    .sort((a, b) => b.clicks - a.clicks);
+}
+
+// Real geographic engagement density -- weight is projects.views, no
+// invented figure. Feeds a Mapbox heatmap layer, not a fabricated
+// "hot area" claim.
+export async function getProjectEngagementPointsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id, name, lat, lng, views")
+    .not("lat", "is", null)
+    .not("lng", "is", null)
+    .in("status", ["published", "featured"]);
+
+  if (error) throw error;
+  return (data ?? []).map((p) => ({ id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, weight: p.views }));
+}
+
 export async function getPlanSubscriberCounts() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("developers").select("plan_tier");

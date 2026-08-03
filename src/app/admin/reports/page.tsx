@@ -1,5 +1,6 @@
 import { AdminReportsTabs } from "@/components/admin/AdminReportsTabs";
 import {
+  getAdPlacementPerformanceAdmin,
   getAgencyAnalyticsAdmin,
   getAiUsageReportAdmin,
   getAllBookingsAdmin,
@@ -10,6 +11,8 @@ import {
   getAllProjectsAdmin,
   getBrokerAnalyticsAdmin,
   getCommunities,
+  getConversionFunnelAdmin,
+  getProjectEngagementPointsAdmin,
   getRevenueReportAdmin,
   getSalesReportAdmin,
   getSearchAnalyticsAdmin,
@@ -36,6 +39,9 @@ export default async function AdminReportsPage() {
     activityReport,
     searchReport,
     aiUsageReport,
+    conversionFunnel,
+    adPerformance,
+    engagementPoints,
   ] = await Promise.all([
     getAllDevelopersAdmin(),
     getAllProjectsAdmin(),
@@ -52,6 +58,9 @@ export default async function AdminReportsPage() {
     getUserActivityReportAdmin(),
     getSearchAnalyticsAdmin(),
     getAiUsageReportAdmin(),
+    getConversionFunnelAdmin(),
+    getAdPlacementPerformanceAdmin(),
+    getProjectEngagementPointsAdmin(),
   ]);
 
   return (
@@ -72,6 +81,8 @@ export default async function AdminReportsPage() {
         activity={{ report: activityReport }}
         search={{ report: searchReport }}
         aiUsage={{ report: aiUsageReport }}
+        conversion={{ funnel: conversionFunnel, adPerformance }}
+        engagementPoints={engagementPoints}
       />
     </div>
   );

@@ -188,7 +188,7 @@ export default async function ProjectDetailsPage({
       <div className="mx-auto max-w-6xl px-6 pb-16 pt-6">
         {projectBanner && (
           <Link
-            href={projectBanner.target_url ?? "#"}
+            href={projectBanner.target_url ? `/api/ads/click/${projectBanner.id}` : "#"}
             className="mb-4 block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
           >
             <p className="text-xs font-semibold text-gold-400">Sponsored</p>

@@ -617,6 +617,31 @@ section as modules get built out.
   sits between the pre-existing Price Overview and the Projects grid,
   inside the same `ProjectAccessGate` subscription gate as the rest of
   the community's project data — nothing existing on the page changed.
+- Analytics & Tracking (Module 26, now fully done): three of the seven
+  listed items turned out to already exist — Google Analytics (GA4/GTM/
+  Meta/TikTok Pixel, `AnalyticsScripts.tsx` + the admin-editable
+  `platform_settings.google_analytics_id` on `/admin/settings`), Search
+  Analytics (the prior batch), and Click Tracking (`project_events`,
+  now also feeding the new Conversion tab below). Two new tabs added to
+  `/admin/reports`: **Conversion** chains every real funnel stage this
+  schema already captures (project views as a current total — no
+  timestamp exists to trend it — clicks, leads, bookings, signed deals
+  with real value) plus ad placement click performance; **Map
+  Analytics** is a real Mapbox heatmap (a new, standalone map instance,
+  not an extension of the public `DubaiMap.tsx`) weighted by each
+  project's actual view count — genuine engagement density, not an
+  invented "hot area" claim, and unrelated to Module 5's still-pending
+  ROI/rental-yield map layers, which this pass deliberately didn't
+  touch since those would require exactly the kind of fabricated
+  per-listing return figures this codebase has repeatedly refused to
+  invent. Ad placement click-through is genuinely new: a
+  `ad_placement_events` table (patch_108) plus a public redirect route
+  (`/api/ads/click/[id]`, mirroring the existing `/s/[code]` staff-
+  referral-link precedent) that all five existing banner render sites
+  now route through — each only when `target_url` is actually set, so
+  the pre-existing no-target `"#"` fallback behaves exactly as before.
+  Ad impression tracking stays out of scope (would need client-side
+  visibility detection on what are today plain server-rendered links).
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -639,8 +664,6 @@ section as modules get built out.
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
   Module 20 — see "Substantially built" above for Homepage Banners,
   Featured Developers, and Sponsored Communities, which are now done).
-- Formal analytics/tracking integrations, heatmaps, conversion tracking
-  (Module 26).
 - Multi-language / Arabic / RTL support (Module 29).
 
 This snapshot is a starting point for scoping "what's next," not a

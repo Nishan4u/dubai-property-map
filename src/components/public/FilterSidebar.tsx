@@ -71,7 +71,7 @@ export function FilterSidebar({
   handoverYears: number[];
   filters: ProjectFilters;
   onApply: (filters: ProjectFilters) => void;
-  sidebarBanner?: { title: string; targetUrl: string | null; developerName?: string } | null;
+  sidebarBanner?: { id: string; title: string; targetUrl: string | null; developerName?: string } | null;
   /** Set for logged-in Developer/Salesperson accounts — the results are
    * already locked to this one developer, so the developer picker and the
    * other-developers directory widget are hidden rather than offered as a
@@ -441,7 +441,7 @@ export function FilterSidebar({
 
       {sidebarBanner && (
         <Link
-          href={sidebarBanner.targetUrl ?? "#"}
+          href={sidebarBanner.targetUrl ? `/api/ads/click/${sidebarBanner.id}` : "#"}
           className="block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
         >
           <p className="text-xs font-semibold text-gold-400">Sponsored</p>

@@ -94,7 +94,7 @@ export default async function DeveloperProfilePage({
       <div className="mx-auto max-w-6xl px-6 py-10">
         {developerBanner && (
           <Link
-            href={developerBanner.target_url ?? "#"}
+            href={developerBanner.target_url ? `/api/ads/click/${developerBanner.id}` : "#"}
             className="mb-4 block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
           >
             <p className="text-xs font-semibold text-gold-400">Sponsored</p>
