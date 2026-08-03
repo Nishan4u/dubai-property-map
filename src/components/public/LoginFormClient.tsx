@@ -8,6 +8,12 @@ import { createClient } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/authError";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
+function formatRetryAfter(seconds: number) {
+  if (!seconds || seconds < 60) return "a minute";
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
 export function LoginFormClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,6 +73,20 @@ export function LoginFormClient() {
     setUnconfirmed(false);
     setResendStatus("idle");
 
+    // Blocks even a correct password while locked out -- checked before
+    // ever calling signInWithPassword, not just after a failure.
+    const lockRes = await fetch("/api/auth/login-lockout-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const lockStatus = await lockRes.json();
+    if (lockStatus.locked) {
+      setErrorMsg(`Too many failed attempts. Try again in ${formatRetryAfter(lockStatus.retryAfterSeconds)}.`);
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -74,7 +94,21 @@ export function LoginFormClient() {
     });
 
     if (error) {
-      setErrorMsg(authErrorMessage(error));
+      if (error.code === "invalid_credentials") {
+        const failRes = await fetch("/api/auth/login-failure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const failStatus = await failRes.json();
+        setErrorMsg(
+          failStatus.locked
+            ? `Too many failed attempts. Try again in ${formatRetryAfter(failStatus.retryAfterSeconds)}.`
+            : authErrorMessage(error)
+        );
+      } else {
+        setErrorMsg(authErrorMessage(error));
+      }
       setUnconfirmed(error.code === "email_not_confirmed");
       setLoading(false);
       return;

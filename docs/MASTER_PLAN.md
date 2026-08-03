@@ -425,11 +425,30 @@ section as modules get built out.
   duplicate what brokers already have). Failed-login tracking, account
   lockout, and IP restrictions stay pending — this pass only covers
   successful-login history.
+- Account Lockout & Failed-Login Tracking (rest of Module 27): reuses
+  `login_history` for failed attempts too (patch_102 loosens `user_id` to
+  nullable, since a failed attempt happens before authentication
+  succeeds and there's no `auth.uid()` to attribute it to) instead of a
+  separate table. Two new pre-auth routes using the service-role client
+  (`/api/auth/login-lockout-check`, `/api/auth/login-failure`) — checked
+  in `LoginFormClient.tsx` *before* every sign-in attempt (so a locked
+  account is blocked even on a correct password) and again right after a
+  genuine `invalid_credentials` failure. Lockout is a 15-minute sliding
+  window, 5 attempts (`src/lib/authLockout.ts`), self-resolving as old
+  failures age out — no separate unlock step. A second RLS policy lets a
+  user see their own failed attempts in their existing Login History tab
+  via the email claim on their JWT (a null `user_id` can't match the
+  original owner policy). Known, accepted tradeoff of any email-keyed
+  lockout, called out in the route's own comment: anyone who knows a
+  real user's email — not just that user — can trigger this endpoint, so
+  it stops password brute-forcing but can't stop a malicious caller
+  deliberately locking someone else's account out; this pass doesn't try
+  to close that, it's inherent to the pattern.
 
 **Not yet built (net-new from this document):**
-- Account lockout / failed-login tracking, IP restrictions (rest of
-  Module 27 — see "Substantially built" above for 2FA/Login
-  History/Devices, which are now done).
+- IP restrictions, activity/audit-log surfacing beyond the existing admin
+  Audit Log (rest of Module 27 — see "Substantially built" above for
+  2FA/Login History/Devices/Account Lockout, which are now done).
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
 - Community Explorer's investment score / ROI / rental yield / market
