@@ -2,6 +2,13 @@
 -- existing `bookings` table is a site-visit scheduler, not a real
 -- reservation/contract concept -- this is genuinely new, not an
 -- extension of it.
+--
+-- Every statement below is written to be safely re-runnable: Supabase's
+-- SQL editor does not roll back the whole pasted script on a single
+-- statement's error, it continues past it -- so an earlier failed run
+-- (like the constraint-name bug fixed here) can leave later statements
+-- already applied. `create policy` has no `if not exists` in Postgres,
+-- so each one is preceded by `drop policy if exists`.
 
 -- 1. Extend crm_clients (patch_98) to a 3-way owner: developers have no
 --    client-tracking mechanism at all today, and a reservation needs to
@@ -48,17 +55,21 @@ alter table crm_clients add constraint crm_clients_owner_match check (
 );
 create index if not exists crm_clients_developer_id_idx on crm_clients(developer_id) where developer_id is not null;
 
+drop policy if exists "crm_clients: developer selects own" on crm_clients;
 create policy "crm_clients: developer selects own" on crm_clients for select using (
   developer_id = (select developer_id from profiles where id = auth.uid())
 );
+drop policy if exists "crm_clients: developer inserts own" on crm_clients;
 create policy "crm_clients: developer inserts own" on crm_clients for insert with check (
   developer_id = (select developer_id from profiles where id = auth.uid())
 );
+drop policy if exists "crm_clients: developer updates own" on crm_clients;
 create policy "crm_clients: developer updates own" on crm_clients for update using (
   developer_id = (select developer_id from profiles where id = auth.uid())
 ) with check (
   developer_id = (select developer_id from profiles where id = auth.uid())
 );
+drop policy if exists "crm_clients: developer deletes own" on crm_clients;
 create policy "crm_clients: developer deletes own" on crm_clients for delete using (
   developer_id = (select developer_id from profiles where id = auth.uid())
 );
@@ -67,7 +78,7 @@ create policy "crm_clients: developer deletes own" on crm_clients for delete usi
 --    entity. unit_type_id references a category (project_unit_types),
 --    not an individual numbered unit -- Module 16 "Live Inventory" isn't
 --    built, so unit_number is free text with no availability locking.
-create table unit_reservations (
+create table if not exists unit_reservations (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references crm_clients(id) on delete cascade,
   project_id uuid not null references projects(id) on delete cascade,
@@ -90,8 +101,8 @@ create table unit_reservations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index unit_reservations_client_id_idx on unit_reservations(client_id);
-create index unit_reservations_project_id_idx on unit_reservations(project_id);
+create index if not exists unit_reservations_client_id_idx on unit_reservations(client_id);
+create index if not exists unit_reservations_project_id_idx on unit_reservations(project_id);
 
 alter table unit_reservations enable row level security;
 
@@ -100,51 +111,64 @@ alter table unit_reservations enable row level security;
 -- public policy at all -- the buyer-signing flow goes entirely through
 -- service-role routes keyed by sign_token (same pattern as patch_53's
 -- invitations-by-token route), never through RLS.
+drop policy if exists "unit_reservations: broker selects own" on unit_reservations;
 create policy "unit_reservations: broker selects own" on unit_reservations for select using (
   client_id in (select id from crm_clients where broker_id = (select broker_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: broker inserts own" on unit_reservations;
 create policy "unit_reservations: broker inserts own" on unit_reservations for insert with check (
   client_id in (select id from crm_clients where broker_id = (select broker_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: broker updates own" on unit_reservations;
 create policy "unit_reservations: broker updates own" on unit_reservations for update using (
   client_id in (select id from crm_clients where broker_id = (select broker_id from profiles where id = auth.uid()))
 ) with check (
   client_id in (select id from crm_clients where broker_id = (select broker_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: broker deletes own" on unit_reservations;
 create policy "unit_reservations: broker deletes own" on unit_reservations for delete using (
   client_id in (select id from crm_clients where broker_id = (select broker_id from profiles where id = auth.uid()))
 );
 
+drop policy if exists "unit_reservations: salesperson selects own" on unit_reservations;
 create policy "unit_reservations: salesperson selects own" on unit_reservations for select using (
   client_id in (select id from crm_clients where salesperson_id = (select salesperson_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: salesperson inserts own" on unit_reservations;
 create policy "unit_reservations: salesperson inserts own" on unit_reservations for insert with check (
   client_id in (select id from crm_clients where salesperson_id = (select salesperson_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: salesperson updates own" on unit_reservations;
 create policy "unit_reservations: salesperson updates own" on unit_reservations for update using (
   client_id in (select id from crm_clients where salesperson_id = (select salesperson_id from profiles where id = auth.uid()))
 ) with check (
   client_id in (select id from crm_clients where salesperson_id = (select salesperson_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: salesperson deletes own" on unit_reservations;
 create policy "unit_reservations: salesperson deletes own" on unit_reservations for delete using (
   client_id in (select id from crm_clients where salesperson_id = (select salesperson_id from profiles where id = auth.uid()))
 );
 
+drop policy if exists "unit_reservations: developer selects own" on unit_reservations;
 create policy "unit_reservations: developer selects own" on unit_reservations for select using (
   client_id in (select id from crm_clients where developer_id = (select developer_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: developer inserts own" on unit_reservations;
 create policy "unit_reservations: developer inserts own" on unit_reservations for insert with check (
   client_id in (select id from crm_clients where developer_id = (select developer_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: developer updates own" on unit_reservations;
 create policy "unit_reservations: developer updates own" on unit_reservations for update using (
   client_id in (select id from crm_clients where developer_id = (select developer_id from profiles where id = auth.uid()))
 ) with check (
   client_id in (select id from crm_clients where developer_id = (select developer_id from profiles where id = auth.uid()))
 );
+drop policy if exists "unit_reservations: developer deletes own" on unit_reservations;
 create policy "unit_reservations: developer deletes own" on unit_reservations for delete using (
   client_id in (select id from crm_clients where developer_id = (select developer_id from profiles where id = auth.uid()))
 );
 
+drop policy if exists "unit_reservations: admin reads all" on unit_reservations;
 create policy "unit_reservations: admin reads all" on unit_reservations for select using (is_admin());
 
 notify pgrst, 'reload schema';
