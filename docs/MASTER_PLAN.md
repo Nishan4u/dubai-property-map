@@ -599,6 +599,24 @@ section as modules get built out.
   more tabs ("Search", "AI Usage") on `/admin/reports`. Real token
   counts are shown, never a fabricated dollar cost — no pricing data
   exists anywhere in this codebase to derive one from.
+- Community Explorer enrichment (Module 6, now fully done): each
+  community page gets an Investment Score panel (a genuine average of
+  each listing's own transparent, already-computed score — rating,
+  review volume, the "high-roi" tag — reusing `getInvestmentScore()` as-
+  is, never a new score formula) and a Market Trends panel (off-plan vs.
+  ready split, top developers, top tags — reusing `getMarketInsights()`,
+  already built for MapAI's Market Insights tool, now scoped to the
+  community by name for the first time on a public page). ROI and
+  Rental Yield deliberately do **not** show a fabricated real figure —
+  this schema has no historical rental/resale data, the same rule
+  already enforced for the AI Investment Advisor and the Calculators
+  Suite — instead the community page embeds the existing
+  `RoiCalculator`/`RentalYieldCalculator` components pre-filled with the
+  community's own real average listing price, so a buyer models their
+  own scenario rather than being shown an invented number. All of this
+  sits between the pre-existing Price Overview and the Projects grid,
+  inside the same `ProjectAccessGate` subscription gate as the rest of
+  the community's project data — nothing existing on the page changed.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -614,15 +632,10 @@ section as modules get built out.
   it.
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
-- Community Explorer's investment score / ROI / rental yield / market
-  trends panels (Module 6).
 - Email History, Call Logs, WhatsApp History (rest of Module 15's
   Built-in CRM — see "Substantially built" above for Client Management/
   Notes/Tasks/Calendar/Appointments, which are now done), Connect-Any-CRM
   integrations, ERP/marketing/storage/payment integrations beyond Stripe.
-- Search Analytics and AI Usage Reports (rest of Module 19 — see
-  "Substantially built" above for Revenue/Subscription/Sales/Developer/
-  Broker/Agency/User Activity Reports, which are now done).
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
   Module 20 — see "Substantially built" above for Homepage Banners,
   Featured Developers, and Sponsored Communities, which are now done).

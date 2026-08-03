@@ -5,6 +5,7 @@ import {
   Landmark,
   School,
   Sparkles,
+  Star,
   TrendingUp,
   UtensilsCrossed,
 } from "lucide-react";
@@ -12,14 +13,18 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { CommunityFavoriteButton } from "@/components/public/CommunityFavoriteButton";
+import { RoiCalculator } from "@/components/public/calculators/RoiCalculator";
+import { RentalYieldCalculator } from "@/components/public/calculators/RentalYieldCalculator";
 import { formatAed } from "@/data/mock";
 import { poiLayers } from "@/data/poi";
 import { nearestPoints, type NearbyPoint } from "@/lib/nearbyPoi";
+import { getInvestmentScore } from "@/lib/investmentScore";
 import Link from "next/link";
 import {
   getActiveCommunityBanner,
   getCommunityBySlug,
   getMapAccessStatus,
+  getMarketInsights,
   getProjectsForCommunity,
 } from "@/lib/supabase/queries";
 import { mapProject } from "@/lib/supabase/mappers";
@@ -67,8 +72,21 @@ export default async function CommunityPage({
 
   const communityBanner = await getActiveCommunityBanner(community.id);
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
-  const projectRows = mapAccessStatus === "ok" ? await getProjectsForCommunity(community.id) : [];
+  const [projectRows, marketInsights] =
+    mapAccessStatus === "ok"
+      ? await Promise.all([getProjectsForCommunity(community.id), getMarketInsights(community.name)])
+      : [[], null];
   const communityProjects = projectRows.map((p) => mapProject(p));
+
+  // Community-level Investment Score is a genuine average of each listing's
+  // own transparent, already-computed score (rating/reviews/high-roi tag) --
+  // never a fabricated ROI or rental-yield figure, since this schema has no
+  // historical rental/resale data to compute one from (see getMarketInsights'
+  // own header comment and the AI Investment Advisor's identical rule).
+  const investmentScores = communityProjects.map((p) => getInvestmentScore(p));
+  const avgInvestmentScore = investmentScores.length
+    ? Math.round(investmentScores.reduce((sum, s) => sum + s, 0) / investmentScores.length)
+    : null;
   const prices = communityProjects.map((p) => p.priceFromAed).filter((p) => p > 0);
   const avgPrice = prices.length
     ? prices.reduce((sum, p) => sum + p, 0) / prices.length
@@ -257,6 +275,93 @@ export default async function CommunityPage({
             </>
           )}
         </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-100">
+              <Star className="h-4 w-4 text-gold-400" /> Investment Score
+            </p>
+            {avgInvestmentScore != null ? (
+              <>
+                <p className="text-3xl font-bold text-gold-400">
+                  {avgInvestmentScore}
+                  <span className="text-base text-ink-500">/100</span>
+                </p>
+                <p className="mt-2 text-xs text-ink-600">
+                  Average across {communityProjects.length} listed project
+                  {communityProjects.length === 1 ? "" : "s"} in {community.name}. A
+                  transparent computed metric (rating, review volume, and the
+                  &quot;high-roi&quot; tag) — not a fabricated market statistic. Same
+                  formula as the Investment Score filter on the homepage.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-ink-500">No priced listings yet.</p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-navy-700 bg-navy-850 p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-100">
+              <TrendingUp className="h-4 w-4 text-gold-400" /> Market Trends
+            </p>
+            {marketInsights && marketInsights.totalProjects > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-ink-100">{marketInsights.offPlanCount}</p>
+                    <p className="text-xs text-ink-500">Off-Plan</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-ink-100">{marketInsights.readyCount}</p>
+                    <p className="text-xs text-ink-500">Ready</p>
+                  </div>
+                </div>
+                {marketInsights.topDevelopersByCount.length > 0 && (
+                  <div className="mt-3 border-t border-navy-800 pt-3">
+                    <p className="mb-1.5 text-xs font-medium text-ink-400">Top Developers</p>
+                    <p className="text-xs text-ink-300">
+                      {marketInsights.topDevelopersByCount.map((d) => `${d.name} (${d.count})`).join(" · ")}
+                    </p>
+                  </div>
+                )}
+                {marketInsights.topTags.length > 0 && (
+                  <div className="mt-3 border-t border-navy-800 pt-3">
+                    <p className="mb-1.5 text-xs font-medium text-ink-400">Popular Tags</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {marketInsights.topTags.map((t) => (
+                        <span
+                          key={t.tag}
+                          className="rounded-full bg-navy-800 px-2 py-0.5 text-[10px] text-ink-300"
+                        >
+                          {t.tag} ({t.count})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-ink-500">No market data yet.</p>
+            )}
+          </div>
+        </div>
+
+        {avgPrice > 0 && (
+          <div className="mt-6 rounded-xl border border-navy-700 bg-navy-850 p-4">
+            <p className="mb-1 text-sm font-semibold text-ink-100">Investment Tools</p>
+            <p className="mb-4 text-xs text-ink-500">
+              Estimate potential returns using {community.name}&apos;s average
+              listing price as a starting point — every figure below is yours to
+              adjust. This platform doesn&apos;t track historical rental or resale
+              data, so these are your own modeled estimates, not verified figures
+              for this community.
+            </p>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <RoiCalculator priceAed={avgPrice} />
+              <RentalYieldCalculator priceAed={avgPrice} />
+            </div>
+          </div>
+        )}
 
         <h2 className="mt-8 mb-3 text-lg font-semibold text-ink-100">
           Projects in {community.name}
