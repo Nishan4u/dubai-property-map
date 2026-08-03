@@ -292,6 +292,18 @@ export interface ProjectUnitTypeRow {
   created_at: string;
 }
 
+export interface ProjectUnitRow {
+  id: string;
+  project_id: string;
+  unit_type_id: string;
+  unit_number: string;
+  floor: string | null;
+  price_aed: number | null;
+  status: "available" | "reserved" | "sold";
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UpcomingProjectRow {
   id: string;
   developer_id: string;

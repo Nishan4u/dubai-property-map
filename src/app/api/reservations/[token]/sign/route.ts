@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const admin = createAdminClient();
   const { data: reservation } = await admin
     .from("unit_reservations")
-    .select("id, status")
+    .select("id, status, unit_id")
     .eq("sign_token", token)
     .maybeSingle();
 
@@ -49,6 +49,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // The unit was already flipped to 'reserved' when the contract was sent
+  // (see the send route) -- signing is what finalizes the sale.
+  if (reservation.unit_id) {
+    await admin.from("project_units").update({ status: "sold", updated_at: new Date().toISOString() }).eq("id", reservation.unit_id);
   }
 
   await logAudit("unit_reservation.signed", "unit_reservation", reservation.id, { signatureType }, { client: admin });

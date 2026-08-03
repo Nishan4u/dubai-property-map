@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
+import type { ProjectUnitRow } from "@/types/database";
 
 interface UnitType {
   id: string;
@@ -52,6 +53,10 @@ export function BrokerReservationsSection({
   const [projectId, setProjectId] = useState("");
   const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
   const [unitTypeId, setUnitTypeId] = useState("");
+  const [availableUnits, setAvailableUnits] = useState<ProjectUnitRow[]>([]);
+  // "" = nothing picked yet, "__manual__" = fell back to free-text entry
+  // (no inventory configured, or the buyer's unit isn't in the list yet).
+  const [unitId, setUnitId] = useState("");
   const [unitNumber, setUnitNumber] = useState("");
   const [priceAed, setPriceAed] = useState("");
   const [depositAed, setDepositAed] = useState("");
@@ -69,18 +74,42 @@ export function BrokerReservationsSection({
       .then(({ data }) => setUnitTypes(data ?? []));
   }, [projectId]);
 
+  useEffect(() => {
+    if (!projectId) return;
+    const supabase = createClient();
+    let query = supabase.from("project_units").select("*").eq("project_id", projectId).eq("status", "available").order("unit_number");
+    if (unitTypeId) query = query.eq("unit_type_id", unitTypeId);
+    query.then(({ data }) => setAvailableUnits(data ?? []));
+  }, [projectId, unitTypeId]);
+
   function handleSelectProject(id: string) {
     setProjectId(id);
     setUnitTypeId("");
     setUnitTypes([]);
+    setAvailableUnits([]);
+    setUnitId("");
+    setUnitNumber("");
   }
 
   function handleSelectUnitType(id: string) {
     setUnitTypeId(id);
+    setUnitId("");
+    setUnitNumber("");
     const unitType = unitTypes.find((u) => u.id === id);
     if (unitType?.starting_price_aed && !priceAed) {
       setPriceAed(String(unitType.starting_price_aed));
     }
+  }
+
+  function handleSelectUnit(id: string) {
+    setUnitId(id);
+    if (id === "__manual__") {
+      setUnitNumber("");
+      return;
+    }
+    const unit = availableUnits.find((u) => u.id === id);
+    setUnitNumber(unit?.unit_number ?? "");
+    if (unit?.price_aed && !priceAed) setPriceAed(String(unit.price_aed));
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -88,6 +117,10 @@ export function BrokerReservationsSection({
     if (!projectId || !priceAed) return;
     setSaving(true);
     const supabase = createClient();
+    // unit_id is only spread in when a real unit was picked -- keeps this
+    // insert working against a database that hasn't run patch_105 yet
+    // (no unit_id column at all) for the common case of no unit chosen.
+    const realUnitId = unitId && unitId !== "__manual__" ? unitId : null;
     const { data, error } = await supabase
       .from("unit_reservations")
       .insert({
@@ -98,6 +131,7 @@ export function BrokerReservationsSection({
         price_aed: Number(priceAed),
         deposit_amount_aed: depositAed ? Number(depositAed) : null,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        ...(realUnitId ? { unit_id: realUnitId } : {}),
       })
       .select("*, projects(name)")
       .single();
@@ -107,6 +141,8 @@ export function BrokerReservationsSection({
       setShowForm(false);
       setProjectId("");
       setUnitTypeId("");
+      setAvailableUnits([]);
+      setUnitId("");
       setUnitNumber("");
       setPriceAed("");
       setDepositAed("");
@@ -128,9 +164,13 @@ export function BrokerReservationsSection({
 
   async function handleCancel(id: string) {
     if (!window.confirm("Cancel this reservation?")) return;
-    const supabase = createClient();
-    await supabase.from("unit_reservations").update({ status: "cancelled" }).eq("id", id);
-    setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r)));
+    const res = await fetch(`/api/reservations/cancel/${id}`, { method: "POST" });
+    if (res.ok) {
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r)));
+    } else {
+      const data = await res.json();
+      window.alert(data.error ?? "Failed to cancel reservation.");
+    }
   }
 
   const now = new Date();
@@ -181,13 +221,45 @@ export function BrokerReservationsSection({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Unit Number (optional)</label>
-            <input
-              value={unitNumber}
-              onChange={(e) => setUnitNumber(e.target.value)}
-              placeholder="e.g. 1204"
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-            />
+            <label className="mb-1 block text-xs font-medium text-ink-400">Unit (optional)</label>
+            {availableUnits.length > 0 && unitId !== "__manual__" ? (
+              <select
+                value={unitId}
+                onChange={(e) => handleSelectUnit(e.target.value)}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+              >
+                <option value="">Select a unit…</option>
+                {availableUnits.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    Unit {u.unit_number}
+                    {u.floor ? ` · Floor ${u.floor}` : ""}
+                    {u.price_aed != null ? ` · AED ${u.price_aed.toLocaleString()}` : ""}
+                  </option>
+                ))}
+                <option value="__manual__">Other (type manually)</option>
+              </select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  value={unitNumber}
+                  onChange={(e) => setUnitNumber(e.target.value)}
+                  placeholder="e.g. 1204"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+                {availableUnits.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUnitId("");
+                      setUnitNumber("");
+                    }}
+                    className="shrink-0 text-xs font-medium text-gold-400 hover:text-gold-300"
+                  >
+                    Pick from list
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">Price (AED)</label>

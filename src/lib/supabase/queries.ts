@@ -1653,6 +1653,35 @@ export async function getProjectUnitTypes(projectId: string) {
   return data ?? [];
 }
 
+// One bulk select + in-JS Map-based reduce, matching this file's
+// established aggregate-count pattern (see devCounts/tagCounts above) --
+// not a per-unit-type query. Unit types with no project_units rows at
+// all (inventory not configured) simply have no entry, so the caller's
+// existing manually-set availability badge stays the only signal shown.
+// Fails soft (empty object) rather than throwing -- this is purely
+// additive display data on the public project page, so a transient
+// error (or patch_105 not yet applied on a given environment) should
+// never take down the whole page, unlike the required data this file's
+// other queries throw on.
+export async function getProjectUnitAvailability(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_units")
+    .select("unit_type_id, status")
+    .eq("project_id", projectId);
+
+  if (error) return {};
+
+  const counts = new Map<string, { available: number; total: number }>();
+  for (const row of data ?? []) {
+    const entry = counts.get(row.unit_type_id) ?? { available: 0, total: 0 };
+    entry.total += 1;
+    if (row.status === "available") entry.available += 1;
+    counts.set(row.unit_type_id, entry);
+  }
+  return Object.fromEntries(counts);
+}
+
 export async function getUnitTypeFloorPlans(projectId: string, unitTypeId: string) {
   const supabase = await createClient();
   const path = `${projectId}/floor-plans/${unitTypeId}`;

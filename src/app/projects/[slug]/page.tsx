@@ -23,6 +23,7 @@ import {
   getProjectMediaFiles,
   getProjectPreviewBySlug,
   getProjectsForCommunity,
+  getProjectUnitAvailability,
   getProjectUnitTypes,
   getUnitTypeFloorPlans,
   getViewerProjectScope,
@@ -124,13 +125,14 @@ export default async function ProjectDetailsPage({
     .slice(0, 3)
     .map((p) => mapProject(p));
 
-  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes] = await Promise.all([
+  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes, unitAvailability] = await Promise.all([
     getProjectMediaFiles(project.id, "gallery"),
     getProjectGallerySections(project.id),
     getProjectDocumentsByCategory(project.id),
     getConstructionMilestones(project.id),
     getActiveProjectBanner(project.id),
     getProjectUnitTypes(project.id),
+    getProjectUnitAvailability(project.id),
   ]);
   const unitTypeFloorPlans: Record<string, Awaited<ReturnType<typeof getUnitTypeFloorPlans>>> =
     Object.fromEntries(
@@ -322,6 +324,11 @@ export default async function ProjectDetailsPage({
                       {u.starting_price_aed != null && (
                         <p className="mt-2 text-sm font-semibold text-gold-400">
                           From {formatAed(u.starting_price_aed)}
+                        </p>
+                      )}
+                      {unitAvailability[u.id] && (
+                        <p className="mt-1 text-xs text-ink-500">
+                          {unitAvailability[u.id].available} of {unitAvailability[u.id].total} units available
                         </p>
                       )}
                       <p className="mt-1 text-xs text-ink-400">

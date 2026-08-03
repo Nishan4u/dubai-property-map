@@ -9,7 +9,7 @@ import { UploadProgressItem } from "@/components/ui/UploadProgress";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
-import type { ProjectUnitTypeRow } from "@/types/database";
+import type { ProjectUnitRow, ProjectUnitTypeRow } from "@/types/database";
 
 const availabilityOptions: { label: string; value: ProjectUnitTypeRow["availability"] }[] = [
   { label: "Available", value: "available" },
@@ -22,6 +22,20 @@ const availabilityTone: Record<ProjectUnitTypeRow["availability"], string> = {
   limited: "border-gold-500/40 text-gold-300",
   sold_out: "border-rose-500/40 text-rose-300",
 };
+
+const unitStatusTone: Record<ProjectUnitRow["status"], string> = {
+  available: "border-emerald-500/40 text-emerald-300",
+  reserved: "border-gold-500/40 text-gold-300",
+  sold: "border-rose-500/40 text-rose-300",
+};
+
+type UnitDraftFields = {
+  unitNumber: string;
+  floor: string;
+  priceAed: string;
+};
+
+const emptyUnitDraft: UnitDraftFields = { unitNumber: "", floor: "", priceAed: "" };
 
 type DraftFields = {
   unitName: string;
@@ -104,6 +118,70 @@ export function UnitTypesManager({
   const [imagePercent, setImagePercent] = useState(0);
   const [imageError, setImageError] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  // Independent toggle from mediaOpenId -- a developer may want to see a
+  // unit type's individual units and its photos in two separate rows at
+  // once, there's no existing convention here restricting a row to one
+  // open panel at a time.
+  const [unitsOpenId, setUnitsOpenId] = useState<string | null>(null);
+  const [unitsByType, setUnitsByType] = useState<Record<string, ProjectUnitRow[]>>({});
+  const [unitsLoadingId, setUnitsLoadingId] = useState<string | null>(null);
+  const [unitDraft, setUnitDraft] = useState<UnitDraftFields>(emptyUnitDraft);
+  const [unitSaving, setUnitSaving] = useState(false);
+  const [unitError, setUnitError] = useState("");
+
+  async function toggleUnits(unitTypeId: string) {
+    if (unitsOpenId === unitTypeId) {
+      setUnitsOpenId(null);
+      return;
+    }
+    setUnitsOpenId(unitTypeId);
+    setUnitDraft(emptyUnitDraft);
+    setUnitError("");
+    if (unitsByType[unitTypeId]) return;
+    setUnitsLoadingId(unitTypeId);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("project_units")
+      .select("*")
+      .eq("unit_type_id", unitTypeId)
+      .order("unit_number");
+    setUnitsByType((prev) => ({ ...prev, [unitTypeId]: data ?? [] }));
+    setUnitsLoadingId(null);
+  }
+
+  async function addUnit(unitTypeId: string) {
+    if (!unitDraft.unitNumber.trim()) return;
+    setUnitSaving(true);
+    setUnitError("");
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("project_units")
+      .insert({
+        project_id: projectId,
+        unit_type_id: unitTypeId,
+        unit_number: unitDraft.unitNumber.trim(),
+        floor: unitDraft.floor.trim() === "" ? null : unitDraft.floor.trim(),
+        price_aed: unitDraft.priceAed.trim() === "" ? null : Number(unitDraft.priceAed),
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      setUnitError(error?.message.includes("duplicate") ? "A unit with this number already exists in this project." : "Failed to add unit.");
+      setUnitSaving(false);
+      return;
+    }
+
+    setUnitsByType((prev) => ({ ...prev, [unitTypeId]: [...(prev[unitTypeId] ?? []), data] }));
+    setUnitDraft(emptyUnitDraft);
+    setUnitSaving(false);
+  }
+
+  async function removeUnit(id: string, unitTypeId: string) {
+    setUnitsByType((prev) => ({ ...prev, [unitTypeId]: (prev[unitTypeId] ?? []).filter((u) => u.id !== id) }));
+    const supabase = createClient();
+    await supabase.from("project_units").delete().eq("id", id);
+  }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const uploadedAt = Date.now();
@@ -302,6 +380,16 @@ export function UnitTypesManager({
                   <ImageIcon className="h-3.5 w-3.5" /> Photo &amp; Floor Plans
                 </button>
                 <button
+                  onClick={() => toggleUnits(u.id)}
+                  className={
+                    unitsOpenId === u.id
+                      ? "flex items-center gap-1.5 rounded-lg border border-gold-500/40 px-2.5 py-1.5 text-xs font-medium text-gold-400"
+                      : "flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100"
+                  }
+                >
+                  Units{unitsByType[u.id] ? ` (${unitsByType[u.id].length})` : ""}
+                </button>
+                <button
                   onClick={() => startEdit(u)}
                   className="rounded-lg p-1.5 text-ink-500 hover:text-gold-400"
                 >
@@ -378,6 +466,77 @@ export function UnitTypesManager({
                       onImagePreview={setLightboxUrl}
                     />
                   </div>
+                </div>
+              )}
+              {unitsOpenId === u.id && (
+                <div className="w-full space-y-3 border-t border-navy-800 pt-3">
+                  <p className="text-xs font-semibold text-ink-300">Individual Units for {u.unit_name}</p>
+                  {unitsLoadingId === u.id ? (
+                    <p className="text-xs text-ink-500">Loading…</p>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        {(unitsByType[u.id] ?? []).map((unit) => (
+                          <div
+                            key={unit.id}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-navy-700 bg-navy-950 px-2.5 py-1.5 text-xs"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-ink-100">Unit {unit.unit_number}</span>
+                              {unit.floor && <span className="text-ink-500">Floor {unit.floor}</span>}
+                              {unit.price_aed != null && (
+                                <span className="text-ink-500">AED {unit.price_aed.toLocaleString()}</span>
+                              )}
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${unitStatusTone[unit.status]}`}
+                              >
+                                {unit.status}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => removeUnit(unit.id, u.id)}
+                              className="rounded-lg p-1 text-ink-500 hover:text-rose-400"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {(unitsByType[u.id] ?? []).length === 0 && (
+                          <p className="text-xs text-ink-500">No individual units added yet.</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <input
+                          placeholder="Unit Number (e.g. 1204)"
+                          value={unitDraft.unitNumber}
+                          onChange={(e) => setUnitDraft({ ...unitDraft, unitNumber: e.target.value })}
+                          className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                        />
+                        <input
+                          placeholder="Floor (optional)"
+                          value={unitDraft.floor}
+                          onChange={(e) => setUnitDraft({ ...unitDraft, floor: e.target.value })}
+                          className="w-28 rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Price AED (optional)"
+                          value={unitDraft.priceAed}
+                          onChange={(e) => setUnitDraft({ ...unitDraft, priceAed: e.target.value })}
+                          className="w-36 rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addUnit(u.id)}
+                          disabled={unitSaving || !unitDraft.unitNumber.trim()}
+                          className="flex items-center gap-1.5 rounded-lg bg-gold-500 px-3 py-1.5 text-xs font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add Unit
+                        </button>
+                      </div>
+                      {unitError && <p className="text-xs text-rose-400">{unitError}</p>}
+                    </>
+                  )}
                 </div>
               )}
             </div>

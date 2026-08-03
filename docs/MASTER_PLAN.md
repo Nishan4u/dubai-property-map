@@ -498,8 +498,36 @@ section as modules get built out.
   `/admin/reservations` list. No PDF library is installed, so the signed
   contract is styled HTML with print CSS rather than a generated PDF —
   browser print-to-PDF covers it for this pass. Individual numbered-unit
-  inventory tracking (Module 16 "Live Inventory") still doesn't exist, so
-  a reservation's unit number is free text with no availability locking.
+  inventory tracking (Module 16 "Live Inventory") didn't exist at the
+  time, so a reservation's unit number was free text with no
+  availability locking — closed by the following pass.
+- Live Inventory Management (Module 16): a new `project_units` table
+  (patch_105) adds real individual numbered units (unit number, floor,
+  price, a 3-state `available`/`reserved`/`sold` status) within each
+  existing unit-type category — `project_unit_types` (patch_79) still
+  tracks categories only, this is additive underneath it, mirroring its
+  exact RLS shape (public read, developer manages own, admin manages).
+  The developer's `UnitTypesManager` gets a new "Units" sub-panel per
+  category (list + inline add/delete), independent of the pre-existing
+  Photo & Floor Plans panel. The three reservation-creation forms
+  (broker/salesperson Client detail, developer `/dashboard/reservations`)
+  now offer a real unit picker sourced from that category's available
+  units, falling back to the original free-text field ("Other (type
+  manually)") for projects with no inventory configured — existing
+  reservations and free-text-only projects behave exactly as before.
+  Reserving now genuinely locks a unit: the send route conditionally
+  flips it to `reserved` (409 if another draft already claimed it first,
+  closing the double-booking gap called out above), signing flips it to
+  `sold`, and a new cancel route (replacing the previous direct-update
+  calls) reverts it back to `available` — all via the service-role
+  client, since `project_units` RLS only grants write access to the
+  owning developer regardless of which role initiated the action. The
+  public project page shows a real "X of Y units available" line
+  alongside each category's existing manually-set availability badge
+  (left untouched). Automatic Sync (no external inventory system exists
+  to sync with) and Payment Plan Updates (already covered by the
+  existing project-level payment-plan editing) are explicit non-goals,
+  not gaps.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -521,7 +549,6 @@ section as modules get built out.
   (rest of Module 15's Built-in CRM — see "Substantially built" above for
   Client Management/Notes/Tasks, which are now done), Connect-Any-CRM
   integrations, ERP/marketing/storage/payment integrations beyond Stripe.
-- Live inventory sync automation (Module 16).
 - Business-intelligence-grade reports beyond what's in admin/reports
   today (Module 19).
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
