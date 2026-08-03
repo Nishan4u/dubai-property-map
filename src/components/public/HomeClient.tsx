@@ -20,6 +20,7 @@ import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/
 import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
 import { getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
+import { useSearchTracking } from "@/lib/useSearchTracking";
 import { createClient } from "@/lib/supabase/client";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
@@ -301,6 +302,8 @@ export function HomeClient({
       return true;
     });
   }, [allProjects, activeTab, activeTag, filters, searchQuery]);
+
+  useSearchTracking(searchQuery, "map", filteredProjects.length);
 
   const activeFilterCount = useMemo(() => {
     return Object.entries(filters).filter(([, v]) =>

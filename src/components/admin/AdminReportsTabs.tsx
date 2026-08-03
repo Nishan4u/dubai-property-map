@@ -8,8 +8,10 @@ import { AdminSubscriptionReport } from "@/components/admin/AdminSubscriptionRep
 import { AdminSalesReport } from "@/components/admin/AdminSalesReport";
 import { AdminPeopleAnalytics } from "@/components/admin/AdminPeopleAnalytics";
 import { AdminUserActivityReport } from "@/components/admin/AdminUserActivityReport";
+import { AdminSearchAnalytics } from "@/components/admin/AdminSearchAnalytics";
+import { AdminAiUsageReport } from "@/components/admin/AdminAiUsageReport";
 
-const tabs = ["Overview", "Revenue", "Subscriptions", "Sales", "People", "Activity"] as const;
+const tabs = ["Overview", "Revenue", "Subscriptions", "Sales", "People", "Activity", "Search", "AI Usage"] as const;
 type Tab = (typeof tabs)[number];
 
 export function AdminReportsTabs({
@@ -19,6 +21,8 @@ export function AdminReportsTabs({
   sales,
   people,
   activity,
+  search,
+  aiUsage,
 }: {
   overview: React.ComponentProps<typeof AdminReportsOverview>;
   revenue: React.ComponentProps<typeof AdminRevenueReport>;
@@ -26,6 +30,8 @@ export function AdminReportsTabs({
   sales: React.ComponentProps<typeof AdminSalesReport>;
   people: React.ComponentProps<typeof AdminPeopleAnalytics>;
   activity: React.ComponentProps<typeof AdminUserActivityReport>;
+  search: React.ComponentProps<typeof AdminSearchAnalytics>;
+  aiUsage: React.ComponentProps<typeof AdminAiUsageReport>;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
 
@@ -51,6 +57,8 @@ export function AdminReportsTabs({
       {tab === "Sales" && <AdminSalesReport {...sales} />}
       {tab === "People" && <AdminPeopleAnalytics {...people} />}
       {tab === "Activity" && <AdminUserActivityReport {...activity} />}
+      {tab === "Search" && <AdminSearchAnalytics {...search} />}
+      {tab === "AI Usage" && <AdminAiUsageReport {...aiUsage} />}
     </div>
   );
 }

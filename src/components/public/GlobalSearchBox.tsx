@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useSearchTracking } from "@/lib/useSearchTracking";
 
 export interface SearchItem {
   type: "project" | "community" | "developer";
@@ -27,6 +28,8 @@ export function GlobalSearchBox({ items }: { items: SearchItem[] }) {
     if (!q) return [];
     return items.filter((item) => item.name.toLowerCase().includes(q)).slice(0, 8);
   }, [items, query]);
+
+  useSearchTracking(query, "global_header", results.length);
 
   const showDropdown = focused && query.trim().length > 0;
 

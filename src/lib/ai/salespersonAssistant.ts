@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase/queries";
 import { PROJECTS_TRAILER_MARKER } from "@/lib/ai/shared";
 import { runToolLoop, type ChatMessage } from "@/lib/ai/core";
+import { logAiUsage } from "@/lib/aiUsageLog";
 
 export type { ChatMessage } from "@/lib/ai/core";
 export { isAssistantEnabled } from "@/lib/ai/core";
@@ -84,6 +85,7 @@ export async function* streamSalespersonAssistantReply(
     systemPrompt: SYSTEM_PROMPT,
     tools: [SEARCH_PROJECTS_TOOL, MY_LEADS_TOOL],
     history,
+    onUsage: (usage) => logAiUsage({ kind: "sales", userId: salespersonId, ...usage }),
     dispatchTool: async (name, input) => {
       if (name === "search_projects") {
         // developerId is derived server-side from the verified session, not

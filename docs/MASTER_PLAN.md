@@ -578,11 +578,27 @@ section as modules get built out.
   `login_history` (built in the Security pass, never reported on before)
   as a logins-over-time trend and most-active-users list, alongside a
   signups-over-time trend from `profiles.created_at`. Search Analytics
-  and AI Usage Reports are explicit non-goals — neither has any tracking
-  anywhere in this codebase, and building either means instrumenting
-  live, already-shipped components (the public search/filter UI, and
-  the shared AI tool-loop core used by three assistants) rather than
-  just aggregating what exists.
+  and AI Usage Reports (the two remaining Module 19 types) needed real
+  instrumentation added, not just aggregation — see the next entry.
+- Search & AI Usage Analytics (Module 19, now fully done): a new
+  `useSearchTracking` hook (`src/lib/useSearchTracking.ts`) — debounced
+  800ms, mirrors `trackProjectEvent`'s fire-and-forget insert shape —
+  is wired into all four independent public search surfaces
+  (`AllProjectsClient`, `HomeClient`'s map search, `CommunitiesPageClient`,
+  and the header's `GlobalSearchBox`), each a one-line addition passing
+  its own already-computed query/result-count state; no existing filter
+  logic changed. Only free-text keyword search is tracked, not every
+  filter dropdown. AI usage tracking reads `final.usage` from the
+  Anthropic SDK response inside `runToolLoop` (`src/lib/ai/core.ts`) —
+  already present on every response but never read before — via a new
+  optional `onUsage` callback, summed across tool-calling turns and
+  reported once per request; each of the three assistant wrappers
+  (MapAI, AI Broker Assistant, AI Sales Assistant) passes its own
+  already-available identity through a small closure. Both land in new
+  tables (`search_log`, `ai_usage_log`, patch_107) and surface as two
+  more tabs ("Search", "AI Usage") on `/admin/reports`. Real token
+  counts are shown, never a fabricated dollar cost — no pricing data
+  exists anywhere in this codebase to derive one from.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

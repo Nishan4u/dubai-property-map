@@ -1664,6 +1664,89 @@ export async function getUserActivityReportAdmin() {
   };
 }
 
+const sourceLabel: Record<string, string> = {
+  projects_list: "Projects List",
+  map: "Map",
+  communities: "Communities",
+  global_header: "Global Header",
+};
+
+export async function getSearchAnalyticsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("search_log")
+    .select("query, source, result_count, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = data ?? [];
+
+  const topQueries = new Map<string, number>();
+  for (const r of rows) {
+    const key = r.query.toLowerCase();
+    topQueries.set(key, (topQueries.get(key) ?? 0) + 1);
+  }
+
+  const bySource = new Map<string, number>();
+  for (const r of rows) bySource.set(r.source, (bySource.get(r.source) ?? 0) + 1);
+
+  const byMonth = new Map<string, number>();
+  for (const r of rows) {
+    const key = monthKey(r.created_at);
+    byMonth.set(key, (byMonth.get(key) ?? 0) + 1);
+  }
+
+  return {
+    totalSearches: rows.length,
+    zeroResultSearches: rows.filter((r) => r.result_count === 0).length,
+    topQueries: Array.from(topQueries.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([query, count]) => ({ query, count })),
+    bySource: Array.from(bySource.entries()).map(([source, value]) => ({
+      name: sourceLabel[source] ?? source,
+      value,
+    })),
+    searchesTrend: Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({ date: monthLabel(key), searches: count })),
+  };
+}
+
+export async function getAiUsageReportAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_usage_log")
+    .select("kind, model, input_tokens, output_tokens, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = data ?? [];
+
+  const byKind = new Map<string, { calls: number; inputTokens: number; outputTokens: number }>();
+  for (const r of rows) {
+    const entry = byKind.get(r.kind) ?? { calls: 0, inputTokens: 0, outputTokens: 0 };
+    entry.calls += 1;
+    entry.inputTokens += r.input_tokens;
+    entry.outputTokens += r.output_tokens;
+    byKind.set(r.kind, entry);
+  }
+
+  const byMonth = new Map<string, number>();
+  for (const r of rows) {
+    const key = monthKey(r.created_at);
+    byMonth.set(key, (byMonth.get(key) ?? 0) + r.input_tokens + r.output_tokens);
+  }
+
+  return {
+    totalCalls: rows.length,
+    totalInputTokens: rows.reduce((sum, r) => sum + r.input_tokens, 0),
+    totalOutputTokens: rows.reduce((sum, r) => sum + r.output_tokens, 0),
+    byKind: Array.from(byKind.entries()).map(([kind, stats]) => ({ kind, ...stats })),
+    usageTrend: Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, tokens]) => ({ date: monthLabel(key), tokens })),
+  };
+}
+
 export async function getPlanSubscriberCounts() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("developers").select("plan_tier");

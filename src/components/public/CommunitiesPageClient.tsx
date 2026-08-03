@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { CommunityCard } from "@/components/public/CommunityCard";
+import { useSearchTracking } from "@/lib/useSearchTracking";
 
 interface CommunityWithStats {
   id: string;
@@ -31,6 +32,8 @@ export function CommunitiesPageClient({
         (c.description ?? "").toLowerCase().includes(q)
     );
   }, [communities, query]);
+
+  useSearchTracking(query, "communities", filtered.length);
 
   return (
     <div>

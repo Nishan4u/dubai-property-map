@@ -40,6 +40,7 @@ export async function* runToolLoop({
   model = DEFAULT_MODEL,
   maxTokens = DEFAULT_MAX_TOKENS,
   maxTurns = DEFAULT_MAX_TURNS,
+  onUsage,
 }: {
   systemPrompt: string;
   tools: Anthropic.Tool[];
@@ -48,6 +49,7 @@ export async function* runToolLoop({
   model?: string;
   maxTokens?: number;
   maxTurns?: number;
+  onUsage?: (usage: { model: string; inputTokens: number; outputTokens: number }) => void;
 }): AsyncGenerator<string> {
   if (!isAssistantEnabled()) {
     yield "The AI assistant isn't set up yet -- please reach out through the site for help in the meantime.";
@@ -59,6 +61,12 @@ export async function* runToolLoop({
     role: m.role,
     content: m.content,
   }));
+
+  // Summed across every turn (a request with tool calls makes several
+  // Anthropic calls) so callers get one usage report per top-level
+  // request, not one per turn.
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let turn = 0; turn < maxTurns; turn++) {
     const stream = client.messages.stream({
@@ -77,6 +85,8 @@ export async function* runToolLoop({
 
     const final = await stream.finalMessage();
     messages.push({ role: "assistant", content: final.content });
+    totalInputTokens += final.usage.input_tokens;
+    totalOutputTokens += final.usage.output_tokens;
 
     if (final.stop_reason !== "tool_use") break;
 
@@ -101,4 +111,6 @@ export async function* runToolLoop({
     }
     messages.push({ role: "user", content: toolResults });
   }
+
+  onUsage?.({ model, inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
 }

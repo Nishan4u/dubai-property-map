@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase/queries";
 import { PROJECTS_TRAILER_MARKER } from "@/lib/ai/shared";
 import { runToolLoop, type ChatMessage } from "@/lib/ai/core";
+import { logAiUsage } from "@/lib/aiUsageLog";
 import { poiLayers } from "@/data/poi";
 import { nearestPoints } from "@/lib/nearbyPoi";
 
@@ -183,6 +184,7 @@ export async function* streamAssistantReply(history: ChatMessage[], buyerId?: st
     systemPrompt: SYSTEM_PROMPT,
     tools: [SEARCH_PROJECTS_TOOL, COMMUNITY_INFO_TOOL, MARKET_INSIGHTS_TOOL, INVESTMENT_ANALYSIS_TOOL, MATCHED_PROJECTS_TOOL],
     history,
+    onUsage: (usage) => logAiUsage({ kind: "mapai", userId: buyerId ?? null, ...usage }),
     dispatchTool: async (name, input) => {
       if (name === "search_projects") {
         const results = await searchProjectsForAssistant(input);

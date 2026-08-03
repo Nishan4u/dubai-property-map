@@ -11,6 +11,7 @@ import { ProjectGridSkeleton } from "@/components/public/ProjectGridSkeleton";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { isNearMetro, getInvestmentScore } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
+import { useSearchTracking } from "@/lib/useSearchTracking";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 
 const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
@@ -132,6 +133,8 @@ export function AllProjectsClient({
       return true;
     });
   }, [projects, filters, searchQuery]);
+
+  useSearchTracking(searchQuery, "projects_list", filteredProjects.length);
 
   const sortedProjects = useMemo(() => sortProjects(filteredProjects, sort), [filteredProjects, sort]);
 

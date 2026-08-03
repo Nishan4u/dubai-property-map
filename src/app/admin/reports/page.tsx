@@ -1,6 +1,7 @@
 import { AdminReportsTabs } from "@/components/admin/AdminReportsTabs";
 import {
   getAgencyAnalyticsAdmin,
+  getAiUsageReportAdmin,
   getAllBookingsAdmin,
   getAllBrochureDownloadsAdmin,
   getAllDevelopersAdmin,
@@ -11,6 +12,7 @@ import {
   getCommunities,
   getRevenueReportAdmin,
   getSalesReportAdmin,
+  getSearchAnalyticsAdmin,
   getSubscriptionReportAdmin,
   getUserActivityReportAdmin,
 } from "@/lib/supabase/queries";
@@ -32,6 +34,8 @@ export default async function AdminReportsPage() {
     brokerStats,
     agencyStats,
     activityReport,
+    searchReport,
+    aiUsageReport,
   ] = await Promise.all([
     getAllDevelopersAdmin(),
     getAllProjectsAdmin(),
@@ -46,6 +50,8 @@ export default async function AdminReportsPage() {
     getBrokerAnalyticsAdmin(),
     getAgencyAnalyticsAdmin(),
     getUserActivityReportAdmin(),
+    getSearchAnalyticsAdmin(),
+    getAiUsageReportAdmin(),
   ]);
 
   return (
@@ -64,6 +70,8 @@ export default async function AdminReportsPage() {
         sales={{ sales: salesReport }}
         people={{ developers, projectRows, leads, brokerStats, agencyStats }}
         activity={{ report: activityReport }}
+        search={{ report: searchReport }}
+        aiUsage={{ report: aiUsageReport }}
       />
     </div>
   );
