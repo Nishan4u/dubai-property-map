@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   const { data: planRow } = await supabase
     .from("subscription_plans")
     .select(
-      "stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive, promo_active, promo_ends_at, promo_price_label, promo_stripe_price_id"
+      "stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive, auto_renewal_enabled, promo_active, promo_ends_at, promo_price_label, promo_stripe_price_id"
     )
     .eq("key", plan)
     .eq("plan_type", "broker")
@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
         referral_code: referralCode?.trim() || "",
         broker_referral_signup_id: eligibleReferral?.signupId ?? "",
         broker_referral_discount_percent: eligibleReferral ? String(eligibleReferral.discountPercent) : "",
+        // Checkout Sessions' subscription_data has no cancel_at_period_end
+        // field -- that only exists on an already-created subscription, so
+        // this travels via metadata for the webhook to act on after the
+        // subscription exists (stripe.subscriptions.update(...)).
+        auto_renewal_enabled: String(planRow.auto_renewal_enabled !== false),
       },
       success_url: `${origin}/broker/subscription?checkout=success`,
       cancel_url: `${origin}/broker/subscription?checkout=cancelled`,

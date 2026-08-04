@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { clsx } from "clsx";
 import type { Project, Developer, Community } from "@/types";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { convertToAed } from "@/lib/i18n/currency";
 import { ProjectCard } from "@/components/public/ProjectCard";
 import { FilterSidebar, emptyFilters, type ProjectFilters } from "@/components/public/FilterSidebar";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
@@ -60,6 +62,7 @@ export function AllProjectsClient({
   subscriptionHref: string;
   viewerDeveloperId: string | null;
 }) {
+  const { currency } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);
   const [sort, setSort] = useState<SortOption>("Featured");
@@ -103,8 +106,12 @@ export function AllProjectsClient({
       if (filters.developerId && p.developerId !== filters.developerId) return false;
       if (filters.communityId && p.communityId !== filters.communityId) return false;
       if (filters.propertyType && p.propertyType !== filters.propertyType) return false;
-      if (filters.priceMin && p.priceFromAed < Number(filters.priceMin)) return false;
-      if (filters.priceMax && p.priceFromAed > Number(filters.priceMax)) return false;
+      // Min/max are typed in the viewer's selected currency (see the
+      // "Price Range ({currency})" label in FilterSidebar.tsx) but
+      // priceFromAed is always AED, so the entered values are converted
+      // back to AED here before comparing.
+      if (filters.priceMin && p.priceFromAed < convertToAed(Number(filters.priceMin), currency)) return false;
+      if (filters.priceMax && p.priceFromAed > convertToAed(Number(filters.priceMax), currency)) return false;
       if (filters.bedrooms) {
         const bed = Number(filters.bedrooms);
         const matches = bed === 4 ? p.bedroomsTo >= 4 : p.bedroomsFrom <= bed && p.bedroomsTo >= bed;
@@ -132,7 +139,7 @@ export function AllProjectsClient({
       }
       return true;
     });
-  }, [projects, filters, searchQuery]);
+  }, [projects, filters, searchQuery, currency]);
 
   useSearchTracking(searchQuery, "projects_list", filteredProjects.length);
 

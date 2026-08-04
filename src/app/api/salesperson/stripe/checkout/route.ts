@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   const { data: planRow } = await supabase
     .from("subscription_plans")
     .select(
-      "stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive, promo_active, promo_ends_at, promo_price_label, promo_stripe_price_id"
+      "stripe_price_id, status, online_payment_enabled, renewal_allowed_when_inactive, auto_renewal_enabled, promo_active, promo_ends_at, promo_price_label, promo_stripe_price_id"
     )
     .eq("key", plan)
     .eq("plan_type", "salesperson")
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
         referral_code: referralCode?.trim() || "",
         broker_referral_signup_id: eligibleReferral?.signupId ?? "",
         broker_referral_discount_percent: eligibleReferral ? String(eligibleReferral.discountPercent) : "",
+        auto_renewal_enabled: String(planRow.auto_renewal_enabled !== false),
       },
       success_url: `${origin}/salesperson/subscription?checkout=success`,
       cancel_url: `${origin}/salesperson/subscription?checkout=cancelled`,

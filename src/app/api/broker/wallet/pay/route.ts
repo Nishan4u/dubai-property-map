@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   const { data: planRow } = await admin
     .from("subscription_plans")
-    .select("price_aed, duration_days, status")
+    .select("price_aed, renewal_price_aed, duration_days, status")
     .eq("key", plan)
     .eq("plan_type", "broker")
     .maybeSingle();
@@ -66,8 +66,9 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   // price_aed already includes VAT (this platform doesn't collect it as a
   // separate line item from subscribers), so wallet payment simply charges
-  // it as-is -- no addition on top.
-  const priceAed = Number(planRow.price_aed);
+  // it as-is -- no addition on top. renewal_price_aed, when set, applies
+  // instead for an existing subscriber renewing the same plan.
+  const priceAed = Number(isRenewal && planRow.renewal_price_aed != null ? planRow.renewal_price_aed : planRow.price_aed);
   if (!wallet || Number(wallet.balance_aed) < priceAed) {
     return NextResponse.json({ error: "Insufficient wallet balance." }, { status: 400 });
   }

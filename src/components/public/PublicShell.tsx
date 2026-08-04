@@ -94,6 +94,10 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
+          <div className="flex justify-end sm:hidden">
+            <LanguageCurrencySwitcher />
+          </div>
+
           <GlobalSearchBox items={searchItems} />
 
           {/* Favorites + auth are one non-splitting cluster -- at widths

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { DataTable } from "@/components/ui/DataTable";
+import { SearchableDataTable } from "@/components/admin/SearchableDataTable";
 import { ProjectApprovalActions } from "@/components/admin/ProjectApprovalActions";
 import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
 import { projectStatusTone } from "@/lib/adminBadgeTones";
@@ -47,7 +47,9 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
         ))}
       </div>
 
-      <DataTable
+      <SearchableDataTable
+        searchPlaceholder="Search projects by name or developer..."
+        searchFields={(p) => [p.name, p.developerName ?? ""]}
         columns={[
           { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
           { header: "Developer", render: (p) => p.developerName ?? "—" },
@@ -87,3 +89,4 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
     </>
   );
 }
+

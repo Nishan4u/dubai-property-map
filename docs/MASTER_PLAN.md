@@ -971,6 +971,59 @@ section as modules get built out.
   values — zero change to any existing constraint's other allowed values.
   Broker Agency and Developer subscriptions, and CSV/XML export formats,
   aren't wired to Network International in this pass.
+- Subscription Pricing, last two open items (Module 3): a distinct
+  `renewal_price_aed` (patch_120), applied instead of `price_aed`
+  wherever the amount is charged programmatically for an existing
+  subscriber renewing the same plan — Wallet payment and Network
+  International, both real per-transaction charges. Stripe's own
+  recurring subscription price stays fixed at `price_aed` for every
+  period (Subscription Schedules would be needed to vary it — real,
+  meaningfully bigger scope, not attempted). A per-plan
+  `auto_renewal_enabled` toggle: Checkout Sessions can't set
+  `cancel_at_period_end` at creation time (it isn't a valid
+  `subscription_data` field there, confirmed via a real Stripe SDK type
+  error caught at typecheck) — the checkout routes instead pass the
+  plan's setting through session `metadata`, and the Stripe webhook
+  calls `stripe.subscriptions.update(id, { cancel_at_period_end: true
+  })` right after the subscription is created when disabled, so it
+  still charges normally through `mode: "subscription"` and then stops
+  instead of auto-renewing, the same "pay for a period, come back to
+  renew" shape Bank Transfer/Network International already have.
+- Language/currency switcher fixed at the source (Module 29): the
+  homepage uses its own `SiteHeader.tsx`, not `PublicShell.tsx` — the
+  switcher had only ever been added to the latter, so it was silently
+  absent on the one page most visitors land on first. Separately, on
+  every page that did have it, it was wrapped in `hidden sm:flex`,
+  invisible below the `sm:` breakpoint site-wide, not just missing on
+  one page. Both fixed: the switcher is now mounted in `SiteHeader.tsx`
+  too, and both files gained a dedicated mobile-only row (`sm:hidden`)
+  so it's reachable on every breakpoint instead of only appearing once
+  the viewport widens.
+- Search & Filters currency-awareness (Module 29): the "Price Range"
+  filter's label was hardcoded to literal "(AED)" regardless of the
+  selected currency, and — a real functional bug beyond the label —
+  typing a min/max value always compared it directly against
+  `priceFromAed` (always AED) with no conversion, so a value typed
+  while USD was selected silently filtered as if it were AED. Both
+  fixed: the label now reads the live `currency` from `useLocale()`,
+  and a new `convertToAed()` helper (`src/lib/i18n/currency.ts`, the
+  inverse of the existing `convertFromAed()`) converts the entered
+  value back to AED before comparing, in both `AllProjectsClient.tsx`
+  and `HomeClient.tsx` (two independent copies of the same filter
+  logic, both carried the same bug).
+- Broker Agency profile picture (Module 11): `brokerages` had no photo/
+  logo column at all (unlike `developers.logo_url`/`brokers.photo_url`)
+  and the agency's own profile page was a purely read-only text table —
+  added `logo_url` (patch_119) and a new upload widget mirroring
+  `BrokerProfileForm.tsx`'s exact photo-upload pattern, without
+  converting the rest of the page into an editable form (narrower than
+  what was asked).
+- Admin project search (Module 4 enhancement): `/admin/projects` was
+  the one admin list still on a plain `DataTable` with only a status-
+  tab filter, no search — every sibling table (Developers, Brokers,
+  Brokerages, Salespersons, Users, Payments, Subscriptions) already had
+  one from an earlier pass. Switched to `SearchableDataTable`, matching
+  that exact precedent (search by project name or developer name).
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

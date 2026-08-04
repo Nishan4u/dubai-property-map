@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: planRow } = await supabase
     .from("subscription_plans")
-    .select("price_aed, duration_days, status, online_payment_enabled, renewal_allowed_when_inactive")
+    .select("price_aed, renewal_price_aed, duration_days, status, online_payment_enabled, renewal_allowed_when_inactive")
     .eq("key", plan)
     .eq("plan_type", "broker")
     .maybeSingle();
@@ -55,17 +55,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No broker account found." }, { status: 400 });
   }
 
+  const brokerCheck = Array.isArray(profile.brokers) ? profile.brokers[0] : profile.brokers;
+  const isRenewal = brokerCheck?.plan_key === plan && brokerCheck?.subscription_status === "active";
+
   if (planRow.status !== "active") {
-    const brokerCheck = Array.isArray(profile.brokers) ? profile.brokers[0] : profile.brokers;
-    const isExistingRenewal =
-      planRow.renewal_allowed_when_inactive && brokerCheck?.plan_key === plan && brokerCheck?.subscription_status === "active";
+    const isExistingRenewal = planRow.renewal_allowed_when_inactive && isRenewal;
     if (!isExistingRenewal) {
       return NextResponse.json({ error: "This plan is no longer available." }, { status: 400 });
     }
   }
 
+  const basePrice = isRenewal && planRow.renewal_price_aed != null ? planRow.renewal_price_aed : planRow.price_aed;
   const eligibleReferral = await applyReferralDiscountIfEligible("broker", profile.broker_id, plan);
-  const amountAed = eligibleReferral ? planRow.price_aed * (1 - eligibleReferral.discountPercent / 100) : planRow.price_aed;
+  const amountAed = eligibleReferral ? basePrice * (1 - eligibleReferral.discountPercent / 100) : basePrice;
 
   const origin = request.headers.get("origin") ?? "http://localhost:3000";
   const result = await createNetworkInternationalOrder({

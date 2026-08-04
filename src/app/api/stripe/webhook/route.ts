@@ -74,6 +74,14 @@ export async function POST(request: NextRequest) {
           expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
             .toISOString()
             .slice(0, 10);
+
+          // Checkout Sessions can't set cancel_at_period_end at creation
+          // time (it isn't a subscription_data field there) -- the
+          // checkout route travels the plan's intent via metadata
+          // instead, applied here once the subscription actually exists.
+          if (session.metadata?.auto_renewal_enabled === "false") {
+            await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+          }
         }
 
         await supabase
@@ -141,6 +149,10 @@ export async function POST(request: NextRequest) {
           expiresAt = new Date(subscription.items.data[0].current_period_end * 1000)
             .toISOString()
             .slice(0, 10);
+
+          if (session.metadata?.auto_renewal_enabled === "false") {
+            await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+          }
         }
 
         await supabase

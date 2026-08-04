@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookmarkPlus, ChevronRight, MapPin, SlidersHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { LocationAutocomplete } from "@/components/public/LocationAutocomplete";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
@@ -79,6 +80,7 @@ export function FilterSidebar({
    * browsable, which they aren't for these accounts). */
   viewerDeveloperId?: string | null;
 }) {
+  const { currency } = useLocale();
   const [draft, setDraft] = useState<ProjectFilters>(filters);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
@@ -188,7 +190,7 @@ export function FilterSidebar({
 
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">
-              Price Range (AED)
+              Price Range ({currency})
             </label>
             <div className="flex items-center gap-2">
               <input

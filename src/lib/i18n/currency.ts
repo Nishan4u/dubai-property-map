@@ -8,6 +8,13 @@ export function convertFromAed(amountAed: number, currency: Currency) {
   return amountAed * RATES_PER_AED[currency];
 }
 
+// Inverse of convertFromAed -- for turning a value a user typed in their
+// selected currency (e.g. a min/max price filter) back into AED, the unit
+// every project's priceFromAed is actually stored and compared in.
+export function convertToAed(amountInCurrency: number, currency: Currency) {
+  return amountInCurrency / RATES_PER_AED[currency];
+}
+
 const CURRENCY_SYMBOL: Record<Currency, string> = {
   AED: "AED",
   USD: "$",

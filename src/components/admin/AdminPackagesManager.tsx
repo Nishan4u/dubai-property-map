@@ -22,6 +22,7 @@ interface PlanRow {
   name: string;
   price_label: string;
   price_aed: number | null;
+  renewal_price_aed: number | null;
   vat_percent: number | null;
   features: string[];
   stripe_price_id: string | null;
@@ -35,6 +36,7 @@ interface PlanRow {
   online_payment_enabled: boolean;
   bank_transfer_enabled: boolean;
   renewal_allowed_when_inactive: boolean;
+  auto_renewal_enabled: boolean;
   feature_limits: SubscriptionPlanFeatureLimits;
   promo_price_label: string | null;
   promo_stripe_price_id: string | null;
@@ -86,6 +88,7 @@ export function AdminPackagesManager({
         name: row.name,
         price_label: row.price_label,
         price_aed: row.price_aed,
+        renewal_price_aed: row.renewal_price_aed,
         vat_percent: row.vat_percent,
         features: row.features,
         stripe_price_id: row.stripe_price_id || null,
@@ -98,6 +101,7 @@ export function AdminPackagesManager({
         online_payment_enabled: row.online_payment_enabled,
         bank_transfer_enabled: row.bank_transfer_enabled,
         renewal_allowed_when_inactive: row.renewal_allowed_when_inactive,
+        auto_renewal_enabled: row.auto_renewal_enabled,
         feature_limits: row.feature_limits,
         promo_price_label: row.promo_price_label || null,
         promo_stripe_price_id: row.promo_stripe_price_id || null,
@@ -227,6 +231,28 @@ export function AdminPackagesManager({
                 <p className="mt-1 text-xs text-ink-500">
                   A real number for referral discount/wallet math -- the label above is still what
                   subscribers actually see.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-400">
+                  Renewal Price (AED, blank = same as purchase price)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={row.renewal_price_aed ?? ""}
+                  onChange={(e) =>
+                    updateField(row.id, "renewal_price_aed", e.target.value === "" ? null : Number(e.target.value))
+                  }
+                  placeholder="e.g. 90"
+                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-ink-500">
+                  Charged instead of Price (AED) when an existing subscriber renews the same plan via
+                  Wallet or Network International. Stripe&apos;s own recurring subscription price stays
+                  fixed at Price (AED) for every period — Stripe doesn&apos;t support varying it without
+                  Subscription Schedules, not built here.
                 </p>
               </div>
               <div>
@@ -494,6 +520,22 @@ export function AdminPackagesManager({
                   />
                   Bank Transfer
                 </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-300">
+                  <input
+                    type="checkbox"
+                    checked={row.auto_renewal_enabled}
+                    onChange={(e) => updateField(row.id, "auto_renewal_enabled", e.target.checked)}
+                    className="accent-emerald-500"
+                  />
+                  Stripe Auto-Renewal
+                </label>
+                {!row.auto_renewal_enabled && (
+                  <p className="basis-full text-xs text-ink-500">
+                    New Stripe subscriptions for this plan charge once, then cancel automatically at the
+                    end of the period instead of auto-renewing — subscribers come back to pay again, the
+                    same shape Bank Transfer already has.
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { clsx } from "clsx";
 import { Filter, Heart, Search, X } from "lucide-react";
 import { AuthStatus } from "@/components/auth/AuthStatus";
+import { LanguageCurrencySwitcher } from "@/components/i18n/LanguageCurrencySwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import type { ListingType, Project } from "@/types";
@@ -72,6 +73,10 @@ export function SiteHeader({
         <div className="flex shrink-0 items-center gap-2 sm:hidden">
           <AuthStatus />
         </div>
+      </div>
+
+      <div className="flex justify-end sm:hidden">
+        <LanguageCurrencySwitcher />
       </div>
 
       <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
@@ -177,6 +182,7 @@ export function SiteHeader({
          before Admin Panel/Logout. Grouped together they always sit flush,
          wherever the whole cluster ends up. */}
       <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
+        <LanguageCurrencySwitcher />
         <Link
           href="/favorites"
           className="flex shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100"
