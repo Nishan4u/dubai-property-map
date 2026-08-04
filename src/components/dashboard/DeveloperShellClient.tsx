@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Mail,
   Package,
+  Plug,
   Rocket,
   Settings,
   ShieldCheck,
@@ -44,6 +45,7 @@ const navItems = [
   { label: "Profile", href: "/profile", icon: User },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },
+  { label: "Integrations", href: "/integrations", icon: Plug },
 ];
 
 export function DeveloperShellClient({

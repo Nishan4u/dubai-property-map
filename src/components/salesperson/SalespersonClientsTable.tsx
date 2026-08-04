@@ -48,6 +48,11 @@ export function SalespersonClientsTable({ salespersonId, clients }: { salesperso
     }
 
     await logAudit("crm_client.create", "crm_client", data.id, { fullName: name.trim() });
+    fetch("/api/integrations/dispatch-client-created", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: data.id }),
+    }).catch(() => {});
     setName("");
     setEmail("");
     setPhone("");

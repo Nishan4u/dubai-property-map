@@ -913,6 +913,42 @@ export async function getCrmClientDetailForDeveloper(clientId: string, developer
   return getCrmClientDetail("developer_id", developerId, clientId);
 }
 
+export async function getCrmIntegrationsForOwner(ownerType: "broker" | "salesperson" | "developer", ownerId: string) {
+  const supabase = await createClient();
+  const { data: integrations, error } = await supabase
+    .from("crm_integrations")
+    .select("*")
+    .eq(`${ownerType}_id`, ownerId)
+    .order("created_at", { ascending: false });
+
+  if (error || !integrations?.length) return [];
+
+  const { data: logs } = await supabase
+    .from("crm_integration_logs")
+    .select("*")
+    .in(
+      "integration_id",
+      integrations.map((i) => i.id)
+    )
+    .order("created_at", { ascending: false });
+
+  return integrations.map((integration) => ({
+    ...integration,
+    logs: (logs ?? []).filter((l) => l.integration_id === integration.id).slice(0, 10),
+  }));
+}
+
+export async function getAllCrmIntegrationsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_integrations")
+    .select("*, brokers(full_name), salespersons(full_name), developers(name)")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getBookingsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

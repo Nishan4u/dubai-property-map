@@ -358,8 +358,9 @@ section as modules get built out.
   Meetings/Appointments were added in the Module 23 pass (`crm_appointments`)
   — see "Meeting & Collaboration" below. Email History, Call Logs, and
   WhatsApp History were added in a later pass — see "CRM Communication
-  History" below; only Connect-Any-CRM and other third-party
-  integrations remain net-new for this module.
+  History" below. Connect-Any-CRM was added in a later pass too — see
+  "Connect-Any-CRM" below; only ERP/Marketing/Storage/Payment-beyond-
+  Stripe integrations remain net-new for this module.
 - Admin panel search & bulk actions: live search added to Developers,
   Brokers, Brokerages, Salespersons, Users, Payments, and all four
   Subscriptions account tables; select-all + bulk delete on Developers,
@@ -673,8 +674,8 @@ section as modules get built out.
   the pre-existing no-target `"#"` fallback behaves exactly as before.
   Ad impression tracking stays out of scope (would need client-side
   visibility detection on what are today plain server-rendered links).
-- CRM Communication History (rest of Module 15, now fully done except
-  Connect-Any-CRM/ERP/marketing integrations — see below): Email
+- CRM Communication History (part of Module 15 — see "Connect-Any-CRM"
+  below for the rest): Email
   History is purely additive read-only RLS on the existing `email_logs`
   table (patch_109), matched by `to_email = crm_clients.email` rather
   than adding a new `client_id` column — the latter would have meant
@@ -693,6 +694,36 @@ section as modules get built out.
   section's exact form/list shape; no developer client-detail page
   exists yet, an already-established non-goal repeated from two earlier
   batches, not newly introduced here.
+- Connect-Any-CRM (last piece of Module 15, now fully done except ERP/
+  Marketing/Storage/Payment-beyond-Stripe — see below): a self-service
+  outbound-webhook + secret-authenticated JSON pull-feed framework
+  (`crm_integrations`/`crm_integration_logs`, patch_111) a broker,
+  salesperson, or developer can point at their own real CRM (its native
+  webhook receiver, or a Zapier/Make/n8n workflow) — not a fake named-
+  vendor connector, since no real CRM vendor account exists for this
+  platform and no vendor's OAuth credentials can be genuinely
+  fabricated. Every webhook POST is HMAC-SHA256 signed with the
+  integration's own secret; every attempt (success or failure, with
+  HTTP status/error) is logged. Two real events dispatch today —
+  `lead.created` (a new `property_requests` row, wired inline into the
+  existing `/api/broker/property-requests` route's own "best-effort,
+  doesn't affect the already-committed insert" block) and
+  `client.created` (a new `crm_clients` row, relayed through a small new
+  `/api/integrations/dispatch-client-created` route since that insert
+  happens client-side and the signing secret must never reach the
+  browser) — deliberately not the full "Leads, Clients, Projects, Units,
+  Availability, Prices, Payment Plans, Salespersons, Property Requests,
+  Reservations, Tasks, Notes, Appointments, Documents" sync-data list
+  from the original spec, which is straightforward to extend later with
+  the same pattern. The existing narrow per-developer `sendLeadWebhook`
+  (`developers.lead_webhook_url`, patch_22) is completely untouched — a
+  different, already-shipped mechanism this pass is additive to, not a
+  replacement for. Self-service UI lives at `/broker/integrations`,
+  `/salesperson/integrations`, `/dashboard/integrations` (developer);
+  `/admin/integrations` is a read-only oversight table across every
+  owner. OAuth 2.0, GraphQL, two-way sync, and CSV/XML feed formats stay
+  out of this pass — real gaps, but meaningfully bigger scope than a
+  first pass, noted here rather than silently dropped.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -708,11 +739,16 @@ section as modules get built out.
   it.
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
-- Connect-Any-CRM integrations, ERP/marketing/storage/payment
-  integrations beyond Stripe (last remaining piece of Module 15 — see
-  "Substantially built" above for Client Management/Notes/Tasks/
-  Calendar/Appointments/Email History/Call Logs/WhatsApp History, all
-  of which are now done).
+- ERP, Marketing (Meta/Google Ads), Storage (Drive/OneDrive/Dropbox/S3),
+  and Payment-beyond-Stripe integrations — last remaining piece of
+  Module 15 (see "Substantially built" above for Client Management/
+  Notes/Tasks/Calendar/Appointments/Email History/Call Logs/WhatsApp
+  History/Connect-Any-CRM, all of which are now done). Each of these
+  fundamentally requires a real registered OAuth app/vendor credential
+  from that specific provider to function at all — unlike a generic
+  webhook or Twilio's REST API, there's no genuine placeholder config
+  that would work once filled in, since each vendor's app must be
+  registered against this exact deployed domain.
 - Real browser Web Push (service worker + VAPID + permission UX) — last
   remaining piece of Module 20 (see "Substantially built" above for
   Homepage Banners, Featured Developers, Sponsored Communities, and

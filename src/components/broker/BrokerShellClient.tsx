@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Briefcase, Building2, CalendarDays, ClipboardList, CreditCard, FolderOpen, Gift, LayoutDashboard, Map, ShieldCheck, User, Users } from "lucide-react";
+import { Bell, Briefcase, Building2, CalendarDays, ClipboardList, CreditCard, FolderOpen, Gift, LayoutDashboard, Map, Plug, ShieldCheck, User, Users } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Security", href: "/security", icon: ShieldCheck },
+  { label: "Integrations", href: "/integrations", icon: Plug },
 ];
 
 export function BrokerShellClient({

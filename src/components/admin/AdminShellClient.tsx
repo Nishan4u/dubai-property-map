@@ -30,6 +30,7 @@ import {
   IdCard,
   Send,
   LayoutTemplate,
+  Plug,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
@@ -62,6 +63,7 @@ const navItems = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Campaigns", href: "/campaigns", icon: Send },
   { label: "Landing Pages", href: "/landing-pages", icon: LayoutTemplate },
+  { label: "Integrations", href: "/integrations", icon: Plug },
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },

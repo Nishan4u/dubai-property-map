@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { notifyDeveloperTeam, notifyUser } from "@/lib/notify";
 import { isFreeAccessEnabled } from "@/lib/supabase/queries";
+import { dispatchCrmEvent } from "@/lib/crmIntegrations";
 
 // The single atomic route for submitting a property request. Runs
 // server-side only so RESEND_API_KEY never reaches the browser, and so the
@@ -120,6 +121,15 @@ export async function POST(request: NextRequest) {
   // Everything below is best-effort — the request above has already
   // committed and must survive regardless of what happens with email.
   const requestId = insertedRequest.request_id as string;
+
+  await dispatchCrmEvent("broker", profile.broker_id, "lead.created", {
+    id: insertedRequest.id,
+    requestId,
+    propertyType,
+    budgetMin: budgetMin ?? null,
+    budgetMax: budgetMax ?? null,
+    project: project.name,
+  });
 
   const budgetLine =
     budgetMin || budgetMax
