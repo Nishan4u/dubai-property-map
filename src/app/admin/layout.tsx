@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminShellClient } from "@/components/admin/AdminShellClient";
+import { getAdminPermissionContext, visibleModuleKeys } from "@/lib/permissions";
 
 export default async function AdminLayout({
   children,
@@ -22,10 +23,15 @@ export default async function AdminLayout({
 
   if (!profile || profile.role !== "admin") redirect("/");
 
+  const { profile: permissionProfile, permissions } = await getAdminPermissionContext(supabase, user.id);
+  const modules = visibleModuleKeys(permissionProfile, permissions);
+  if (permissionProfile.custom_role_id && modules.length === 0) redirect("/");
+
   return (
     <AdminShellClient
       userLabel={profile.full_name ?? "Admin"}
-      userRole="Super Admin"
+      userRole={permissionProfile.custom_role_id ? "Restricted Admin" : "Super Admin"}
+      visibleModuleKeys={modules}
     >
       {children}
     </AdminShellClient>

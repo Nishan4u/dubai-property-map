@@ -269,7 +269,7 @@ Push Notifications, Mobile Navigation, Touch-Optimized Map.
 
 ---
 
-## Build Status Snapshot (as of 2026-08-03)
+## Build Status Snapshot (as of 2026-08-04)
 
 A quick, codebase-verified read of what's already in place vs. what's net
 new from this document — not exhaustive, but grounded in what actually
@@ -766,6 +766,44 @@ section as modules get built out.
   codebase already renders via `Date.toLocaleString()` client-side,
   which already shows the browser's own local time for free on a
   platform whose users are overwhelmingly in one timezone anyway.
+- Role & Permission Management (Module 2, now substantially built): a
+  new, opt-in "limited admin" tier (`custom_roles` +
+  `profiles.custom_role_id`, patch_113) layered on top of the existing
+  `role = 'admin'` accounts — deliberately **not** a rewrite of the
+  fixed-role system. Research this pass established RLS funnels almost
+  entirely through one `is_admin()` function plus owner-id-column
+  matching (not hundreds of scattered role checks), but app code has
+  **83 independent `role === "x"` checks with no shared helper** —
+  retrofitting all of them would have been the single riskiest change
+  of this whole session, so it wasn't attempted. Every existing admin
+  account (`custom_role_id` null) keeps byte-identical full access —
+  confirmed against all 3 real admin accounts in the live database,
+  none of which are affected. A full admin can create named roles
+  (`/admin/roles`) granting `view`/`manage` access per admin-panel
+  module (Payments, Content, Integrations, etc. — the same ~31 items
+  already in `AdminShellClient.tsx`'s nav) and create new admin team
+  members restricted to one. Enforcement is real but stated honestly
+  as an **application-layer** boundary (`src/lib/permissions.ts`'s
+  `hasModuleAccess()`/`visibleModuleKeys()` — nav filtering plus 3
+  representative API routes), not a rewritten RLS layer: a restricted
+  admin's Postgres session still evaluates `is_admin()` as true, so
+  `is_admin()`-gated RLS still grants underlying table access. True
+  per-table DB-level enforcement would mean touching every one of the
+  ~54 `is_admin()`-gated policy files — the exact scope explosion this
+  design avoids, for a threat model (internal team members using the
+  documented UI/API, not adversarial direct-Postgres bypass) where the
+  application layer is the real boundary. A caught, fixed-during-
+  verification bug worth noting: the very first draft of
+  `admin/layout.tsx` selected `custom_role_id` in the same query as
+  the existing `role`/`full_name` fetch — since selecting a column
+  that doesn't exist yet errors the *whole* query in PostgREST, that
+  would have locked every admin out of the entire panel on any
+  environment where patch_113 hadn't been applied yet. Fixed by
+  isolating the `custom_role_id` lookup into its own query that
+  degrades to "full admin" on any error, never to "no access."
+  Exhaustive wiring across the other ~27 admin API routes, and
+  extending custom roles to the `staff` portal, are explicit,
+  documented fast-follows, not silently dropped.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -779,8 +817,6 @@ section as modules get built out.
   de facto "role security" layer, but there's no single dedicated
   admin-facing surface for either, so calling them "done" would overstate
   it.
-- Unlimited custom roles/permissions beyond the fixed user types (Module
-  2).
 - ERP, Marketing (Meta/Google Ads), Storage (Drive/OneDrive/Dropbox/S3),
   and Payment-beyond-Stripe integrations — last remaining piece of
   Module 15 (see "Substantially built" above for Client Management/

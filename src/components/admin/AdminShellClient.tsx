@@ -31,6 +31,7 @@ import {
   Send,
   LayoutTemplate,
   Plug,
+  KeyRound,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
@@ -68,23 +69,33 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },
   { label: "Audit Log", href: "/audit-log", icon: Shield },
+  { label: "Roles & Permissions", href: "/roles", icon: KeyRound },
 ];
 
 export function AdminShellClient({
   userLabel,
   userRole,
+  visibleModuleKeys,
   children,
 }: {
   userLabel: string;
   userRole: string;
+  /** Module keys (nav item's href with the leading slash stripped, ""
+   * -> "dashboard") this account may see -- see src/lib/permissions.ts.
+   * A full admin's list already includes every existing item, so this
+   * filter is a no-op for every account that existed before Module 2. */
+  visibleModuleKeys: string[];
   children: React.ReactNode;
 }) {
+  const allowed = new Set(visibleModuleKeys);
+  const filteredNavItems = navItems.filter((item) => allowed.has(item.href.replace(/^\//, "") || "dashboard"));
+
   return (
     <DashboardShell
       brandLabel="Admin Dashboard"
       brandIcon={Shield}
       basePath="/admin"
-      navItems={navItems}
+      navItems={filteredNavItems}
       userLabel={userLabel}
       userRole={userRole}
     >

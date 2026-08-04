@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
+import { getAdminPermissionContext, hasModuleAccess } from "@/lib/permissions";
 
 function slugifyCode(input: string) {
   return input
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
+  const { profile: permissionProfile, permissions } = await getAdminPermissionContext(supabase, user.id);
+  if (!hasModuleAccess(permissionProfile, permissions, "staff", "manage")) {
+    return NextResponse.json({ error: "You don't have permission to manage staff." }, { status: 403 });
   }
 
   const {

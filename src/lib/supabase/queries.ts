@@ -1027,6 +1027,14 @@ export async function getAllAdPlacementsAdmin() {
   return data ?? [];
 }
 
+export async function getAllCustomRolesAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("custom_roles").select("*").order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getAllMarketingCampaignsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
