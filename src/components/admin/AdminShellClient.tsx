@@ -28,6 +28,8 @@ import {
   UserCog,
   CalendarCheck,
   IdCard,
+  Send,
+  LayoutTemplate,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
@@ -58,6 +60,8 @@ const navItems = [
   { label: "SEO", href: "/seo", icon: Search },
   { label: "Email Logs", href: "/email-logs", icon: Mail },
   { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "Campaigns", href: "/campaigns", icon: Send },
+  { label: "Landing Pages", href: "/landing-pages", icon: LayoutTemplate },
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },

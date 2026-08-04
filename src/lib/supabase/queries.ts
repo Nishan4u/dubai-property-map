@@ -991,6 +991,41 @@ export async function getAllAdPlacementsAdmin() {
   return data ?? [];
 }
 
+export async function getAllMarketingCampaignsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("marketing_campaigns")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getAllLandingPagesAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("landing_pages")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getLandingPageBySlug(slug: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("landing_pages")
+    .select("*")
+    .eq("slug", slug)
+    .eq("published", true)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
 export async function getAdPlacementsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

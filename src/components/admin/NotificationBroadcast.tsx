@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Send } from "lucide-react";
 import { CompactSelect } from "@/components/public/CompactSelect";
-import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 
 const AUDIENCE_OPTIONS: { label: string; value: Audience }[] = [
@@ -22,6 +21,7 @@ export function NotificationBroadcast({
   const [audience, setAudience] = useState<Audience>("buyers");
   const [developerId, setDeveloperId] = useState(developers[0]?.id ?? "");
   const [message, setMessage] = useState("");
+  const [sendEmailToo, setSendEmailToo] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
@@ -29,47 +29,33 @@ export function NotificationBroadcast({
     if (!message.trim()) return;
     setSending(true);
     setResult(null);
-    const supabase = createClient();
 
-    let recipients: { id: string }[] = [];
-    if (audience === "buyers") {
-      const { data } = await supabase.from("profiles").select("id").eq("role", "buyer");
-      recipients = data ?? [];
-    } else if (audience === "developers") {
-      const { data } = await supabase.from("profiles").select("id").eq("role", "developer");
-      recipients = data ?? [];
-    } else {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("developer_id", developerId);
-      recipients = data ?? [];
-    }
+    const res = await fetch("/api/admin/notifications/broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audience, developerId, message: message.trim(), sendEmailToo }),
+    });
+    const body = await res.json();
 
-    let insertError = null;
-    if (recipients.length > 0) {
-      const { error } = await supabase.from("notifications").insert(
-        recipients.map((r) => ({ user_id: r.id, message: message.trim() }))
-      );
-      insertError = error;
-    }
-
-    if (insertError) {
-      setResult(`Failed to send: ${insertError.message}`);
+    if (!res.ok) {
+      setResult(`Failed to send: ${body.error}`);
       setSending(false);
       return;
     }
 
+    const { recipientCount, emailsSent } = body as { recipientCount: number; emailsSent: number };
+
     await logAudit("notification.broadcast", "notification", null, {
       audience,
       developerId: audience === "developer" ? developerId : undefined,
-      recipientCount: recipients.length,
+      recipientCount,
+      emailsSent,
     });
 
     setResult(
-      recipients.length === 0
+      recipientCount === 0
         ? "No matching recipients found — nothing was sent."
-        : `Sent to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}.`
+        : `Sent to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}${sendEmailToo ? ` (${emailsSent} email${emailsSent === 1 ? "" : "s"} sent)` : ""}.`
     );
     setMessage("");
     setSending(false);
@@ -108,6 +94,16 @@ export function NotificationBroadcast({
           className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
         />
       </div>
+
+      <label className="flex items-center gap-2 text-xs text-ink-400">
+        <input
+          type="checkbox"
+          checked={sendEmailToo}
+          onChange={(e) => setSendEmailToo(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-navy-600 bg-navy-800"
+        />
+        Also send email to each recipient
+      </label>
 
       {result && <p className="text-xs font-medium text-emerald-400">{result}</p>}
 

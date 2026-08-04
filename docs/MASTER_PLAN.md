@@ -413,6 +413,35 @@ section as modules get built out.
   (partner developer ticker, Developers directory, Communities grid) —
   every developer and community still shows exactly as before, just
   reordered and badged.
+- Marketing Campaigns (rest of Module 20, now done except real browser
+  Web Push — see below): the existing in-app NotificationBroadcast
+  (`/admin/notifications`, buyers/developers/a specific developer's
+  users) already covers the "push" concept and is now extended with a
+  real "also send email" option — resolves each recipient's email via
+  `auth.admin.getUserById()` (the first use of that API in this
+  codebase) and reuses the existing `sendEmail()`/Resend pipeline, with
+  zero change to its existing in-app-only behavior when left unchecked.
+  A new `/admin/campaigns` page adds genuinely new Email/SMS bulk
+  campaigns targeting CRM clients specifically — the only real,
+  broker/salesperson-collected contact list in this schema (buyer/
+  developer profiles have no phone column and no capture flow for one,
+  so campaigns don't pretend to target them by SMS). SMS
+  (`src/lib/sms.ts`) is a genuine Twilio REST API integration via
+  `fetch`, gated behind `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/
+  `TWILIO_FROM_NUMBER` — no real Twilio account exists yet, so until
+  those are set it logs "not configured" per attempt rather than
+  fabricating a sent message, mirroring `sendEmail()`'s own honesty
+  pattern. A new `crm_clients.marketing_opt_out` flag (default false,
+  patch_110) lets a client be excluded. `/admin/landing-pages` adds
+  standalone public pages at `/l/<slug>`, mirroring `communities/[slug]`'s
+  own server-component/`generateMetadata`/`notFound()` pattern; body
+  text renders as plain paragraphs, not raw HTML, since no rich-text
+  editor exists anywhere in this codebase and an admin-authored HTML
+  field would be a stored-XSS surface for no real formatting benefit.
+  Real browser Web Push (service worker + VAPID + permission UX) stays
+  deliberately out of this pass — technically buildable without vendor
+  credentials, but substantial enough to be its own unit rather than
+  folded into this batch.
 - Security: 2FA, Login History, Device Management (rest of Module 1 +
   core of Module 27), for all six real user roles (buyer, developer,
   broker, broker agency, salesperson, admin) — staff login is a separate,
@@ -684,9 +713,10 @@ section as modules get built out.
   "Substantially built" above for Client Management/Notes/Tasks/
   Calendar/Appointments/Email History/Call Logs/WhatsApp History, all
   of which are now done).
-- Push/Email/SMS marketing campaigns and standalone landing pages (rest of
-  Module 20 — see "Substantially built" above for Homepage Banners,
-  Featured Developers, and Sponsored Communities, which are now done).
+- Real browser Web Push (service worker + VAPID + permission UX) — last
+  remaining piece of Module 20 (see "Substantially built" above for
+  Homepage Banners, Featured Developers, Sponsored Communities, and
+  Marketing Campaigns, all of which are now done).
 - Multi-language / Arabic / RTL support (Module 29).
 
 This snapshot is a starting point for scoping "what's next," not a
