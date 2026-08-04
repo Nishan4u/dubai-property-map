@@ -858,24 +858,37 @@ async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id" | 
   if (error) throw error;
   if (!client) return null;
 
-  const [{ data: requests }, { data: notes }, { data: tasks }, { data: reservations }] = await Promise.all([
-    supabase
-      .from("property_requests")
-      .select("id, request_id, status, property_type, budget_min, budget_max, created_at, projects(name)")
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: false }),
-    supabase.from("crm_notes").select("id, body, created_at, created_by").eq("client_id", clientId).order("created_at", { ascending: false }),
-    supabase
-      .from("crm_tasks")
-      .select("id, title, due_at, status, created_at")
-      .eq("client_id", clientId)
-      .order("due_at", { ascending: true, nullsFirst: false }),
-    supabase
-      .from("unit_reservations")
-      .select("*, projects(name)")
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: requests }, { data: notes }, { data: tasks }, { data: reservations }, { data: emailHistory }, { data: communicationLogs }] =
+    await Promise.all([
+      supabase
+        .from("property_requests")
+        .select("id, request_id, status, property_type, budget_min, budget_max, created_at, projects(name)")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false }),
+      supabase.from("crm_notes").select("id, body, created_at, created_by").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase
+        .from("crm_tasks")
+        .select("id, title, due_at, status, created_at")
+        .eq("client_id", clientId)
+        .order("due_at", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("unit_reservations")
+        .select("*, projects(name)")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false }),
+      // Empty-string fallback when the client has no email on file --
+      // naturally yields zero rows, no special-casing needed.
+      supabase
+        .from("email_logs")
+        .select("id, subject, category, status, sent_at, created_at")
+        .eq("to_email", client.email ?? "")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("crm_communication_logs")
+        .select("id, channel, direction, outcome, notes, created_at")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false }),
+    ]);
 
   return {
     client,
@@ -883,6 +896,8 @@ async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id" | 
     notes: notes ?? [],
     tasks: tasks ?? [],
     reservations: reservations ?? [],
+    emailHistory: emailHistory ?? [],
+    communicationLogs: communicationLogs ?? [],
   };
 }
 

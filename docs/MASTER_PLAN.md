@@ -357,7 +357,9 @@ section as modules get built out.
   a linked client's name when one exists, never inventing one. Calendar/
   Meetings/Appointments were added in the Module 23 pass (`crm_appointments`)
   — see "Meeting & Collaboration" below. Email History, Call Logs, and
-  WhatsApp History are still net-new.
+  WhatsApp History were added in a later pass — see "CRM Communication
+  History" below; only Connect-Any-CRM and other third-party
+  integrations remain net-new for this module.
 - Admin panel search & bulk actions: live search added to Developers,
   Brokers, Brokerages, Salespersons, Users, Payments, and all four
   Subscriptions account tables; select-all + bulk delete on Developers,
@@ -642,6 +644,26 @@ section as modules get built out.
   the pre-existing no-target `"#"` fallback behaves exactly as before.
   Ad impression tracking stays out of scope (would need client-side
   visibility detection on what are today plain server-rendered links).
+- CRM Communication History (rest of Module 15, now fully done except
+  Connect-Any-CRM/ERP/marketing integrations — see below): Email
+  History is purely additive read-only RLS on the existing `email_logs`
+  table (patch_109), matched by `to_email = crm_clients.email` rather
+  than adding a new `client_id` column — the latter would have meant
+  threading a new parameter through `sendEmail()`'s ~41 existing call
+  sites for a benefit only the reservation flow could realistically
+  populate well, not worth the blast radius on an already-shipped,
+  working send path (zero diff to `src/lib/email.ts` in this pass).
+  Call Logs and WhatsApp History are a new `crm_communication_logs`
+  table — one table with a `channel` enum (`call`/`whatsapp`) rather
+  than two near-duplicate tables, mirroring `project_events`' own
+  `event_type` enum precedent — a manually-entered contact record, not
+  a fabricated live telephony/WhatsApp Business API integration (no
+  vendor credentials exist anywhere in this codebase for either). Both
+  land as two new read-only/append-only sections on the existing Broker
+  and Salesperson client-detail pages, mirroring the existing Notes
+  section's exact form/list shape; no developer client-detail page
+  exists yet, an already-established non-goal repeated from two earlier
+  batches, not newly introduced here.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -657,10 +679,11 @@ section as modules get built out.
   it.
 - Unlimited custom roles/permissions beyond the fixed user types (Module
   2).
-- Email History, Call Logs, WhatsApp History (rest of Module 15's
-  Built-in CRM — see "Substantially built" above for Client Management/
-  Notes/Tasks/Calendar/Appointments, which are now done), Connect-Any-CRM
-  integrations, ERP/marketing/storage/payment integrations beyond Stripe.
+- Connect-Any-CRM integrations, ERP/marketing/storage/payment
+  integrations beyond Stripe (last remaining piece of Module 15 — see
+  "Substantially built" above for Client Management/Notes/Tasks/
+  Calendar/Appointments/Email History/Call Logs/WhatsApp History, all
+  of which are now done).
 - Push/Email/SMS marketing campaigns and standalone landing pages (rest of
   Module 20 — see "Substantially built" above for Homepage Banners,
   Featured Developers, and Sponsored Communities, which are now done).
