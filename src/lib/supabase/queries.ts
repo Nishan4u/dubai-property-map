@@ -1066,6 +1066,20 @@ export async function getAllApiKeysAdmin() {
   }));
 }
 
+// Deliberately never selects secret_access_key -- the raw secret is only
+// ever handled server-side (src/app/api/developer/storage-connection and
+// storageSync.ts, both via the admin client), never sent back to the browser.
+export async function getStorageConnectionForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("storage_connections")
+    .select("bucket_name, region, access_key_id, status, last_synced_at, last_sync_file_count, last_sync_error")
+    .eq("developer_id", developerId)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
 export async function getBookingsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

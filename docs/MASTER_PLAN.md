@@ -900,6 +900,36 @@ section as modules get built out.
   salesperson client-detail pages is completely untouched — this is a
   separate, additive bulk-campaign channel, not a replacement for that
   contact-history feature.
+- Storage — S3 media backup (Module 15 "Other Integrations" → Storage):
+  a deliberately narrow reading of "connect Storage" — an opt-in,
+  one-way, on-demand mirror of a developer's own already-uploaded
+  project media into their own Amazon S3 bucket
+  (`storage_connections`, patch_117), not a replacement for or an
+  alternate write path alongside the existing upload flow. Supabase
+  Storage's `project-media` bucket remains the one and only backend
+  every existing upload component (`ProjectFileManager.tsx` and every
+  other of the 11 file-upload call sites across this codebase) reads
+  from and writes to, completely untouched — this was a deliberate
+  choice between three real options (replace it, offer S3 as a
+  per-file alternative, or an opt-in sync target) since Google Drive/
+  OneDrive/Dropbox each additionally need a registered OAuth app and
+  per-account consent flow that S3 doesn't. `src/lib/storageSync.ts`
+  recursively walks each of the developer's projects' `gallery`/
+  `documents` folders (mirroring `ProjectFileManager.tsx`'s own
+  file-vs-folder detection convention) and re-uploads every file to S3
+  via `@aws-sdk/client-s3` on every sync — simple and correct for a
+  first pass, not delta-tracked, so re-syncing a large catalog
+  re-uploads everything rather than only what changed. Configured from
+  a new panel on the developer's existing `/dashboard/settings` page;
+  the secret access key is stored (not hashed, since it must be reused
+  on every sync, the same tradeoff as `crm_integrations.secret`) but
+  never sent back to the browser after the initial save — updating any
+  other field later doesn't require re-entering it. Developers are
+  pointed at using IAM credentials scoped to just the one bucket, not
+  account-wide keys. Google Drive, OneDrive, and Dropbox remain out of
+  this pass — each needs a real registered OAuth app tied to this
+  deployed domain, the same category of vendor-blocked gap as ERP/Ads/
+  Payment-beyond-Stripe below, unlike S3's plain IAM-key auth.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

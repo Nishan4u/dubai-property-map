@@ -1,5 +1,6 @@
 import { DeveloperSettingsForm } from "@/components/dashboard/DeveloperSettingsForm";
-import { requireDeveloperProfile } from "@/lib/supabase/queries";
+import { DeveloperStorageSyncPanel } from "@/components/dashboard/DeveloperStorageSyncPanel";
+import { requireDeveloperProfile, getStorageConnectionForDeveloper } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -15,16 +16,23 @@ export default async function DeveloperSettingsPage() {
     .eq("id", developerId)
     .single();
 
+  const storageConnection = await getStorageConnectionForDeveloper(developerId);
+
   return (
-    <DeveloperSettingsForm
-      developerId={developerId}
-      notificationPrefs={
-        (developer?.notification_prefs as {
-          new_leads?: boolean;
-          new_messages?: boolean;
-        }) ?? { new_leads: true, new_messages: true }
-      }
-      leadWebhookUrl={developer?.lead_webhook_url ?? ""}
-    />
+    <div className="space-y-6">
+      <DeveloperSettingsForm
+        developerId={developerId}
+        notificationPrefs={
+          (developer?.notification_prefs as {
+            new_leads?: boolean;
+            new_messages?: boolean;
+          }) ?? { new_leads: true, new_messages: true }
+        }
+        leadWebhookUrl={developer?.lead_webhook_url ?? ""}
+      />
+      <div className="max-w-2xl px-6">
+        <DeveloperStorageSyncPanel connection={storageConnection} />
+      </div>
+    </div>
   );
 }
