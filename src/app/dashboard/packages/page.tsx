@@ -34,7 +34,6 @@ export default async function DeveloperPackagesPage() {
         <h1 className="text-xl font-bold text-ink-100">Packages & Subscription</h1>
         <p className="text-sm text-ink-400">
           You&apos;re on the <span className="capitalize text-gold-400">{developer?.plan_tier ?? "free"}</span> plan.
-          Upgrading requires Stripe to be configured (see Settings note below if it errors).
         </p>
       </div>
 

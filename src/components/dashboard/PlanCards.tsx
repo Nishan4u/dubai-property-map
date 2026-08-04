@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { clsx } from "clsx";
 import { Check, Landmark } from "lucide-react";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 import { PromoPrice } from "@/components/ui/PromoPrice";
-import { getReferralCookie } from "@/lib/referralCookie";
 
 interface Plan {
   key: string;
@@ -33,12 +32,6 @@ export function PlanCards({
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
-  const [referralCode, setReferralCode] = useState("");
-
-  useEffect(() => {
-    const cookieCode = getReferralCookie();
-    if (cookieCode) setReferralCode(cookieCode);
-  }, []);
 
   async function handleUpgrade(plan: string) {
     setLoadingPlan(plan);
@@ -47,7 +40,7 @@ export function PlanCards({
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, referralCode }),
+        body: JSON.stringify({ plan }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
@@ -65,15 +58,6 @@ export function PlanCards({
           {error}
         </p>
       )}
-      <div className="mb-4 max-w-xs">
-        <label className="mb-1 block text-xs font-medium text-ink-400">Referral Code (Optional)</label>
-        <input
-          value={referralCode}
-          onChange={(e) => setReferralCode(e.target.value)}
-          placeholder="Enter a referral code if you have one"
-          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-        />
-      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
           const isCurrent = plan.key === currentPlan;
@@ -138,7 +122,6 @@ export function PlanCards({
             planKey={bankTransferPlan.key}
             planLabel={bankTransferPlan.name}
             bankDetails={bankDetails}
-            initialReferralCode={referralCode}
           />
         </div>
       )}
