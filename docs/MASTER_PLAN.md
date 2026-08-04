@@ -799,9 +799,18 @@ section as modules get built out.
   environment where patch_113 hadn't been applied yet. Fixed by
   isolating the `custom_role_id` lookup into its own query that
   degrades to "full admin" on any error, never to "no access."
-  Exhaustive wiring across the other ~27 admin API routes, and
-  extending custom roles to the `staff` portal, are explicit,
-  documented fast-follows, not silently dropped.
+  **Update:** `hasModuleAccess()` is now wired into all 20 admin API
+  routes that actually gate on `role === "admin"` (17 more since the
+  original 3 representative routes, plus the new `api-keys` route from
+  the Public API pass). Two routes that live under `/api/admin/
+  salespersons/*` (`create`, `[id]/reset-password`) were deliberately
+  **not** touched — despite the URL path, they gate on `role ===
+  "developer"` (a developer creating/resetting their own salesperson's
+  account), not `"admin"`, so Custom Roles doesn't apply to them at
+  all; wiring admin-permission logic into a developer-authenticated
+  route would have been a real bug, not a fast-follow. Extending custom
+  roles to the `staff` portal remains an explicit, documented
+  fast-follow, not silently dropped.
 - Web Push Notifications (last remaining piece of Module 20/28, now
   built): real VAPID-based browser push (`web-push` npm package,
   `push_subscriptions` table, patch_114) — not a fabricated
@@ -825,8 +834,20 @@ section as modules get built out.
   `createAdminClient`, plus the two property-request routes) — real
   coverage (staff commission notices, broker referral cashback,
   property request alerts) without ever risking the client bundle.
-  Exhaustive coverage of every remaining `notifyUser` call site, and a
-  push-preferences settings page, are explicit fast-follows.
+  **Update:** the two property-request routes' `notifyDeveloperTeam`
+  call (the one case originally trimmed from this pass, since it needed
+  its own developer-team profile lookup rather than a single user id)
+  now fans push out to every team member too, mirroring
+  `notifyDeveloperTeam`'s own `profiles.developer_id` query rather than
+  changing `notify.ts` itself. The remaining `notifyUser`/
+  `notifyDeveloperTeam` call sites are all in client components
+  (`AdPlacementActions.tsx`, `DeveloperStatusActions.tsx`,
+  `ProjectApprovalActions.tsx`, `DeveloperContactForm.tsx`,
+  `ProjectEnquiryPanel.tsx`, `BookingsTableClient.tsx`) — genuinely not
+  safe to extend without routing them through a new server endpoint
+  first, a real refactor rather than a mechanical fast-follow, so they
+  stay out of scope. A push-preferences settings page is still an
+  explicit fast-follow.
 - Public API + API Keys (last piece of Module 15 "API & Webhooks" +
   Module 27 "API Security" that didn't need a vendor credential): a
   new admin-issued bearer-key system (`api_keys`/`api_request_logs`,

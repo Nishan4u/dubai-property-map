@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminPermissionContext, hasModuleAccess } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { logAudit } from "@/lib/auditLog";
@@ -47,6 +48,11 @@ export async function GET(request: NextRequest) {
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
+  const { profile: permissionProfile, permissions } = await getAdminPermissionContext(supabase, user.id);
+  if (!hasModuleAccess(permissionProfile, permissions, "payments", "manage")) {
+    return NextResponse.json({ error: "You don't have permission to manage payments." }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

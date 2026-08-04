@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminPermissionContext, hasModuleAccess } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/auditLog";
 import { getStripe } from "@/lib/stripe";
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
+  const { profile: permissionProfile, permissions } = await getAdminPermissionContext(supabase, user.id);
+  if (!hasModuleAccess(permissionProfile, permissions, "subscriptions", "manage")) {
+    return NextResponse.json({ error: "You don't have permission to manage subscriptions." }, { status: 403 });
   }
 
   const { action, days } = (await request.json()) as { action: Action; days?: number };

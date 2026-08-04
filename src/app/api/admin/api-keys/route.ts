@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateApiKey, type ApiScope } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/auditLog";
+import { getAdminPermissionContext, hasModuleAccess } from "@/lib/permissions";
 
 const VALID_SCOPES: ApiScope[] = ["projects:read", "communities:read", "developers:read"];
 
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
+  const { profile: permissionProfile, permissions } = await getAdminPermissionContext(supabase, user.id);
+  if (!hasModuleAccess(permissionProfile, permissions, "api-keys", "manage")) {
+    return NextResponse.json({ error: "You don't have permission to manage API keys." }, { status: 403 });
   }
 
   const { name, scopes } = (await request.json()) as { name: string; scopes: string[] };

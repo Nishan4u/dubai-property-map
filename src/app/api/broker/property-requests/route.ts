@@ -236,13 +236,12 @@ export async function POST(request: NextRequest) {
     await notifyUser(salespersonProfile.id, requestMessage, project.id, admin);
     await sendPushToUser(salespersonProfile.id, { title: "New Property Request", body: requestMessage });
   }
-  await notifyDeveloperTeam(
-    project.developer_id,
-    `New property request ${requestId} for ${project.name}.`,
-    project.id,
-    undefined,
-    admin
-  );
+  const teamMessage = `New property request ${requestId} for ${project.name}.`;
+  await notifyDeveloperTeam(project.developer_id, teamMessage, project.id, undefined, admin);
+  const { data: developerTeamProfiles } = await admin.from("profiles").select("id").eq("developer_id", project.developer_id);
+  if (developerTeamProfiles?.length) {
+    await Promise.all(developerTeamProfiles.map((p) => sendPushToUser(p.id, { title: "New Property Request", body: teamMessage })));
+  }
 
   return NextResponse.json({ requestId });
 }
