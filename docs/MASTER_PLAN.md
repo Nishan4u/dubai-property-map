@@ -998,7 +998,16 @@ section as modules get built out.
   one page. Both fixed: the switcher is now mounted in `SiteHeader.tsx`
   too, and both files gained a dedicated mobile-only row (`sm:hidden`)
   so it's reachable on every breakpoint instead of only appearing once
-  the viewport widens.
+  the viewport widens. **Update**: `LanguageCurrencySwitcher.tsx`
+  itself was still using plain native `<select>` elements — reachable
+  everywhere now, but visually inconsistent with the rest of the site,
+  which replaced native selects with the custom-styled `CompactSelect`
+  dropdown in an earlier pass (property/community/admin filters,
+  admin tables, forms). Rebuilt on `CompactSelect` (`hideLabel`,
+  `allowClear={false}` since language/currency always hold a value,
+  fixed compact widths via `className`) so both dropdowns now open the
+  same dark-themed option panel as every other dropdown on the site,
+  verified live at mobile/tablet/desktop widths.
 - Search & Filters currency-awareness (Module 29): the "Price Range"
   filter's label was hardcoded to literal "(AED)" regardless of the
   selected currency, and — a real functional bug beyond the label —
