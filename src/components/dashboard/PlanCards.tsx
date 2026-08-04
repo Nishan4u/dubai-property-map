@@ -33,6 +33,11 @@ export function PlanCards({
   const [error, setError] = useState("");
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
 
+  // The Free tier isn't a self-serve upgrade target (its button is a
+  // disabled label), and a "Custom" price means a contact-sales plan with
+  // no real checkout -- neither belongs among the actionable upgrade cards.
+  const upgradablePlans = plans.filter((plan) => plan.key !== "free" && plan.price_label !== "Custom");
+
   async function handleUpgrade(plan: string) {
     setLoadingPlan(plan);
     setError("");
@@ -59,7 +64,7 @@ export function PlanCards({
         </p>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {plans.map((plan) => {
+        {upgradablePlans.map((plan) => {
           const isCurrent = plan.key === currentPlan;
           return (
             <div
