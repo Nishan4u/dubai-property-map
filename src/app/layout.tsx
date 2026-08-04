@@ -4,6 +4,7 @@ import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
 import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
 import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
 import { InstallAppPrompt } from "@/components/public/InstallAppPrompt";
+import { PushNotificationPrompt } from "@/components/public/PushNotificationPrompt";
 import { ServiceWorkerRegister } from "@/components/public/ServiceWorkerRegister";
 import { AiChatWidget } from "@/components/public/AiChatWidget";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
@@ -67,6 +68,7 @@ export default async function RootLayout({
             <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
           </FavoritesProvider>
           <InstallAppPrompt />
+          <PushNotificationPrompt />
           <ServiceWorkerRegister />
           <AiChatWidget />
         </LocaleProvider>

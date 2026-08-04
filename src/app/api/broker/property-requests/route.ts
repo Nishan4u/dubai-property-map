@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { notifyDeveloperTeam, notifyUser } from "@/lib/notify";
 import { isFreeAccessEnabled } from "@/lib/supabase/queries";
 import { dispatchCrmEvent } from "@/lib/crmIntegrations";
+import { sendPushToUser } from "@/lib/webPush";
 
 // The single atomic route for submitting a property request. Runs
 // server-side only so RESEND_API_KEY never reaches the browser, and so the
@@ -231,12 +232,9 @@ export async function POST(request: NextRequest) {
     .eq("salesperson_id", salesperson.id)
     .maybeSingle();
   if (salespersonProfile) {
-    await notifyUser(
-      salespersonProfile.id,
-      `New property request ${requestId} for ${project.name} from ${broker.full_name}.`,
-      project.id,
-      admin
-    );
+    const requestMessage = `New property request ${requestId} for ${project.name} from ${broker.full_name}.`;
+    await notifyUser(salespersonProfile.id, requestMessage, project.id, admin);
+    await sendPushToUser(salespersonProfile.id, { title: "New Property Request", body: requestMessage });
   }
   await notifyDeveloperTeam(
     project.developer_id,

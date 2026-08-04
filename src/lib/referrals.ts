@@ -1,13 +1,20 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyUser } from "@/lib/notify";
+import { sendPushToUser } from "@/lib/webPush";
 
 type AccountType = "developer" | "broker" | "salesperson";
 
+// This file only ever runs server-side (it already imports createAdminClient,
+// the service-role client, which would leak into the browser if this were
+// reachable from client code) -- safe to also call the Node-only web-push
+// library here, unlike src/lib/notify.ts itself, which is called directly
+// from several client components and must stay free of server-only imports.
 async function notifyStaff(staffId: string, message: string) {
   const admin = createAdminClient();
   const { data: staffProfile } = await admin.from("profiles").select("id").eq("staff_id", staffId).maybeSingle();
   if (staffProfile) {
     await notifyUser(staffProfile.id, message, undefined, admin);
+    await sendPushToUser(staffProfile.id, { title: "Dubai Property Map", body: message });
   }
 }
 

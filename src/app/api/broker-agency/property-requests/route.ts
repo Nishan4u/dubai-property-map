@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { notifyDeveloperTeam, notifyUser } from "@/lib/notify";
 import { isFreeAccessEnabled } from "@/lib/supabase/queries";
+import { sendPushToUser } from "@/lib/webPush";
 
 // Agency-level counterpart to /api/broker/property-requests. Deliberately
 // separate: an agency's own requests are never attached to a broker_id and
@@ -165,12 +166,9 @@ export async function POST(request: NextRequest) {
     .eq("salesperson_id", salesperson.id)
     .maybeSingle();
   if (salespersonProfile) {
-    await notifyUser(
-      salespersonProfile.id,
-      `New property request ${requestId} for ${project.name} from ${agency.name}.`,
-      project.id,
-      admin
-    );
+    const requestMessage = `New property request ${requestId} for ${project.name} from ${agency.name}.`;
+    await notifyUser(salespersonProfile.id, requestMessage, project.id, admin);
+    await sendPushToUser(salespersonProfile.id, { title: "New Property Request", body: requestMessage });
   }
   await notifyDeveloperTeam(
     project.developer_id,

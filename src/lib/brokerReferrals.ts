@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyUser } from "@/lib/notify";
+import { sendPushToUser } from "@/lib/webPush";
 
 // Deliberately a separate file/module from src/lib/referrals.ts, which is
 // an unrelated internal-DPM-staff commission-tracking system (staff earn
@@ -17,7 +18,10 @@ async function notifyAccount(admin: Admin, accountType: AccountType, accountId: 
     .select("id")
     .eq(`${accountType}_id`, accountId)
     .maybeSingle();
-  if (profile) await notifyUser(profile.id, message, undefined, admin);
+  if (profile) {
+    await notifyUser(profile.id, message, undefined, admin);
+    await sendPushToUser(profile.id, { title: "Dubai Property Map", body: message });
+  }
 }
 
 async function getSettings(admin: Admin) {

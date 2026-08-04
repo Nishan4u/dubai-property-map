@@ -439,10 +439,8 @@ section as modules get built out.
   text renders as plain paragraphs, not raw HTML, since no rich-text
   editor exists anywhere in this codebase and an admin-authored HTML
   field would be a stored-XSS surface for no real formatting benefit.
-  Real browser Web Push (service worker + VAPID + permission UX) stays
-  deliberately out of this pass — technically buildable without vendor
-  credentials, but substantial enough to be its own unit rather than
-  folded into this batch.
+  Real browser Web Push was deliberately kept out of this pass as its
+  own unit — see below, now built.
 - Security: 2FA, Login History, Device Management (rest of Module 1 +
   core of Module 27), for all six real user roles (buyer, developer,
   broker, broker agency, salesperson, admin) — staff login is a separate,
@@ -804,6 +802,31 @@ section as modules get built out.
   Exhaustive wiring across the other ~27 admin API routes, and
   extending custom roles to the `staff` portal, are explicit,
   documented fast-follows, not silently dropped.
+- Web Push Notifications (last remaining piece of Module 20/28, now
+  built): real VAPID-based browser push (`web-push` npm package,
+  `push_subscriptions` table, patch_114) — not a fabricated
+  integration, since VAPID keys are self-generated and need no
+  third-party vendor account, unlike SMS/ERP/Ads/Storage. `public/
+  sw.js` gained `push`/`notificationclick` listeners, purely additive
+  to its existing install/activate/fetch handlers. A new
+  `PushNotificationPrompt.tsx` (mirrors `InstallAppPrompt.tsx`'s exact
+  dismissible-banner shape) asks permission and subscribes, shown only
+  to a signed-in user. A real bug was caught and fixed during
+  verification: piggybacking the push-send directly onto `notify.ts`'s
+  `notifyUser`/`notifyDeveloperTeam` (the original plan, for automatic
+  coverage across every existing call site) broke the production build
+  — `web-push` uses Node's `tls`/`net`, and `notify.ts` is imported
+  directly by several **client components** (e.g. `AdPlacementActions.tsx`),
+  so the Node-only library got pulled into the browser bundle.
+  `notify.ts` was reverted to byte-identical original and left
+  untouched; push is instead wired into the handful of call sites
+  already provably server-only (`src/lib/referrals.ts`/
+  `brokerReferrals.ts`, which already import the service-role
+  `createAdminClient`, plus the two property-request routes) — real
+  coverage (staff commission notices, broker referral cashback,
+  property request alerts) without ever risking the client bundle.
+  Exhaustive coverage of every remaining `notifyUser` call site, and a
+  push-preferences settings page, are explicit fast-follows.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -827,11 +850,6 @@ section as modules get built out.
   webhook or Twilio's REST API, there's no genuine placeholder config
   that would work once filled in, since each vendor's app must be
   registered against this exact deployed domain.
-- Real browser Web Push (service worker + VAPID + permission UX) — last
-  remaining piece of Module 20 (see "Substantially built" above for
-  Homepage Banners, Featured Developers, Sponsored Communities, and
-  Marketing Campaigns, all of which are now done).
-
 This snapshot is a starting point for scoping "what's next," not a
 commitment — confirm with the user before treating any line as decided
 priority.
