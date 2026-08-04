@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 
-type Channel = "email" | "sms";
+type Channel = "email" | "sms" | "whatsapp";
 
 // Audience is fixed, not a segment builder: every CRM client with the
 // relevant contact channel on file who hasn't opted out. crm_clients
@@ -79,8 +79,10 @@ export function AdminCreateCampaignForm() {
         >
           <p className="text-sm font-semibold text-ink-100 sm:col-span-2">New Campaign</p>
           <p className="text-xs text-ink-500 sm:col-span-2">
-            Sends to every CRM client with an {channel === "email" ? "email" : "phone number"} on file who hasn&apos;t
-            opted out. Saved as a draft first — nothing sends until you click Send from the table below.
+            Sends to every CRM client with{" "}
+            {channel === "email" ? "an email" : channel === "whatsapp" ? "a WhatsApp number" : "a phone number"} on
+            file who hasn&apos;t opted out. Saved as a draft first — nothing sends until you click Send from the
+            table below.
           </p>
 
           <div>
@@ -102,6 +104,7 @@ export function AdminCreateCampaignForm() {
             >
               <option value="email">Email</option>
               <option value="sms">SMS</option>
+              <option value="whatsapp">WhatsApp</option>
             </select>
           </div>
 

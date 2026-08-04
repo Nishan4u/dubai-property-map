@@ -21,10 +21,10 @@ export default async function AdminCampaignsPage() {
       <div>
         <h1 className="text-xl font-bold text-ink-100">Marketing Campaigns</h1>
         <p className="text-sm text-ink-400">
-          Email and SMS campaigns sent to CRM clients. Email uses the same delivery pipeline as every other email
-          on this platform (Resend). SMS needs TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER
-          configured — without them, SMS sends are logged as failed with a clear reason rather than silently
-          pretending to succeed.
+          Email, SMS, and WhatsApp campaigns sent to CRM clients. Email uses the same delivery pipeline as every
+          other email on this platform (Resend). SMS needs TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN /
+          TWILIO_FROM_NUMBER configured; WhatsApp needs WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID — without
+          them, sends are logged as failed with a clear reason rather than silently pretending to succeed.
         </p>
       </div>
 

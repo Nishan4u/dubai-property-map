@@ -874,6 +874,32 @@ section as modules get built out.
   distinct from the OAuth-*to* third parties already noted as out of
   scope), write endpoints, and CSV/XML response formats are explicit,
   documented fast-follows, not built in this pass.
+- WhatsApp Business API (Module 15/22 "Communication"): a third Marketing
+  Campaign channel alongside email/sms (patch_116), sending real
+  messages through Meta's WhatsApp Cloud API. `src/lib/whatsapp.ts`
+  already held `getWhatsAppUrl()` — a pre-existing `wa.me` deep-link
+  helper used by two public client components
+  (`FeaturedProjectCard.tsx`/`ProjectEnquiryPanel.tsx`) to open the
+  visitor's own WhatsApp client, unrelated to actually sending a message
+  via API — the new `sendWhatsApp()` is appended to that same file
+  rather than creating a new one, but deliberately resolves
+  `createAdminClient` via a dynamic `import()` inside the function body
+  rather than a static top-level import, so the service-role client and
+  its module graph are never pulled into the client bundle those two
+  components already ship — the same class of risk Web Push's
+  `notify.ts` bug came from, guarded against here even though
+  `@supabase/supabase-js` itself (unlike `web-push`) wouldn't have
+  broken the build. `whatsapp_logs` mirrors `sms_logs`' exact shape
+  (pending → sent/failed, campaign-linked); no real Meta Business/
+  WhatsApp app exists for this platform yet, so sends clearly log "not
+  configured" rather than a fabricated success until
+  `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` are set — same
+  honesty pattern as `sendSms()`. Targets `crm_clients.whatsapp`
+  specifically (not the `phone` column SMS uses), since the two can
+  differ. The existing manually-entered "Call & WhatsApp Log" on broker/
+  salesperson client-detail pages is completely untouched — this is a
+  separate, additive bulk-campaign channel, not a replacement for that
+  contact-history feature.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

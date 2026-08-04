@@ -4,6 +4,7 @@ import { getAdminPermissionContext, hasModuleAccess } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
+import { sendWhatsApp } from "@/lib/whatsapp";
 
 const BATCH_SIZE = 20;
 
@@ -36,15 +37,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "This campaign has already been sent." }, { status: 400 });
   }
 
-  const contactColumn = campaign.channel === "email" ? "email" : "phone";
+  const contactColumn = campaign.channel === "email" ? "email" : campaign.channel === "whatsapp" ? "whatsapp" : "phone";
   const { data: clients } = await admin
     .from("crm_clients")
-    .select("email, phone")
+    .select("email, phone, whatsapp")
     .eq("marketing_opt_out", false)
     .not(contactColumn, "is", null);
 
   const contacts = Array.from(
-    new Set((clients ?? []).map((c) => (campaign.channel === "email" ? c.email : c.phone)).filter((v): v is string => !!v))
+    new Set(
+      (clients ?? [])
+        .map((c) => (campaign.channel === "email" ? c.email : campaign.channel === "whatsapp" ? c.whatsapp : c.phone))
+        .filter((v): v is string => !!v)
+    )
   );
 
   await admin.from("marketing_campaigns").update({ status: "sending", recipient_count: contacts.length }).eq("id", id);
@@ -63,6 +68,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             subject: campaign.subject ?? campaign.name,
             html: `<p>${campaign.body.replace(/\n/g, "<br />")}</p>`,
           });
+          return ok;
+        }
+        if (campaign.channel === "whatsapp") {
+          const { ok } = await sendWhatsApp({ campaignId: campaign.id, to: contact, body: campaign.body });
           return ok;
         }
         const { ok } = await sendSms({ campaignId: campaign.id, to: contact, body: campaign.body });
