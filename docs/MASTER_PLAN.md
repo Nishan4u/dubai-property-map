@@ -827,6 +827,32 @@ section as modules get built out.
   property request alerts) without ever risking the client bundle.
   Exhaustive coverage of every remaining `notifyUser` call site, and a
   push-preferences settings page, are explicit fast-follows.
+- Public API + API Keys (last piece of Module 15 "API & Webhooks" +
+  Module 27 "API Security" that didn't need a vendor credential): a
+  new admin-issued bearer-key system (`api_keys`/`api_request_logs`,
+  patch_115) distinct from Connect-Any-CRM's `crm_integrations` — that
+  system is per-owner outbound dispatch + a single integration's own
+  pull feed; this is a general-purpose **inbound** read API
+  (`GET /api/v1/projects`, `/communities`, `/developers`) any external
+  partner an admin issues a key to can call. Only a sha256 hash of the
+  key is ever persisted (`src/lib/apiAuth.ts`) — stricter than
+  `crm_integrations.secret`, which is kept in plaintext because it must
+  be re-used to re-sign each outbound HMAC; a bearer key never needs to
+  be read back, so hashing it is strictly better and closes a real gap
+  the "API Security" line called out. Each key carries its own scopes
+  (`projects:read`/`communities:read`/`developers:read`), is rate-limited
+  (120 requests/5 min, a second in-memory limiter alongside
+  `src/lib/ai/rateLimit.ts` so one noisy API key can't crowd out AI chat
+  visitors or vice versa), and every request — success or failure — is
+  logged. `/admin/api-keys` (new nav entry + `api-keys` module key in
+  `src/lib/permissions.ts`, so a custom role can be scoped to it) issues
+  keys (shown once, mirroring `IntegrationsPanel`'s reveal-once pattern
+  one step further since a hashed key can never be re-displayed at all)
+  and revokes them (one-way, no re-activation, matching real API-key
+  lifecycle conventions). OAuth 2.0 (as an API this platform exposes,
+  distinct from the OAuth-*to* third parties already noted as out of
+  scope), write endpoints, and CSV/XML response formats are explicit,
+  documented fast-follows, not built in this pass.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -834,12 +860,14 @@ section as modules get built out.
   above); Activity Logs and Audit Logs already existed before this
   session (`admin_audit_log` + `/admin/audit-log`); Data Encryption and
   Backup & Recovery are Supabase/infra-level (TLS, managed Postgres
-  backups), not app features to build. API Security and Role Security
-  aren't distinct dedicated features anywhere in this codebase — every
-  API route does its own auth check and every table's RLS policy is the
-  de facto "role security" layer, but there's no single dedicated
-  admin-facing surface for either, so calling them "done" would overstate
-  it.
+  backups), not app features to build. API Security now has a real,
+  dedicated admin-facing surface (`/admin/api-keys`, see "Substantially
+  built" above); Role Security is still not a distinct dedicated page —
+  `/admin/roles` (custom admin roles) and every table's RLS policy are
+  the de facto role-security layer, but there's no single consolidated
+  "role security audit" view, and building one now would mostly
+  duplicate `/admin/roles` + `/admin/audit-log` rather than add real new
+  capability.
 - ERP, Marketing (Meta/Google Ads), Storage (Drive/OneDrive/Dropbox/S3),
   and Payment-beyond-Stripe integrations — last remaining piece of
   Module 15 (see "Substantially built" above for Client Management/

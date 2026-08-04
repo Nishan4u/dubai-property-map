@@ -32,6 +32,7 @@ import {
   LayoutTemplate,
   Plug,
   KeyRound,
+  KeySquare,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 
@@ -65,6 +66,7 @@ const navItems = [
   { label: "Campaigns", href: "/campaigns", icon: Send },
   { label: "Landing Pages", href: "/landing-pages", icon: LayoutTemplate },
   { label: "Integrations", href: "/integrations", icon: Plug },
+  { label: "API Keys", href: "/api-keys", icon: KeySquare },
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },

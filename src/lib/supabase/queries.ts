@@ -659,6 +659,100 @@ export async function getCommunityBySlug(slug: string) {
   return data;
 }
 
+// ---------- Public API (Module 15 "API & Webhooks" / Module 27 "API
+// Security") ---------- Lean, deliberately narrow shapes for external
+// API-key holders -- distinct from getPublishedProjects()/getDevelopers()/
+// getCommunities() above, which return the full internal row shape used
+// by the public site itself. No filters/pagination beyond a capped limit
+// in this first pass, matching Connect-Any-CRM's own "real, bounded slice
+// now, extend later" precedent.
+
+export interface PublicApiProject {
+  slug: string;
+  name: string;
+  propertyType: string;
+  listingType: string;
+  priceFromAed: number;
+  bedroomsFrom: number;
+  bedroomsTo: number;
+  handoverQuarter: string | null;
+  handoverYear: number | null;
+  tags: string[];
+  community: string | null;
+  developer: string | null;
+}
+
+export async function getPublicApiProjects(limit = 50): Promise<PublicApiProject[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select(
+      "slug, name, property_type, listing_type, price_from_aed, bedrooms_from, bedrooms_to, handover_quarter, handover_year, tags, developers(name), communities(name)"
+    )
+    .in("status", ["published", "featured"])
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100));
+
+  if (error) return [];
+
+  type Row = {
+    slug: string;
+    name: string;
+    property_type: string;
+    listing_type: string;
+    price_from_aed: number;
+    bedrooms_from: number;
+    bedrooms_to: number;
+    handover_quarter: string | null;
+    handover_year: number | null;
+    tags: string[];
+    developers: { name: string } | { name: string }[] | null;
+    communities: { name: string } | { name: string }[] | null;
+  };
+
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const developer = Array.isArray(row.developers) ? row.developers[0] : row.developers;
+    const community = Array.isArray(row.communities) ? row.communities[0] : row.communities;
+    return {
+      slug: row.slug,
+      name: row.name,
+      propertyType: row.property_type,
+      listingType: row.listing_type,
+      priceFromAed: row.price_from_aed,
+      bedroomsFrom: row.bedrooms_from,
+      bedroomsTo: row.bedrooms_to,
+      handoverQuarter: row.handover_quarter,
+      handoverYear: row.handover_year,
+      tags: row.tags ?? [],
+      community: community?.name ?? null,
+      developer: developer?.name ?? null,
+    };
+  });
+}
+
+export async function getPublicApiCommunities(limit = 100) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("communities")
+    .select("slug, name, description")
+    .order("name")
+    .limit(Math.min(Math.max(limit, 1), 200));
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getPublicApiDevelopers(limit = 100) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("developers")
+    .select("slug, name, description, logo_url")
+    .eq("status", "active")
+    .order("name")
+    .limit(Math.min(Math.max(limit, 1), 200));
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getProjectsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -947,6 +1041,29 @@ export async function getAllCrmIntegrationsAdmin() {
 
   if (error) return [];
   return data ?? [];
+}
+
+// Admin oversight for the Public API: every key plus its 10 most recent
+// request-log rows, mirroring getCrmIntegrationsForOwner's exact "fetch
+// once, filter+slice in memory" shape rather than an N+1 query per key.
+export async function getAllApiKeysAdmin() {
+  const supabase = await createClient();
+  const { data: keys, error } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
+  if (error || !keys?.length) return [];
+
+  const { data: logs } = await supabase
+    .from("api_request_logs")
+    .select("*")
+    .in(
+      "api_key_id",
+      keys.map((k) => k.id)
+    )
+    .order("created_at", { ascending: false });
+
+  return keys.map((key) => ({
+    ...key,
+    logs: (logs ?? []).filter((l) => l.api_key_id === key.id).slice(0, 10),
+  }));
 }
 
 export async function getBookingsForDeveloper(developerId: string) {

@@ -44,6 +44,7 @@ export const ADMIN_MODULES: ModuleDef[] = [
   { key: "campaigns", label: "Campaigns" },
   { key: "landing-pages", label: "Landing Pages" },
   { key: "integrations", label: "Integrations" },
+  { key: "api-keys", label: "API Keys" },
   { key: "reports", label: "Reports" },
   { key: "settings", label: "Settings" },
   { key: "security", label: "Security" },
