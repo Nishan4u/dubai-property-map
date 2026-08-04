@@ -85,7 +85,7 @@ export function AdRequestSection({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-ink-100">Advertise Your Projects</h2>
-          <p className="text-xs text-ink-500">AED 500 per placement · runs for 15 days</p>
+          <p className="text-xs text-ink-500">AED 100 per placement · runs for 15 days</p>
         </div>
         <button
           onClick={() => setShowForm((s) => !s)}
@@ -194,7 +194,7 @@ export function AdRequestSection({
             disabled={loading}
             className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60 sm:col-span-2"
           >
-            {loading ? "Redirecting to payment…" : "Pay AED 500 & Submit"}
+            {loading ? "Redirecting to payment…" : "Pay AED 100 & Submit"}
           </button>
         </form>
       )}

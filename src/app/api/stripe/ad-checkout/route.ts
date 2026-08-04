@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
-const AD_PLACEMENT_PRICE_AED = 500;
+const AD_PLACEMENT_PRICE_AED = 100;
 const AD_PLACEMENT_DAYS = 15;
 
 export async function POST(request: NextRequest) {
