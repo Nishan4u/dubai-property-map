@@ -17,6 +17,7 @@ import {
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapProject, currentYear } from "@/lib/supabase/mappers";
+import { getLocale } from "@/lib/i18n/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,10 @@ export default async function DeveloperProfilePage({
   const { slug } = await params;
   const developer = await getDeveloperBySlug(slug);
   if (!developer) notFound();
+
+  const locale = await getLocale();
+  const developerName = locale === "ar" && developer.name_ar ? developer.name_ar : developer.name;
+  const developerDescription = locale === "ar" && developer.description_ar ? developer.description_ar : developer.description;
 
   // Same protection as every other project-listing surface (spec sections
   // 20-21: "Direct URL" must be protected too, not just the directory).
@@ -119,7 +124,7 @@ export default async function DeveloperProfilePage({
           )}
           <div className="flex-1">
             <h1 className="flex items-center gap-2 text-xl font-bold text-ink-100">
-              {developer.name}
+              {developerName}
               {developer.verified && (
                 <BadgeCheck className="h-5 w-5 text-sky-400" />
               )}
@@ -139,7 +144,7 @@ export default async function DeveloperProfilePage({
         </div>
 
         <p className="mt-6 max-w-3xl text-sm leading-relaxed text-ink-300">
-          {developer.description}
+          {developerDescription}
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">

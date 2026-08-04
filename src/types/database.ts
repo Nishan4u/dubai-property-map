@@ -124,6 +124,8 @@ export interface DeveloperRow {
   verified: boolean;
   founded: number | null;
   description: string | null;
+  name_ar: string | null;
+  description_ar: string | null;
   status: DeveloperStatus;
   email: string | null;
   phone: string | null;
@@ -211,6 +213,8 @@ export interface CommunityRow {
   slug: string;
   name: string;
   description: string | null;
+  name_ar: string | null;
+  description_ar: string | null;
   lng: number | null;
   lat: number | null;
   x_pct: number | null;

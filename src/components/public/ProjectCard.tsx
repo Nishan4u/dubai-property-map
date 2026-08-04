@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Heart } from "lucide-react";
 import type { Project } from "@/types";
-import { formatAed, getDeveloper, getCommunity } from "@/data/mock";
+import { getDeveloper, getCommunity } from "@/data/mock";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { useFavorites } from "@/components/auth/FavoritesProvider";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ShareButton } from "@/components/public/ShareButton";
 
 export function ProjectCard({
@@ -18,6 +19,7 @@ export function ProjectCard({
   onSelect?: (project: Project) => void;
 }) {
   const router = useRouter();
+  const { formatPrice } = useLocale();
   const { favoriteIds, toggle } = useFavorites();
   const saved = favoriteIds.has(project.id);
   const developerName = project.developerName ?? getDeveloper(project.developerId)?.name;
@@ -71,7 +73,7 @@ export function ProjectCard({
         <p className="truncate text-sm font-medium text-ink-200">by {developerName}</p>
         <p className="truncate text-xs text-ink-500">{communityName}</p>
         <p className="mt-1 text-sm font-semibold text-gold-400">
-          From {formatAed(project.priceFromAed)}
+          From {formatPrice(project.priceFromAed)}
         </p>
         <p className="mt-0.5 text-xs text-ink-400">
           {project.bedroomsFrom === 0 ? "Studio" : `${project.bedroomsFrom}`}

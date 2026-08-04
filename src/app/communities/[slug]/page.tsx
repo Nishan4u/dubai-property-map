@@ -15,7 +15,7 @@ import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { CommunityFavoriteButton } from "@/components/public/CommunityFavoriteButton";
 import { RoiCalculator } from "@/components/public/calculators/RoiCalculator";
 import { RentalYieldCalculator } from "@/components/public/calculators/RentalYieldCalculator";
-import { formatAed } from "@/data/mock";
+import { getCurrency, getLocale, formatPrice } from "@/lib/i18n/locale";
 import { poiLayers } from "@/data/poi";
 import { nearestPoints, type NearbyPoint } from "@/lib/nearbyPoi";
 import { getInvestmentScore } from "@/lib/investmentScore";
@@ -69,6 +69,11 @@ export default async function CommunityPage({
   const { slug } = await params;
   const community = await getCommunityBySlug(slug);
   if (!community) notFound();
+
+  const currency = await getCurrency();
+  const locale = await getLocale();
+  const communityName = locale === "ar" && community.name_ar ? community.name_ar : community.name;
+  const communityDescription = locale === "ar" && community.description_ar ? community.description_ar : community.description;
 
   const communityBanner = await getActiveCommunityBanner(community.id);
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
@@ -142,10 +147,10 @@ export default async function CommunityPage({
                 className="h-3 w-3 rounded-full"
                 style={{ background: community.pin_color }}
               />
-              {community.name}
+              {communityName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-ink-400">
-              {community.description}
+              {communityDescription}
             </p>
           </div>
           <div className="flex gap-6 text-center">
@@ -157,7 +162,7 @@ export default async function CommunityPage({
             </div>
             <div>
               <p className="text-lg font-bold text-ink-100">
-                {avgPrice > 0 ? formatAed(avgPrice) : "—"}
+                {avgPrice > 0 ? formatPrice(avgPrice, currency) : "—"}
               </p>
               <p className="text-xs text-ink-500">Avg Price</p>
             </div>
@@ -234,19 +239,19 @@ export default async function CommunityPage({
               <div className="grid grid-cols-3 gap-4 border-b border-navy-800 pb-4 text-center">
                 <div>
                   <p className="text-sm font-bold text-ink-100">
-                    {formatAed(minPrice)}
+                    {formatPrice(minPrice, currency)}
                   </p>
                   <p className="text-xs text-ink-500">Lowest starting price</p>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gold-400">
-                    {formatAed(avgPrice)}
+                    {formatPrice(avgPrice, currency)}
                   </p>
                   <p className="text-xs text-ink-500">Average starting price</p>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-ink-100">
-                    {formatAed(maxPrice)}
+                    {formatPrice(maxPrice, currency)}
                   </p>
                   <p className="text-xs text-ink-500">Highest starting price</p>
                 </div>
@@ -261,7 +266,7 @@ export default async function CommunityPage({
                       {bedroomLabel(b.bedrooms)}
                     </p>
                     <p className="text-sm font-semibold text-ink-100">
-                      from {formatAed(b.min)}
+                      from {formatPrice(b.min, currency)}
                     </p>
                   </div>
                 ))}

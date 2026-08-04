@@ -19,6 +19,8 @@ function slugify(input: string) {
 const emptyDraft = {
   name: "",
   description: "",
+  name_ar: "",
+  description_ar: "",
   pin_color: "#3b82f6",
   lat: "",
   lng: "",
@@ -52,6 +54,8 @@ export function CommunityManager({
     setDraft({
       name: c.name,
       description: c.description ?? "",
+      name_ar: c.name_ar ?? "",
+      description_ar: c.description_ar ?? "",
       pin_color: c.pin_color,
       lat: c.lat?.toString() ?? "",
       lng: c.lng?.toString() ?? "",
@@ -69,6 +73,8 @@ export function CommunityManager({
     const payload = {
       name: draft.name,
       description: draft.description || null,
+      name_ar: draft.name_ar || null,
+      description_ar: draft.description_ar || null,
       pin_color: draft.pin_color,
       lat: draft.lat ? Number(draft.lat) : null,
       lng: draft.lng ? Number(draft.lng) : null,
@@ -176,6 +182,24 @@ export function CommunityManager({
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
             />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field
+              label="Arabic Name (optional)"
+              value={draft.name_ar}
+              onChange={(v) => setDraft((d) => ({ ...d, name_ar: v }))}
+              placeholder="الاسم بالعربية"
+            />
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-400">Arabic Description (optional)</label>
+              <textarea
+                dir="rtl"
+                rows={2}
+                value={draft.description_ar}
+                onChange={(e) => setDraft((d) => ({ ...d, description_ar: e.target.value }))}
+                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+              />
+            </div>
           </div>
           <div className="border-t border-navy-800 pt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">

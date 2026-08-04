@@ -12,7 +12,7 @@ import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyReq
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
-import { formatAed } from "@/data/mock";
+import { getCurrency, formatPrice } from "@/lib/i18n/locale";
 import {
   getActiveProjectBanner,
   getConstructionMilestones,
@@ -79,6 +79,7 @@ export default async function ProjectDetailsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const currency = await getCurrency();
   // Existence + ownership checks use the public-safe preview, not the full
   // RLS-protected row -- since patch_83 locks the base `projects` table
   // down to authorized viewers only, fetching the full row for a guest
@@ -232,7 +233,7 @@ export default async function ProjectDetailsPage({
               </div>
               <p className="mt-2 text-xs text-ink-500">Starting From</p>
               <p className="text-2xl font-bold text-gold-400">
-                {formatAed(project.priceFromAed)}
+                {formatPrice(project.priceFromAed, currency)}
               </p>
               <p className="flex items-center justify-end gap-1 text-xs text-ink-400">
                 <Star className="h-3.5 w-3.5 fill-gold-400 text-gold-400" />
@@ -323,7 +324,7 @@ export default async function ProjectDetailsPage({
                       </div>
                       {u.starting_price_aed != null && (
                         <p className="mt-2 text-sm font-semibold text-gold-400">
-                          From {formatAed(u.starting_price_aed)}
+                          From {formatPrice(u.starting_price_aed, currency)}
                         </p>
                       )}
                       {unitAvailability[u.id] && (

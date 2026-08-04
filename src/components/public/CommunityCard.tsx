@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { clsx } from "clsx";
 import { useCommunityFavorites } from "@/components/auth/CommunityFavoritesProvider";
-import { formatAed } from "@/data/mock";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export function CommunityCard({
   id,
@@ -26,6 +26,7 @@ export function CommunityCard({
   featured?: boolean;
 }) {
   const { favoriteCommunityIds, toggle } = useCommunityFavorites();
+  const { formatPrice } = useLocale();
   const isFavorited = favoriteCommunityIds.has(id);
 
   return (
@@ -57,7 +58,7 @@ export function CommunityCard({
       <p className="mt-2 line-clamp-2 text-xs text-ink-400">{description}</p>
       <div className="mt-3 text-xs text-ink-500">
         {projectsCount} Projects
-        {avgPrice > 0 ? ` · Avg ${formatAed(avgPrice)}` : ""}
+        {avgPrice > 0 ? ` · Avg ${formatPrice(avgPrice)}` : ""}
       </div>
     </Link>
   );

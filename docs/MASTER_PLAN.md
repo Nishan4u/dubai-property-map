@@ -724,6 +724,48 @@ section as modules get built out.
   owner. OAuth 2.0, GraphQL, two-way sync, and CSV/XML feed formats stay
   out of this pass — real gaps, but meaningfully bigger scope than a
   first pass, noted here rather than silently dropped.
+- Multi-language / Arabic / RTL Support (Module 29, now substantially
+  built): a cookie-based locale/currency preference
+  (`src/lib/i18n/`) — deliberately **not** a `src/app/[locale]/**`
+  URL-routing restructuring, since that would touch every existing
+  route, link, `sitemap.ts`/`robots.ts` entry, and the DB-driven
+  redirect logic already in `src/proxy.ts` across the whole codebase,
+  a blast radius wildly out of proportion for one architectural choice.
+  Every existing URL stays byte-identical; English/AED remains the
+  default with zero visible change when no preference is set. Real RTL
+  support: `dir="rtl"`/`lang="ar"` set dynamically on `<html>`
+  (`src/app/layout.tsx`) from the cookie, logical-property layout
+  fixes applied to the shared header/footer (`PublicShell.tsx`), and a
+  language/currency switcher in the header. The shared chrome (footer
+  copyright, switcher labels) is genuinely translated via a small
+  dictionary system; full per-page body-copy translation across the
+  50+ public components stays out of this pass — a bounded, real slice
+  now beats a mechanical sweep that would touch nearly every existing
+  page in one batch. Currency: all 15 real public-facing
+  `formatAed()` call sites (project/community cards, map popups, the
+  community/project detail pages) now convert through the currency
+  cookie and `CurrencyConverter.tsx`'s own existing indicative rates
+  (reused, not duplicated); the 6 internal/admin financial-reporting
+  call sites (revenue/sales/conversion reports, the developer
+  dashboard's pipeline value) deliberately stay in AED, since silently
+  converting an admin's own revenue figures based on their personal
+  currency preference would be actively confusing, not a feature.
+  Content: `name_ar`/`description_ar` columns (patch_112) on
+  `communities`/`developers`/`projects`, with **real AI-translated
+  Arabic names for all 159 existing communities** (genuine, well-
+  documented Dubai place names) and the ~30 major, widely-recognized
+  developer brands — the other ~200 smaller/boutique developer entries
+  (several visibly test/QA rows) deliberately keep `name_ar` null and
+  fall back to English, since inventing a plausible-sounding Arabic
+  transliteration for a company whose actual branding isn't known
+  would be exactly the kind of fabrication this codebase has
+  repeatedly refused elsewhere (Investment Score, ROI/rental yield).
+  Community and Developer detail pages show the Arabic name/
+  description when present, always falling back to English — never a
+  blank field. Timezone: not a new picker — every date in this
+  codebase already renders via `Date.toLocaleString()` client-side,
+  which already shows the browser's own local time for free on a
+  platform whose users are overwhelmingly in one timezone anyway.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -753,7 +795,6 @@ section as modules get built out.
   remaining piece of Module 20 (see "Substantially built" above for
   Homepage Banners, Featured Developers, Sponsored Communities, and
   Marketing Campaigns, all of which are now done).
-- Multi-language / Arabic / RTL support (Module 29).
 
 This snapshot is a starting point for scoping "what's next," not a
 commitment — confirm with the user before treating any line as decided

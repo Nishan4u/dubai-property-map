@@ -2,26 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { NumberField, SelectField } from "./fields";
-
-// Indicative rates only -- no live FX feed is wired into this codebase.
-// Refreshed periodically by hand; never presented as real-time.
-const RATES_PER_AED: Record<string, number> = {
-  AED: 1,
-  USD: 0.2723,
-  EUR: 0.2508,
-  GBP: 0.214,
-  INR: 22.85,
-  SAR: 1.0209,
-};
-
-const CURRENCY_LABELS: Record<string, string> = {
-  AED: "AED — UAE Dirham",
-  USD: "USD — US Dollar",
-  EUR: "EUR — Euro",
-  GBP: "GBP — British Pound",
-  INR: "INR — Indian Rupee",
-  SAR: "SAR — Saudi Riyal",
-};
+import { RATES_PER_AED, CURRENCY_LABELS } from "@/lib/i18n/rates";
 
 const options = Object.keys(RATES_PER_AED).map((code) => ({ value: code, label: CURRENCY_LABELS[code] }));
 

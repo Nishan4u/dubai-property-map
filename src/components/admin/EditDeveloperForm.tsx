@@ -17,6 +17,8 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
   const [website, setWebsite] = useState(developer.website ?? "");
   const [founded, setFounded] = useState(developer.founded?.toString() ?? "");
   const [description, setDescription] = useState(developer.description ?? "");
+  const [nameAr, setNameAr] = useState(developer.name_ar ?? "");
+  const [descriptionAr, setDescriptionAr] = useState(developer.description_ar ?? "");
   const [approvedEmailDomain, setApprovedEmailDomain] = useState(developer.approved_email_domain ?? "");
   const [logoUrl, setLogoUrl] = useState(developer.logo_url ?? "");
   const [featured, setFeatured] = useState(developer.featured);
@@ -76,6 +78,8 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
         website: website || null,
         founded: founded ? Number(founded) : null,
         description: description || null,
+        name_ar: nameAr.trim() || null,
+        description_ar: descriptionAr.trim() || null,
         approved_email_domain: approvedEmailDomain.trim() ? approvedEmailDomain.trim().replace(/^@/, "").toLowerCase() : null,
         featured,
       })
@@ -168,6 +172,17 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+        />
+      </div>
+      <Field label="Arabic Name (optional)" value={nameAr} onChange={setNameAr} placeholder="الاسم بالعربية" />
+      <div>
+        <label className="mb-1 block text-xs font-medium text-ink-400">Arabic Description (optional)</label>
+        <textarea
+          dir="rtl"
+          rows={3}
+          value={descriptionAr}
+          onChange={(e) => setDescriptionAr(e.target.value)}
           className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
         />
       </div>

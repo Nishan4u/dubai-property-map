@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FolderOpen } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
-import { formatAed } from "@/data/mock";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 interface PresentationProject {
   name: string;
@@ -19,6 +19,7 @@ interface PresentationProject {
 }
 
 export function PresentationClient({ token }: { token: string }) {
+  const { formatPrice } = useLocale();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
@@ -80,7 +81,7 @@ export function PresentationClient({ token }: { token: string }) {
                 <p className="mt-0.5 truncate text-xs text-ink-400">
                   {p.developerName && `by ${p.developerName}`} {p.communityName && `· ${p.communityName}`}
                 </p>
-                <p className="mt-2 text-sm font-semibold text-gold-400">From {formatAed(p.priceFromAed)}</p>
+                <p className="mt-2 text-sm font-semibold text-gold-400">From {formatPrice(p.priceFromAed)}</p>
                 <p className="mt-1 text-xs text-ink-500">
                   {p.bedroomsFrom === 0 ? "Studio" : `${p.bedroomsFrom}`}
                   {p.bedroomsTo > p.bedroomsFrom ? `-${p.bedroomsTo} Bed` : p.bedroomsFrom > 0 ? " Bed" : ""}

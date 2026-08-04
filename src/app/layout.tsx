@@ -6,6 +6,8 @@ import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
 import { InstallAppPrompt } from "@/components/public/InstallAppPrompt";
 import { ServiceWorkerRegister } from "@/components/public/ServiceWorkerRegister";
 import { AiChatWidget } from "@/components/public/AiChatWidget";
+import { LocaleProvider } from "@/components/i18n/LocaleProvider";
+import { getCurrency, getLocale } from "@/lib/i18n/locale";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,19 +51,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const currency = await getCurrency();
+
   return (
     <html
-      lang="en"
+      lang={locale}
+      dir={locale === "ar" ? "rtl" : "ltr"}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-navy-950 text-ink-100">
         <AnalyticsScripts />
-        <FavoritesProvider>
-          <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
-        </FavoritesProvider>
-        <InstallAppPrompt />
-        <ServiceWorkerRegister />
-        <AiChatWidget />
+        <LocaleProvider initialLocale={locale} initialCurrency={currency}>
+          <FavoritesProvider>
+            <CommunityFavoritesProvider>{children}</CommunityFavoritesProvider>
+          </FavoritesProvider>
+          <InstallAppPrompt />
+          <ServiceWorkerRegister />
+          <AiChatWidget />
+        </LocaleProvider>
       </body>
     </html>
   );

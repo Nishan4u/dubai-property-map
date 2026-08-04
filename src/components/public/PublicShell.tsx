@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Heart } from "lucide-react";
 import { AuthStatus } from "@/components/auth/AuthStatus";
+import { LanguageCurrencySwitcher } from "@/components/i18n/LanguageCurrencySwitcher";
+import { t } from "@/lib/i18n/locale";
 import { GlobalSearchBox, type SearchItem } from "@/components/public/GlobalSearchBox";
 import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import {
@@ -100,7 +102,8 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
              between them, leaving a stray gap before Admin Panel/Logout.
              Grouped together they always sit flush, wherever the whole
              cluster ends up. */}
-          <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
+          <div className="ms-auto hidden shrink-0 items-center gap-2 sm:flex">
+            <LanguageCurrencySwitcher />
             <Link
               href="/favorites"
               className="flex shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100"
@@ -132,7 +135,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
         </div>
-        © 2026 Dubai Property Map. All rights reserved.
+        {await t("footer.rights", { year: new Date().getFullYear() })}
       </footer>
     </div>
   );

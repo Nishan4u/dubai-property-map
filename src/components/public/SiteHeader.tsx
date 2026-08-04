@@ -5,7 +5,7 @@ import Image from "next/image";
 import { clsx } from "clsx";
 import { Filter, Heart, Search, X } from "lucide-react";
 import { AuthStatus } from "@/components/auth/AuthStatus";
-import { formatAed } from "@/data/mock";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import type { ListingType, Project } from "@/types";
 
@@ -48,6 +48,7 @@ export function SiteHeader({
    * search is one of the "protected" interactive Map features. */
   searchDisabled?: boolean;
 }) {
+  const { formatPrice } = useLocale();
   const showResults = !searchDisabled && !!searchQuery?.trim() && !!searchResults;
 
   return (
@@ -128,7 +129,7 @@ export function SiteHeader({
                     </span>
                   </span>
                   <span className="shrink-0 text-xs font-semibold text-gold-400">
-                    {formatAed(project.priceFromAed)}
+                    {formatPrice(project.priceFromAed)}
                   </span>
                 </button>
               ))

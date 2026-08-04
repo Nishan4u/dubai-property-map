@@ -6,9 +6,10 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import { ChevronDown, Heart, MapPin, Share2, Star, X } from "lucide-react";
 import type { Project } from "@/types";
-import { formatAed, getCommunity, getDeveloper } from "@/data/mock";
+import { getCommunity, getDeveloper } from "@/data/mock";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { useFavorites } from "@/components/auth/FavoritesProvider";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -24,6 +25,7 @@ export function FeaturedProjectCard({
   onExpandChange?: (expanded: boolean) => void;
 }) {
   const router = useRouter();
+  const { formatPrice } = useLocale();
   const { favoriteIds, toggle } = useFavorites();
   const saved = favoriteIds.has(project.id);
   const [open, setOpen] = useState(true);
@@ -67,7 +69,7 @@ export function FeaturedProjectCard({
               <Star className="h-2.5 w-2.5 fill-gold-400" /> Featured
             </span>
             <p className="truncate text-xs font-semibold text-ink-100">{project.name}</p>
-            <p className="text-[10px] text-ink-500">{formatAed(project.priceFromAed)}</p>
+            <p className="text-[10px] text-ink-500">{formatPrice(project.priceFromAed)}</p>
           </div>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 -rotate-90 text-ink-500" />
         </button>
@@ -157,7 +159,7 @@ export function FeaturedProjectCard({
         </div>
 
         <dl className="mt-2 space-y-1 text-[10px] sm:text-xs">
-          <Row label="Starting From" value={formatAed(project.priceFromAed)} />
+          <Row label="Starting From" value={formatPrice(project.priceFromAed)} />
           <Row
             label="Handover"
             value={`${project.handoverQuarter} ${project.handoverYear}`}

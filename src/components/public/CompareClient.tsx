@@ -5,12 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { CompactSelect } from "@/components/public/CompactSelect";
-import { formatAed } from "@/data/mock";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Project } from "@/types";
 
 const MAX_SLOTS = 5;
 
 export function CompareClient({ projects }: { projects: Project[] }) {
+  const { formatPrice } = useLocale();
   // Lets a project's Share menu link straight into a comparison that
   // already includes it (/compare?add=<slug>), instead of always landing
   // on an arbitrary first-3 selection the visitor has to fix themselves.
@@ -95,7 +96,7 @@ export function CompareClient({ projects }: { projects: Project[] }) {
   const rows: { label: string; render: (p: Project) => React.ReactNode }[] = [
     { label: "Developer", render: (p) => p.developerName },
     { label: "Community", render: (p) => p.communityName },
-    { label: "Price From", render: (p) => formatAed(p.priceFromAed) },
+    { label: "Price From", render: (p) => formatPrice(p.priceFromAed) },
     { label: "Payment Plan", render: (p) => p.paymentPlan },
     { label: "Bedrooms", render: (p) => `${p.bedroomsFrom} - ${p.bedroomsTo} BR` },
     { label: "Handover", render: (p) => `${p.handoverQuarter} ${p.handoverYear}` },

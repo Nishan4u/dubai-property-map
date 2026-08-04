@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import type { Community, Project } from "@/types";
 import type { UpcomingProjectPublicRow } from "@/types/database";
-import { formatAed, getDeveloper } from "@/data/mock";
+import { getDeveloper } from "@/data/mock";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { poiLayers, metroLines, highwayLines } from "@/data/poi";
 import { smoothLine } from "@/lib/smoothLine";
 import { trackProjectEvent } from "@/lib/trackEvent";
@@ -56,6 +57,7 @@ export function DubaiMap({
    * public teasers with no protected data (just developer name/logo). */
   upcomingProjects?: UpcomingProjectPublicRow[];
 }) {
+  const { formatPrice } = useLocale();
   const [zoom, setZoom] = useState(1);
   const [satellite, setSatellite] = useState(false);
   const [useLiveMap, setUseLiveMap] = useState(false);
@@ -882,7 +884,7 @@ export function DubaiMap({
             </p>
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="font-semibold text-ink-100">
-                {formatAed(activeProject.priceFromAed)}
+                {formatPrice(activeProject.priceFromAed)}
               </span>
               <span className="flex items-center gap-1 text-ink-400">
                 <Star className="h-3 w-3 fill-gold-400 text-gold-400" />
