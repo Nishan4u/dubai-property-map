@@ -71,7 +71,7 @@ export async function recordCommission(input: {
   accountType: AccountType;
   accountId: string;
   paymentId: string;
-  paymentSource: "stripe" | "bank_transfer";
+  paymentSource: "stripe" | "bank_transfer" | "network_international";
   subscriptionAmount: number;
   paidAt?: Date;
 }) {

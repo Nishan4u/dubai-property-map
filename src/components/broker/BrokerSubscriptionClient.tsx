@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Check, Gift, Landmark, Wallet } from "lucide-react";
+import { Check, Gift, Landmark, Wallet, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BankTransferPayment, type BankDetails } from "@/components/dashboard/BankTransferPayment";
 import { BankTransferHistory } from "@/components/dashboard/BankTransferHistory";
@@ -61,6 +61,7 @@ export function BrokerSubscriptionClient({
   const [bankTransferPlan, setBankTransferPlan] = useState<Plan | null>(null);
   const [referralCode, setReferralCode] = useState("");
   const [walletPayingPlan, setWalletPayingPlan] = useState<string | null>(null);
+  const [networkLoadingPlan, setNetworkLoadingPlan] = useState<string | null>(null);
 
   useEffect(() => {
     const cookieCode = getReferralCookie();
@@ -100,6 +101,24 @@ export function BrokerSubscriptionClient({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout failed");
       setLoadingPlan(null);
+    }
+  }
+
+  async function handleNetworkCheckout(plan: string) {
+    setNetworkLoadingPlan(plan);
+    setError("");
+    try {
+      const res = await fetch("/api/broker/network-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, referralCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Checkout failed");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed");
+      setNetworkLoadingPlan(null);
     }
   }
 
@@ -237,6 +256,16 @@ export function BrokerSubscriptionClient({
                 >
                   <Landmark className="h-3.5 w-3.5" />
                   {bankTransferPlan?.key === plan.key ? "Hide Bank Transfer" : "Pay via Bank Transfer"}
+                </button>
+              )}
+              {!isCurrent && plan.price_aed != null && plan.online_payment_enabled !== false && (
+                <button
+                  onClick={() => handleNetworkCheckout(plan.key)}
+                  disabled={networkLoadingPlan !== null}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-navy-600 py-2 text-xs font-medium text-ink-300 hover:text-ink-100 disabled:opacity-60"
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  {networkLoadingPlan === plan.key ? "Redirecting…" : "Pay with Network International"}
                 </button>
               )}
               {canPayWithWallet && (

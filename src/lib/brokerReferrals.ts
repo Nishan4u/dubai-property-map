@@ -172,7 +172,7 @@ export async function recordReferralPaymentSuccess(input: {
   accountType: AccountType;
   accountId: string;
   signupId?: string | null; // known directly from Stripe checkout metadata when present
-  paymentSource: "stripe" | "bank_transfer";
+  paymentSource: "stripe" | "bank_transfer" | "network_international";
   paymentReference: string;
   subscriptionAmountAed: number;
   planKey: string;

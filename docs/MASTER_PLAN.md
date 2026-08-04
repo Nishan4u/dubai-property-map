@@ -928,8 +928,49 @@ section as modules get built out.
   pointed at using IAM credentials scoped to just the one bucket, not
   account-wide keys. Google Drive, OneDrive, and Dropbox remain out of
   this pass — each needs a real registered OAuth app tied to this
-  deployed domain, the same category of vendor-blocked gap as ERP/Ads/
-  Payment-beyond-Stripe below, unlike S3's plain IAM-key auth.
+  deployed domain, the same category of vendor-blocked gap as ERP/Ads
+  below, unlike S3's plain IAM-key auth.
+- Network International (Module 3/15 "Payments"): a real REST API
+  integration with N-Genius Online (Network International's payment
+  gateway), verified directly against docs.ngenius-payments.com rather
+  than built from memory, given the real cost of a wrong field name in
+  a payment integration — the access-token auth flow, order-creation
+  endpoint/body shape, and webhook payload fields were each confirmed
+  live. Added as a third online-payment option for Broker and
+  Salesperson subscriptions, alongside the existing Stripe and Bank
+  Transfer paths — `/api/broker/network-checkout`,
+  `/api/salesperson/network-checkout`, and a
+  `/api/network-international/webhook` handler mirroring
+  `/api/stripe/webhook`'s `broker_subscription`/`salesperson_subscription`
+  activation shape (referral attribution, staff commission, the Broker
+  Referral Program's cashback/discount hooks, confirmation email) as
+  closely as the two gateways' different models allow. **Honest, stated
+  limitation**: N-Genius's order API is a one-time-payment primitive with
+  no native recurring-billing concept the way Stripe Checkout's
+  `mode: "subscription"` has — replicating true auto-renewal would need a
+  separate saved-card/tokenization flow plus a background renewal job,
+  real but meaningfully bigger scope, not attempted here. Each successful
+  payment activates the account for exactly one billing period
+  (`subscription_plans.duration_days`), the same "pay for a period, come
+  back to renew" shape Bank Transfer already has in this codebase — not a
+  new gap, a second instance of an already-accepted tradeoff. Promo
+  pricing (`promo_stripe_price_id`) has no AED-denominated equivalent
+  anywhere in this schema, so it doesn't apply to Network International
+  checkout, only the plan's plain `price_aed`. N-Genius webhook payloads
+  are not signed by the platform itself (confirmed in their own docs) —
+  the best available verification is an optional shared-secret header
+  configured in the N-Genius portal, checked against
+  `NETWORK_INTERNATIONAL_WEBHOOK_SECRET`; a known, accepted limitation of
+  the vendor's own platform, not something this integration can fix,
+  documented rather than silently assumed secure (mirrors the honest
+  tradeoff already called out for the email-keyed account-lockout
+  mechanism). `payment_type`/`payment_source` check constraints across
+  `brokers`/`salespersons`/`staff_commissions`/`broker_referral_signups`
+  extended additively (patch_118, same dynamic-constraint-name pattern as
+  patch_97) to add `'network_international'` alongside the existing
+  values — zero change to any existing constraint's other allowed values.
+  Broker Agency and Developer subscriptions, and CSV/XML export formats,
+  aren't wired to Network International in this pass.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
@@ -945,16 +986,21 @@ section as modules get built out.
   "role security audit" view, and building one now would mostly
   duplicate `/admin/roles` + `/admin/audit-log` rather than add real new
   capability.
-- ERP, Marketing (Meta/Google Ads), Storage (Drive/OneDrive/Dropbox/S3),
-  and Payment-beyond-Stripe integrations — last remaining piece of
-  Module 15 (see "Substantially built" above for Client Management/
+- ERP, Marketing (Meta/Google Ads), and Google Drive/OneDrive/Dropbox
+  (S3 is now built, see "Substantially built" above) — the last
+  remaining pieces of Module 15's integration list (Client Management/
   Notes/Tasks/Calendar/Appointments/Email History/Call Logs/WhatsApp
-  History/Connect-Any-CRM, all of which are now done). Each of these
-  fundamentally requires a real registered OAuth app/vendor credential
-  from that specific provider to function at all — unlike a generic
-  webhook or Twilio's REST API, there's no genuine placeholder config
-  that would work once filled in, since each vendor's app must be
-  registered against this exact deployed domain.
+  History/Connect-Any-CRM/S3 Storage/Network International are all now
+  done). Each of these fundamentally requires a real registered OAuth
+  app/vendor credential from that specific provider to function at all
+  — unlike a generic webhook, Twilio/WhatsApp's REST APIs, or S3's
+  plain IAM keys, there's no genuine placeholder config that would work
+  once filled in, since each vendor's app must be registered against
+  this exact deployed domain. Checkout.com and PayTabs (the other two
+  Module 3/15 payment gateway options alongside Network International,
+  now built) weren't attempted — a business only has one real merchant
+  relationship to build against, and it isn't this session's call to
+  pick which.
 This snapshot is a starting point for scoping "what's next," not a
 commitment — confirm with the user before treating any line as decided
 priority.
