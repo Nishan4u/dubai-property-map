@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { NumberField, ResultCard, ResultRow } from "./fields";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
 
 export function RentalYieldCalculator({ priceAed }: { priceAed?: number }) {
+  const { currency } = useLocale();
   const [price, setPrice] = useState(priceAed ?? 1500000);
   const [annualRent, setAnnualRent] = useState(Math.round((priceAed ?? 1500000) * 0.06));
   const [annualCosts, setAnnualCosts] = useState(Math.round((priceAed ?? 1500000) * 0.008));
@@ -16,12 +19,22 @@ export function RentalYieldCalculator({ priceAed }: { priceAed?: number }) {
 
   return (
     <div className="space-y-3">
-      <NumberField label="Property Price (AED)" value={price} onChange={setPrice} step={10000} />
-      <NumberField label="Estimated Annual Rent (AED)" value={annualRent} onChange={setAnnualRent} step={1000} />
       <NumberField
-        label="Annual Service Charge & Maintenance (AED)"
-        value={annualCosts}
-        onChange={setAnnualCosts}
+        label={`Property Price (${currency})`}
+        value={convertFromAed(price, currency)}
+        onChange={(v) => setPrice(convertToAed(v, currency))}
+        step={10000}
+      />
+      <NumberField
+        label={`Estimated Annual Rent (${currency})`}
+        value={convertFromAed(annualRent, currency)}
+        onChange={(v) => setAnnualRent(convertToAed(v, currency))}
+        step={1000}
+      />
+      <NumberField
+        label={`Annual Service Charge & Maintenance (${currency})`}
+        value={convertFromAed(annualCosts, currency)}
+        onChange={(v) => setAnnualCosts(convertToAed(v, currency))}
         step={500}
       />
 

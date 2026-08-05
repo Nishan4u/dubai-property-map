@@ -21,6 +21,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     // timestamp is a paid boost (see patch_99) that lapses once it's past,
     // without needing a background job to flip the boolean back.
     featured: row.featured && (!row.featured_until || new Date(row.featured_until) > new Date()),
+    featuredUntil: row.featured_until,
     priceFromAed: row.price_from_aed,
     paymentPlan: row.payment_plan ?? "",
     bedroomsFrom: row.bedrooms_from,

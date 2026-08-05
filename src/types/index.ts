@@ -66,6 +66,7 @@ export interface Project {
   status: ProjectStatus;
   approvalStatus: ApprovalStatus;
   featured: boolean;
+  featuredUntil?: string | null;
   priceFromAed: number;
   paymentPlan: string;
   bedroomsFrom: number;

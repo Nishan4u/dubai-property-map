@@ -33,3 +33,11 @@ export function formatPriceValue(amountAed: number, currency: Currency) {
   if (value >= 1_000) return `${symbol} ${(value / 1000).toFixed(0)}K`;
   return `${symbol} ${value.toFixed(0)}`;
 }
+
+// Full-precision currency formatting for exact computed amounts (e.g. a
+// calculator's result) -- formatPriceValue's K/M abbreviation above is for
+// marketing price tags, not something you want on a mortgage payment.
+export function formatMoneyValue(amountAed: number, currency: Currency) {
+  const value = convertFromAed(amountAed, currency);
+  return `${CURRENCY_SYMBOL[currency]} ${Math.round(value).toLocaleString()}`;
+}

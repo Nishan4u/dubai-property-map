@@ -62,7 +62,7 @@ const CALCULATORS = [
     id: "payment-plan",
     label: "Payment Plan",
     icon: Calculator,
-    description: "Turn a developer payment plan's percentages into AED amounts.",
+    description: "Turn a developer payment plan's percentages into real amounts.",
     render: () => <PaymentPlanCalculator priceAed={DEFAULT_PRICE} />,
   },
   {

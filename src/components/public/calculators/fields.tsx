@@ -117,6 +117,3 @@ export function SelectField({
   );
 }
 
-export function formatAedNumber(n: number) {
-  return `AED ${Math.round(n).toLocaleString()}`;
-}

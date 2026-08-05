@@ -21,17 +21,24 @@ export function ProjectApprovalActions({
   projectName,
   developerId,
   featured,
+  featuredUntil,
   status,
 }: {
   projectId: string;
   projectName: string;
   developerId: string;
   featured: boolean;
+  featuredUntil?: string | null;
   status: DbProjectStatus;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isFeatured, setIsFeatured] = useState(featured);
+  // A real featured_until means this is a developer's paid "Feature a
+  // Project" boost (AED 50 / 15 days, see /dashboard/packages), not an
+  // admin-set permanent feature -- shown here since that purchase has no
+  // other admin-visible record anywhere (patch_99 writes no payment row).
+  const isPaidBoost = featured && featuredUntil && new Date(featuredUntil) > new Date();
 
   async function updateApproval(approval_status: DbApprovalStatus) {
     setLoading(true);
@@ -61,7 +68,10 @@ export function ProjectApprovalActions({
     const next = !isFeatured;
     setIsFeatured(next);
     const supabase = createClient();
-    await supabase.from("projects").update({ featured: next }).eq("id", projectId);
+    // Clearing featured_until here too: an admin manually turning Featured
+    // on/off is a permanent override, and should not be silently undone
+    // later by a leftover paid-boost expiry date from a previous purchase.
+    await supabase.from("projects").update({ featured: next, featured_until: null }).eq("id", projectId);
     await logAudit(next ? "project.featured" : "project.unfeatured", "project", projectId);
     if (next) {
       await notifyDeveloperTeam(
@@ -106,6 +116,11 @@ export function ProjectApprovalActions({
       >
         <Star className={clsx("h-3.5 w-3.5", isFeatured && "fill-gold-400")} />
         Featured
+        {isPaidBoost && (
+          <span className="text-[10px] font-normal text-ink-500">
+            (paid, until {new Date(featuredUntil!).toLocaleDateString("en-GB", { day: "numeric", month: "short" })})
+          </span>
+        )}
       </button>
     </div>
   );

@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { NumberField, formatAedNumber } from "./fields";
+import { NumberField } from "./fields";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
 
 interface Milestone {
   label: string;
@@ -22,6 +24,7 @@ export function PaymentPlanCalculator({
   priceAed?: number;
   paymentPlanDetails?: Milestone[];
 }) {
+  const { currency, formatMoney } = useLocale();
   const [price, setPrice] = useState(priceAed ?? 1500000);
   const [milestones, setMilestones] = useState<Milestone[]>(
     paymentPlanDetails && paymentPlanDetails.length > 0 ? paymentPlanDetails : DEFAULT_MILESTONES
@@ -44,7 +47,12 @@ export function PaymentPlanCalculator({
 
   return (
     <div className="space-y-3">
-      <NumberField label="Total Property Price (AED)" value={price} onChange={setPrice} step={10000} />
+      <NumberField
+        label={`Total Property Price (${currency})`}
+        value={convertFromAed(price, currency)}
+        onChange={(v) => setPrice(convertToAed(v, currency))}
+        step={10000}
+      />
 
       {usingProjectPlan && (
         <p className="text-[11px] text-ink-500">Pre-filled from this project&apos;s published payment plan.</p>
@@ -68,7 +76,7 @@ export function PaymentPlanCalculator({
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-ink-500">%</span>
             </div>
             <p className="w-24 shrink-0 text-right text-xs font-medium text-ink-200">
-              {formatAedNumber((price * m.percent) / 100)}
+              {formatMoney((price * m.percent) / 100)}
             </p>
             <button
               type="button"

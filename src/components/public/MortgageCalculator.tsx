@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
 
 export function MortgageCalculator({ priceAed }: { priceAed: number }) {
+  const { currency, formatMoney } = useLocale();
   const [price, setPrice] = useState(priceAed);
   const [downPct, setDownPct] = useState(20);
   const [rate, setRate] = useState(4.5);
@@ -21,16 +24,19 @@ export function MortgageCalculator({ priceAed }: { priceAed: number }) {
 
   return (
     <div className="space-y-3">
-      <NumberField label="Property Price (AED)" value={price} onChange={setPrice} step={10000} />
+      <NumberField
+        label={`Property Price (${currency})`}
+        value={convertFromAed(price, currency)}
+        onChange={(v) => setPrice(convertToAed(v, currency))}
+        step={10000}
+      />
       <SliderField label="Down Payment" value={downPct} onChange={setDownPct} min={5} max={80} suffix="%" />
       <SliderField label="Interest Rate" value={rate} onChange={setRate} min={2} max={8} step={0.1} suffix="%" />
       <SliderField label="Tenure" value={years} onChange={setYears} min={5} max={30} suffix=" yrs" />
 
       <div className="rounded-lg bg-navy-800 p-3">
         <p className="text-xs text-ink-400">Estimated Monthly Payment</p>
-        <p className="text-xl font-semibold text-gold-400">
-          AED {Math.round(monthly).toLocaleString()}
-        </p>
+        <p className="text-xl font-semibold text-gold-400">{formatMoney(monthly)}</p>
       </div>
     </div>
   );

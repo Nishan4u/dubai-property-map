@@ -71,6 +71,7 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
                   projectName={p.name}
                   developerId={p.developerId}
                   featured={p.featured}
+                  featuredUntil={p.featuredUntil}
                   status={p.status}
                 />
                 <Link

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NumberField, ResultCard, ResultRow, formatAedNumber } from "./fields";
+import { NumberField, ResultCard, ResultRow } from "./fields";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
 
 const DLD_RATE = 0.04;
 const DLD_ADMIN_FEE = 580;
@@ -14,6 +16,7 @@ const MORTGAGE_REG_ADMIN_FEE = 290;
 // listing-specific data -- same category of fixed government fee as the
 // existing Mortgage Calculator's interest-rate assumption.
 export function DldFeeCalculator({ priceAed }: { priceAed?: number }) {
+  const { currency, formatMoney } = useLocale();
   const [price, setPrice] = useState(priceAed ?? 1500000);
   const [includeAgentCommission, setIncludeAgentCommission] = useState(true);
   const [includeMortgageReg, setIncludeMortgageReg] = useState(false);
@@ -28,7 +31,12 @@ export function DldFeeCalculator({ priceAed }: { priceAed?: number }) {
 
   return (
     <div className="space-y-3">
-      <NumberField label="Property Price (AED)" value={price} onChange={setPrice} step={10000} />
+      <NumberField
+        label={`Property Price (${currency})`}
+        value={convertFromAed(price, currency)}
+        onChange={(v) => setPrice(convertToAed(v, currency))}
+        step={10000}
+      />
 
       <label className="flex items-center gap-2 text-xs text-ink-300">
         <input
@@ -50,16 +58,21 @@ export function DldFeeCalculator({ priceAed }: { priceAed?: number }) {
         Buying with a mortgage
       </label>
       {includeMortgageReg && (
-        <NumberField label="Loan Amount (AED)" value={loanAmount} onChange={setLoanAmount} step={5000} />
+        <NumberField
+          label={`Loan Amount (${currency})`}
+          value={convertFromAed(loanAmount, currency)}
+          onChange={(v) => setLoanAmount(convertToAed(v, currency))}
+          step={5000}
+        />
       )}
 
       <ResultCard>
-        <ResultRow label="DLD Transfer Fee (4% + AED 580)" value={formatAedNumber(dldFee)} />
-        {includeAgentCommission && <ResultRow label="Agent Commission (2% + VAT)" value={formatAedNumber(agentCommission)} />}
+        <ResultRow label="DLD Transfer Fee (4% + AED 580)" value={formatMoney(dldFee)} />
+        {includeAgentCommission && <ResultRow label="Agent Commission (2% + VAT)" value={formatMoney(agentCommission)} />}
         {includeMortgageReg && (
-          <ResultRow label="Mortgage Registration Fee (0.25% + AED 290)" value={formatAedNumber(mortgageRegFee)} />
+          <ResultRow label="Mortgage Registration Fee (0.25% + AED 290)" value={formatMoney(mortgageRegFee)} />
         )}
-        <ResultRow label="Total Transaction Fees" value={formatAedNumber(total)} highlight />
+        <ResultRow label="Total Transaction Fees" value={formatMoney(total)} highlight />
       </ResultCard>
       <p className="text-[11px] text-ink-500">
         Standard published DLD rates as of 2026 — confirm with your conveyancer for exact figures.

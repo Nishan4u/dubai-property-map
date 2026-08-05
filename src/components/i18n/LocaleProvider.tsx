@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { translate, type Currency, type Locale } from "@/lib/i18n/dictionaries";
-import { formatPriceValue } from "@/lib/i18n/currency";
+import { formatPriceValue, formatMoneyValue } from "@/lib/i18n/currency";
 
 interface LocaleContextValue {
   locale: Locale;
   currency: Currency;
   t: (key: string, vars?: Record<string, string | number>) => string;
   formatPrice: (amountAed: number) => string;
+  formatMoney: (amountAed: number) => string;
   setPreferences: (locale: Locale, currency: Currency) => Promise<void>;
 }
 
@@ -46,6 +47,10 @@ export function LocaleProvider({
     return formatPriceValue(amountAed, currency);
   }
 
+  function formatMoney(amountAed: number) {
+    return formatMoneyValue(amountAed, currency);
+  }
+
   return (
     <LocaleContext.Provider
       value={{
@@ -53,6 +58,7 @@ export function LocaleProvider({
         currency,
         t: (key, vars) => translate(locale, key, vars),
         formatPrice,
+        formatMoney,
         setPreferences,
       }}
     >
