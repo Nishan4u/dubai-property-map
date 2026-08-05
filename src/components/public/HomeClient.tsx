@@ -17,7 +17,6 @@ import { ProjectListPanel } from "@/components/public/ProjectListPanel";
 import { DubaiMap } from "@/components/public/DubaiMap";
 import { MapFilterChips } from "@/components/public/MapFilterChips";
 import { MapAmenityBar } from "@/components/public/MapAmenityBar";
-import { MapSearchTools } from "@/components/public/MapSearchTools";
 import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
 import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
@@ -568,6 +567,13 @@ export function HomeClient({
             onSearchMapClick={handleSearchMapClick}
             onViewChange={handleMapViewChange}
             restoreView={restoreView}
+            onNearMe={handleNearMe}
+            onStartRadius={handleStartRadiusSearch}
+            onStartDraw={handleStartDraw}
+            onClearGeoSearch={handleClearGeoSearch}
+            onFinishDraw={handleFinishDraw}
+            radiusKm={radiusKm}
+            onRadiusChange={handleRadiusChange}
           />
           {featuredProject && (
             <FeaturedProjectCard
@@ -584,20 +590,6 @@ export function HomeClient({
              the 3-column filters+list+map layout can leave the map panel
              itself quite narrow. If it still doesn't fully fit, its own
              overflow-x-auto scrolls rather than overlapping anything. */}
-          <div className="absolute bottom-16 left-4 right-52 z-10">
-            <MapSearchTools
-              mode={searchToolMode}
-              region={geoSearchRegion}
-              radiusKm={radiusKm}
-              drawPointCount={drawPoints.length}
-              onNearMe={handleNearMe}
-              onStartRadius={handleStartRadiusSearch}
-              onStartDraw={handleStartDraw}
-              onFinishDraw={handleFinishDraw}
-              onClear={handleClearGeoSearch}
-              onRadiusChange={handleRadiusChange}
-            />
-          </div>
           <div className="absolute bottom-4 left-4 right-52 z-10">
             <MapAmenityBar active={activeLayers} onToggle={toggleLayer} />
           </div>

@@ -7,10 +7,13 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import {
   ChevronLeft,
   ChevronRight,
+  Circle,
   Compass,
+  LocateFixed,
   Maximize,
   Minimize,
   Minus,
+  PenTool,
   Plus,
   RotateCcw,
   RotateCw,
@@ -26,6 +29,7 @@ import { smoothLine } from "@/lib/smoothLine";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { getInvestmentScore } from "@/lib/investmentScore";
 import { buildCirclePolygon, type GeoSearchRegion } from "@/lib/geoSearch";
+import { MapSearchContextPanel } from "@/components/public/MapSearchTools";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
@@ -54,6 +58,13 @@ export function DubaiMap({
   onSearchMapClick,
   onViewChange,
   restoreView = null,
+  onNearMe,
+  onStartRadius,
+  onStartDraw,
+  onClearGeoSearch,
+  onFinishDraw,
+  radiusKm = 5,
+  onRadiusChange,
 }: {
   communities: Community[];
   projects: Project[];
@@ -80,6 +91,16 @@ export function DubaiMap({
   /** Set (non-null) once, e.g. right after loading a saved search, to fly
    * the camera to that exact stored viewport. */
   restoreView?: { center: [number, number]; zoom: number; pitch: number; bearing: number } | null;
+  /** Radius Search / Draw Search Area / Near Me trigger buttons -- rendered
+   * inside this component's own zoom/rotate control stack (see below) so
+   * they read as one toolbar rather than a separate floating panel. */
+  onNearMe?: () => void;
+  onStartRadius?: () => void;
+  onStartDraw?: () => void;
+  onClearGeoSearch?: () => void;
+  onFinishDraw?: () => void;
+  radiusKm?: number;
+  onRadiusChange?: (km: number) => void;
 }) {
   const { formatPrice } = useLocale();
   const [zoom, setZoom] = useState(1);
@@ -1023,7 +1044,71 @@ export function DubaiMap({
         >
           <Compass className="h-4 w-4" />
         </button>
+        {(onNearMe || onStartRadius || onStartDraw) && (
+          <>
+            <div className="my-0.5 h-px bg-navy-700" />
+            {onNearMe && (
+              <button
+                onClick={onNearMe}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+                title="Search near me"
+              >
+                <LocateFixed className="h-4 w-4" />
+              </button>
+            )}
+            {onStartRadius && (
+              <button
+                onClick={onStartRadius}
+                className={clsx(
+                  "flex h-8 w-8 items-center justify-center rounded-lg",
+                  searchToolMode === "radius-pick" || geoSearchRegion?.type === "radius"
+                    ? "bg-gold-500/15 text-gold-400"
+                    : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+                )}
+                title="Radius search"
+              >
+                <Circle className="h-4 w-4" />
+              </button>
+            )}
+            {onStartDraw && (
+              <button
+                onClick={onStartDraw}
+                className={clsx(
+                  "flex h-8 w-8 items-center justify-center rounded-lg",
+                  searchToolMode === "drawing" || geoSearchRegion?.type === "polygon"
+                    ? "bg-gold-500/15 text-gold-400"
+                    : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+                )}
+                title="Draw a search area"
+              >
+                <PenTool className="h-4 w-4" />
+              </button>
+            )}
+            {onClearGeoSearch && (geoSearchRegion || searchToolMode !== "idle") && (
+              <button
+                onClick={onClearGeoSearch}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+                title="Clear search area"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </>
+        )}
       </div>
+
+      {(geoSearchRegion?.type === "radius" || searchToolMode === "drawing") && (
+        <div className="absolute left-16 top-1/2 z-10 -translate-y-1/2">
+          <MapSearchContextPanel
+            mode={searchToolMode}
+            isRadiusActive={geoSearchRegion?.type === "radius"}
+            radiusKm={radiusKm}
+            drawPointCount={drawPoints.length}
+            onFinishDraw={onFinishDraw ?? (() => {})}
+            onRadiusChange={onRadiusChange ?? (() => {})}
+          />
+        </div>
+      )}
 
       {/* Map / Satellite toggle + fullscreen */}
       <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
