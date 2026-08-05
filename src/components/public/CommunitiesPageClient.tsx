@@ -14,6 +14,7 @@ interface CommunityWithStats {
   projectsCount: number;
   avgPrice: number;
   featured: boolean;
+  region: string | null;
 }
 
 export function CommunitiesPageClient({
@@ -29,7 +30,8 @@ export function CommunitiesPageClient({
     return communities.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        (c.description ?? "").toLowerCase().includes(q)
+        (c.description ?? "").toLowerCase().includes(q) ||
+        (c.region ?? "").toLowerCase().includes(q)
     );
   }, [communities, query]);
 
@@ -63,6 +65,7 @@ export function CommunitiesPageClient({
             projectsCount={c.projectsCount}
             avgPrice={c.avgPrice}
             featured={c.featured}
+            region={c.region}
           />
         ))}
         {filtered.length === 0 && (

@@ -664,6 +664,17 @@ section as modules get built out.
   sits between the pre-existing Price Overview and the Projects grid,
   inside the same `ProjectAccessGate` subscription gate as the rest of
   the community's project data — nothing existing on the page changed.
+- Community data import (Module 6, further enriched): 201 real Dubai
+  communities imported (87 genuinely new, 114 matched and enriched
+  in place), each tagged with a real named sub-region (patch_123,
+  e.g. "Marina & New Dubai", "Deira", "Dubailand West" — shown on
+  both the directory cards and the community page header, and
+  included in the directory search). The community page's "Nearby"
+  panel now prefers real per-community data (patch_124, 3618 rows —
+  top 3 real named places per category with both straight-line and
+  an estimated real road distance) over the existing live nearest-
+  point computation, which stays as the fallback for any community
+  outside the imported set.
 - Analytics & Tracking (Module 26, now fully done): three of the seven
   listed items turned out to already exist — Google Analytics (GA4/GTM/
   Meta/TikTok Pixel, `AnalyticsScripts.tsx` + the admin-editable

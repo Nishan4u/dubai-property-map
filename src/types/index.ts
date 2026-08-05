@@ -53,6 +53,10 @@ export interface Community {
   lat: number;
   pinColor: string;
   featured: boolean;
+  /** Real named sub-region grouping (e.g. "Marina & New Dubai", "Deira") —
+   * only present for communities imported with a source region label;
+   * optional so the ~15 hardcoded mock.ts communities keep working. */
+  region?: string | null;
 }
 
 export interface Project {

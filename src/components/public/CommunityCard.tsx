@@ -15,6 +15,7 @@ export function CommunityCard({
   projectsCount,
   avgPrice,
   featured = false,
+  region = null,
 }: {
   id: string;
   slug: string;
@@ -24,6 +25,7 @@ export function CommunityCard({
   projectsCount: number;
   avgPrice: number;
   featured?: boolean;
+  region?: string | null;
 }) {
   const { favoriteCommunityIds, toggle } = useCommunityFavorites();
   const { formatPrice } = useLocale();
@@ -55,6 +57,7 @@ export function CommunityCard({
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: pinColor }} />
         <h3 className="text-sm font-semibold text-ink-100">{name}</h3>
       </div>
+      {region && <p className="mt-1 text-xs text-ink-500">{region}</p>}
       <p className="mt-2 line-clamp-2 text-xs text-ink-400">{description}</p>
       <div className="mt-3 text-xs text-ink-500">
         {projectsCount} Projects

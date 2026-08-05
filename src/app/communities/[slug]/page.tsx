@@ -17,12 +17,13 @@ import { RoiCalculator } from "@/components/public/calculators/RoiCalculator";
 import { RentalYieldCalculator } from "@/components/public/calculators/RentalYieldCalculator";
 import { getCurrency, getLocale, formatPrice } from "@/lib/i18n/locale";
 import { poiLayers } from "@/data/poi";
-import { nearestPoints, type NearbyPoint } from "@/lib/nearbyPoi";
+import { nearestPoints } from "@/lib/nearbyPoi";
 import { getInvestmentScore } from "@/lib/investmentScore";
 import Link from "next/link";
 import {
   getActiveCommunityBanner,
   getCommunityBySlug,
+  getCommunityNearestLocations,
   getMapAccessStatus,
   getMarketInsights,
   getProjectsForCommunity,
@@ -30,6 +31,15 @@ import {
 import { mapProject } from "@/lib/supabase/mappers";
 
 export const dynamic = "force-dynamic";
+
+// Loose enough to cover both real per-community DB rows (patch_124, no
+// lng/lat of their own -- just a name and two real distances) and the
+// dynamic nearestPoints() fallback's richer NearbyPoint shape.
+interface NearbyDisplayPoint {
+  name: string;
+  distanceKm: number;
+  driveKm?: number;
+}
 
 function poiPoints(key: string) {
   return poiLayers.find((l) => l.key === key)?.points ?? [];
@@ -117,25 +127,58 @@ export default async function CommunityPage({
   const hasCoords = community.lat != null && community.lng != null;
   const origin = hasCoords ? { lat: community.lat!, lng: community.lng! } : null;
 
-  const nearby = {
-    schools: origin ? nearestPoints(origin, poiPoints("schools"), 3) : [],
-    hospitals: origin ? nearestPoints(origin, poiPoints("hospitals"), 3) : [],
-    transport: origin ? nearestPoints(origin, poiPoints("metro"), 3) : [],
-    lifestyle: origin
-      ? nearestPoints(
-          origin,
-          [
-            ...poiPoints("beaches"),
-            ...poiPoints("golf"),
-            ...poiPoints("parks"),
-            ...poiPoints("malls"),
-          ],
-          3
-        )
-      : [],
-    restaurants: origin ? nearestPoints(origin, poiPoints("restaurants"), 3) : [],
-    attractions: origin ? nearestPoints(origin, poiPoints("attractions"), 3) : [],
-  };
+  // Real per-community nearest-place data (patch_124) takes priority when
+  // it exists -- it's pre-vetted per community (not just "nearest point in
+  // a generic citywide layer") and carries a real estimated road distance
+  // alongside straight-line, which the live nearestPoints() fallback below
+  // can't produce. Communities outside that imported set (or before the
+  // migration is applied) transparently fall back to the existing dynamic
+  // computation -- same real poi.ts data, just straight-line only.
+  const nearestLocationRows = await getCommunityNearestLocations(community.id);
+  const nearestByCategory = new Map<string, NearbyDisplayPoint[]>();
+  for (const row of nearestLocationRows) {
+    const key = row.category.toLowerCase();
+    const list = nearestByCategory.get(key) ?? [];
+    list.push({
+      name: row.poi_name,
+      distanceKm: Number(row.distance_km),
+      driveKm: Number(row.est_drive_km),
+    });
+    nearestByCategory.set(key, list);
+  }
+  const hasRealNearbyData = nearestByCategory.size > 0;
+
+  const nearby: Record<
+    "schools" | "hospitals" | "transport" | "lifestyle" | "restaurants" | "attractions",
+    NearbyDisplayPoint[]
+  > = hasRealNearbyData
+    ? {
+        schools: nearestByCategory.get("schools") ?? [],
+        hospitals: nearestByCategory.get("hospitals") ?? [],
+        transport: nearestByCategory.get("transport") ?? [],
+        lifestyle: nearestByCategory.get("lifestyle") ?? [],
+        restaurants: nearestByCategory.get("restaurants") ?? [],
+        attractions: nearestByCategory.get("attractions") ?? [],
+      }
+    : {
+        schools: origin ? nearestPoints(origin, poiPoints("schools"), 3) : [],
+        hospitals: origin ? nearestPoints(origin, poiPoints("hospitals"), 3) : [],
+        transport: origin ? nearestPoints(origin, poiPoints("metro"), 3) : [],
+        lifestyle: origin
+          ? nearestPoints(
+              origin,
+              [
+                ...poiPoints("beaches"),
+                ...poiPoints("golf"),
+                ...poiPoints("parks"),
+                ...poiPoints("malls"),
+              ],
+              3
+            )
+          : [],
+        restaurants: origin ? nearestPoints(origin, poiPoints("restaurants"), 3) : [],
+        attractions: origin ? nearestPoints(origin, poiPoints("attractions"), 3) : [],
+      };
 
   return (
     <PublicShell>
@@ -148,6 +191,11 @@ export default async function CommunityPage({
                 style={{ background: community.pin_color }}
               />
               {communityName}
+              {community.region && (
+                <span className="rounded-full bg-navy-800 px-2 py-0.5 text-xs font-medium text-ink-400">
+                  {community.region}
+                </span>
+              )}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-ink-400">
               {communityDescription}
@@ -185,7 +233,7 @@ export default async function CommunityPage({
           </Link>
         )}
 
-        {!hasCoords ? (
+        {!hasCoords && !hasRealNearbyData ? (
           <p className="mt-6 text-sm text-ink-500">
             Nearby places aren&apos;t available for this community yet (no
             coordinates on file).
@@ -394,7 +442,7 @@ function NearbySection({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-  points: NearbyPoint[];
+  points: NearbyDisplayPoint[];
 }) {
   return (
     <div className="rounded-xl border border-navy-700 bg-navy-850 p-4 text-sm">
@@ -413,6 +461,7 @@ function NearbySection({
               <span className="truncate">{pt.name}</span>
               <span className="shrink-0 text-ink-500">
                 {pt.distanceKm.toFixed(1)} km
+                {pt.driveKm != null ? ` · ~${pt.driveKm.toFixed(1)} km by road` : ""}
               </span>
             </li>
           ))}

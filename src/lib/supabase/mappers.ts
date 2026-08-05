@@ -121,6 +121,7 @@ export function mapCommunity(
     lat: Number(row.lat ?? 0),
     pinColor: row.pin_color,
     featured: row.featured,
+    region: row.region ?? null,
   };
 }
 

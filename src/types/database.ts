@@ -224,6 +224,7 @@ export interface CommunityRow {
   meta_description: string | null;
   boundary_radius_km: number | null;
   featured: boolean;
+  region: string | null;
   created_at: string;
 }
 

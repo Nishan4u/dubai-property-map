@@ -31,6 +31,7 @@ export default async function CommunitiesPage() {
       projectsCount: stat?.count ?? 0,
       avgPrice: stat ? stat.totalPrice / stat.count : 0,
       featured: c.featured,
+      region: c.region,
     };
   });
 

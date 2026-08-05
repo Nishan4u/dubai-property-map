@@ -659,6 +659,24 @@ export async function getCommunityBySlug(slug: string) {
   return data;
 }
 
+// Real per-community nearest-place data (patch_124) -- top 3 named places
+// per category with both straight-line and estimated driving distance.
+// Pre-migration or for a community outside the imported set, this simply
+// returns [] (table/rows may not exist yet) so callers can fall back to
+// the existing live nearestPoints() computation instead of erroring.
+export async function getCommunityNearestLocations(communityId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("community_nearest_locations")
+    .select("category, rank, poi_name, poi_lat, poi_lng, distance_km, est_drive_km")
+    .eq("community_id", communityId)
+    .order("category")
+    .order("rank");
+
+  if (error) return [];
+  return data ?? [];
+}
+
 // ---------- Public API (Module 15 "API & Webhooks" / Module 27 "API
 // Security") ---------- Lean, deliberately narrow shapes for external
 // API-key holders -- distinct from getPublishedProjects()/getDevelopers()/
