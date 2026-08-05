@@ -10,9 +10,11 @@ import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyRequestPropertyPanel";
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
+import { NearbyDistances } from "@/components/public/NearbyDistances";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
 import { getCurrency, formatPrice } from "@/lib/i18n/locale";
+import { findNearestByCategory } from "@/lib/investmentScore";
 import {
   getActiveProjectBanner,
   getConstructionMilestones,
@@ -152,6 +154,17 @@ export default async function ProjectDetailsPage({
     lng: project.lng,
     fallbackQuery: `${community?.name ?? ""}, Dubai`,
   });
+  const nearbyPoi =
+    project.lat != null && project.lng != null
+      ? findNearestByCategory(project.lat, project.lng, [
+          "metro",
+          "malls",
+          "schools",
+          "hospitals",
+          "airports",
+          "beaches",
+        ])
+      : [];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -551,6 +564,14 @@ export default async function ProjectDetailsPage({
                 <MapPin className="h-3.5 w-3.5 text-gold-400" />
                 {community?.name}, Dubai
               </p>
+              {nearbyPoi.length > 0 && (
+                <div className="mt-4 border-t border-navy-800 pt-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                    Nearby
+                  </p>
+                  <NearbyDistances items={nearbyPoi} />
+                </div>
+              )}
             </Section>
           </div>
 

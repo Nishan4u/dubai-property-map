@@ -19,9 +19,19 @@ export function PartnerDevelopersSlider({
   // Duplicate the list so the marquee can loop seamlessly at -50% translate.
   const track = [...developers, ...developers];
 
+  // The CSS class's 32s duration was tuned for a short partner list. The
+  // directory has since grown to 200+ developers, and a fixed duration
+  // over a much longer track meant each logo whipped by in a fraction of
+  // a second. Scaling duration by item count keeps the per-logo pace (and
+  // reading time) roughly constant no matter how many developers exist.
+  const durationSeconds = Math.max(32, developers.length * 3);
+
   return (
     <div className="overflow-hidden border-t border-navy-800 bg-navy-900 px-4 py-2">
-      <div className="flex w-max animate-marquee items-center gap-8">
+      <div
+        className="flex w-max animate-marquee items-center gap-8"
+        style={{ animationDuration: `${durationSeconds}s` }}
+      >
         {track.map((dev, i) => {
           const content = (
             <span className="flex items-center gap-1.5">

@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { Filter, Heart, Search, X } from "lucide-react";
 import { AuthStatus } from "@/components/auth/AuthStatus";
 import { LanguageCurrencySwitcher } from "@/components/i18n/LanguageCurrencySwitcher";
+import { MobileNavMenu } from "@/components/public/MobileNavMenu";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import type { ListingType, Project } from "@/types";
@@ -53,7 +54,7 @@ export function SiteHeader({
   const showResults = !searchDisabled && !!searchQuery?.trim() && !!searchResults;
 
   return (
-    <div className="border-b border-navy-700 bg-navy-900">
+    <div className="relative border-b border-navy-700 bg-navy-900">
     <header className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
       {/* On mobile this row deliberately pairs the logo with auth/admin
          buttons so they don't wrap onto their own orphaned row with a big
@@ -71,6 +72,7 @@ export function SiteHeader({
           />
         </Link>
         <div className="flex shrink-0 items-center gap-2 sm:hidden">
+          <MobileNavMenu links={navLinks} />
           <AuthStatus />
         </div>
       </div>
@@ -192,7 +194,7 @@ export function SiteHeader({
         <AuthStatus />
       </div>
     </header>
-    <nav className="flex items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-3 py-2 text-xs font-medium text-ink-400 sm:px-6">
+    <nav className="hidden items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-3 py-2 text-xs font-medium text-ink-400 sm:flex sm:px-6">
       {navLinks.map((link) => (
         <Link
           key={link.url}
@@ -211,6 +213,7 @@ const defaultSecondaryLinks = [
   { label: "Developers", url: "/developers" },
   { label: "Communities", url: "/communities" },
   { label: "New Launches", url: "/?tag=new-launch" },
+  { label: "Calculators", url: "/calculators" },
   { label: "Blog", url: "/blog" },
   { label: "Advertise", url: "/advertise" },
 ];

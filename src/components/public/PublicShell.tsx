@@ -5,6 +5,7 @@ import { AuthStatus } from "@/components/auth/AuthStatus";
 import { LanguageCurrencySwitcher } from "@/components/i18n/LanguageCurrencySwitcher";
 import { t } from "@/lib/i18n/locale";
 import { GlobalSearchBox, type SearchItem } from "@/components/public/GlobalSearchBox";
+import { MobileNavMenu } from "@/components/public/MobileNavMenu";
 import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import {
   getCommunities,
@@ -70,9 +71,13 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
         }))),
   ];
 
+  const visibleHeaderLinks = headerLinks.filter(
+    (link) => !viewerDeveloperId || link.url !== "/developers"
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-navy-950">
-      <div className="border-b border-navy-700 bg-navy-900">
+      <div className="relative border-b border-navy-700 bg-navy-900">
         <header className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
           {/* Pairs logo with auth/admin buttons on mobile so they don't
              wrap onto their own orphaned row with a big empty gap next to
@@ -90,6 +95,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
               />
             </Link>
             <div className="flex shrink-0 items-center gap-2 sm:hidden">
+              <MobileNavMenu links={visibleHeaderLinks} />
               <AuthStatus />
             </div>
           </div>
@@ -117,14 +123,12 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             <AuthStatus />
           </div>
         </header>
-        <nav className="flex items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-6 py-2 text-xs font-medium text-ink-400">
-          {headerLinks
-            .filter((link) => !viewerDeveloperId || link.url !== "/developers")
-            .map((link) => (
-              <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
-                {link.label}
-              </Link>
-            ))}
+        <nav className="hidden items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-6 py-2 text-xs font-medium text-ink-400 sm:flex">
+          {visibleHeaderLinks.map((link) => (
+            <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
+              {link.label}
+            </Link>
+          ))}
         </nav>
       </div>
       <PartnerDevelopersSlider developers={developers.map((d) => mapDeveloper(d))} clickBehavior={sliderClickBehavior} />

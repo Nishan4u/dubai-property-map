@@ -26,6 +26,45 @@ export function isNearMetro(project: Project, radiusKm = 1.5): boolean {
   return d !== null && d <= radiusKm;
 }
 
+export interface NearestPoi {
+  categoryKey: string;
+  categoryLabel: string;
+  name: string;
+  distanceKm: number;
+}
+
+// Nearest named point per requested POI category (metro, malls, schools,
+// etc. -- see src/data/poi.ts) to a given lat/lng. Powers the project
+// page's "Nearby" distances -- every result is a real, named place with
+// a real computed distance, never an invented figure.
+export function findNearestByCategory(
+  lat: number,
+  lng: number,
+  categoryKeys: string[]
+): NearestPoi[] {
+  const results: NearestPoi[] = [];
+  for (const key of categoryKeys) {
+    const layer = poiLayers.find((l) => l.key === key);
+    if (!layer || layer.points.length === 0) continue;
+    let nearest = layer.points[0];
+    let nearestDist = approxDistanceKm(lat, lng, nearest.lat, nearest.lng);
+    for (const point of layer.points.slice(1)) {
+      const d = approxDistanceKm(lat, lng, point.lat, point.lng);
+      if (d < nearestDist) {
+        nearest = point;
+        nearestDist = d;
+      }
+    }
+    results.push({
+      categoryKey: key,
+      categoryLabel: layer.label,
+      name: nearest.name,
+      distanceKm: nearestDist,
+    });
+  }
+  return results.sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
 // Transparent, computed-from-real-fields score — not a fabricated market
 // statistic. Combines rating, review volume, and the "high-roi" tag that
 // developers/admins set on real listings.
