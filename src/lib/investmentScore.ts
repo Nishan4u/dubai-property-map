@@ -5,8 +5,9 @@ const metroStations = poiLayers.find((l) => l.key === "metro")?.points ?? [];
 
 // Approximate distance in km between two lat/lng points (fine at Dubai's
 // latitude for a "how close is the nearest metro station" check — not
-// meant for precise navigation).
-function approxDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+// meant for precise navigation). Exported for reuse by the map's Radius
+// Search (src/lib/geoSearch.ts).
+export function approxDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLat = (lat1 - lat2) * 111;
   const dLng = (lng1 - lng2) * 111 * Math.cos((lat1 * Math.PI) / 180);
   return Math.sqrt(dLat * dLat + dLng * dLng);

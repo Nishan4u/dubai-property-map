@@ -25,6 +25,7 @@ import { poiLayers, metroLines, highwayLines } from "@/data/poi";
 import { smoothLine } from "@/lib/smoothLine";
 import { trackProjectEvent } from "@/lib/trackEvent";
 import { getInvestmentScore } from "@/lib/investmentScore";
+import { buildCirclePolygon, type GeoSearchRegion } from "@/lib/geoSearch";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
@@ -34,6 +35,7 @@ const LINE_SOURCE_ID = "poi-lines-source";
 const HEAT_SOURCE_ID = "heat-source";
 const PRICE_HEATMAP_LAYER_ID = "price-heatmap";
 const SCORE_HEATMAP_LAYER_ID = "score-heatmap";
+const SEARCH_REGION_SOURCE_ID = "search-region-source";
 
 export function DubaiMap({
   communities,
@@ -46,6 +48,12 @@ export function DubaiMap({
   isFullscreen = false,
   onFullscreenToggle,
   upcomingProjects = [],
+  searchToolMode = "idle",
+  geoSearchRegion = null,
+  drawPoints = [],
+  onSearchMapClick,
+  onViewChange,
+  restoreView = null,
 }: {
   communities: Community[];
   projects: Project[];
@@ -60,6 +68,18 @@ export function DubaiMap({
    * regardless of subscription/gating status, since these are deliberately
    * public teasers with no protected data (just developer name/logo). */
   upcomingProjects?: UpcomingProjectPublicRow[];
+  /** Radius Search / Draw Search Area -- see HomeClient.tsx's handleSearchMapClick.
+   * "idle" leaves ordinary map clicks (deselect community, etc.) untouched. */
+  searchToolMode?: "idle" | "radius-pick" | "drawing";
+  geoSearchRegion?: GeoSearchRegion | null;
+  drawPoints?: [number, number][];
+  onSearchMapClick?: (lng: number, lat: number) => void;
+  /** Save Map View: fired on every 'moveend' with the map's current camera
+   * state, so HomeClient can snapshot it into a saved search. */
+  onViewChange?: (view: { center: [number, number]; zoom: number; pitch: number; bearing: number }) => void;
+  /** Set (non-null) once, e.g. right after loading a saved search, to fly
+   * the camera to that exact stored viewport. */
+  restoreView?: { center: [number, number]; zoom: number; pitch: number; bearing: number } | null;
 }) {
   const { formatPrice } = useLocale();
   const [zoom, setZoom] = useState(1);
@@ -80,6 +100,15 @@ export function DubaiMap({
   const upcomingMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
   const selectedCommunityIdRef = useRef(selectedCommunityId);
   selectedCommunityIdRef.current = selectedCommunityId;
+  // Read inside the map's own click listener (registered once on mount),
+  // so this always sees the latest mode/callback without re-registering
+  // the listener -- same pattern as selectedCommunityIdRef above.
+  const searchToolModeRef = useRef(searchToolMode);
+  searchToolModeRef.current = searchToolMode;
+  const onSearchMapClickRef = useRef(onSearchMapClick);
+  onSearchMapClickRef.current = onSearchMapClick;
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
   const [popupIndex, setPopupIndex] = useState(0);
 
   const countByCommunity = useMemo(() => {
@@ -181,8 +210,29 @@ export function DubaiMap({
       // handler so this one never sees it (the property/project pins
       // already do this -- see below); this handler assumes that's true and
       // only ever runs for a genuine background/POI-layer click.
-      map.on("click", () => {
+      map.on("click", (e) => {
+        // While a search tool is actively picking a radius center or
+        // collecting draw vertices, a background click feeds that tool
+        // instead of the ordinary "deselect community" behavior.
+        if (searchToolModeRef.current !== "idle") {
+          onSearchMapClickRef.current?.(e.lngLat.lng, e.lngLat.lat);
+          return;
+        }
         if (selectedCommunityIdRef.current) onSelectCommunity(null);
+      });
+
+      // Save Map View: reports the camera's real current state after every
+      // pan/zoom/rotate settles, so HomeClient always has an up-to-date
+      // snapshot ready the moment "Save This Search" is clicked -- without
+      // this component itself needing to re-render on every map movement.
+      map.on("moveend", () => {
+        const center = map.getCenter();
+        onViewChangeRef.current?.({
+          center: [center.lng, center.lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        });
       });
 
       // Mapbox measures the container at construction time; if flexbox
@@ -432,6 +482,33 @@ export function DubaiMap({
           });
         }
 
+        // Radius Search / Draw Search Area overlay -- one source holding
+        // either the committed region (a closed Polygon: the radius
+        // circle, or the finished drawn shape) or, while actively
+        // drawing, an open LineString of the vertices placed so far. The
+        // fill layer only ever paints Polygon features, so it simply
+        // stays empty during an in-progress draw; the line layer renders
+        // the outline either way.
+        if (!map.getSource(SEARCH_REGION_SOURCE_ID)) {
+          map.addSource(SEARCH_REGION_SOURCE_ID, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "search-region-fill",
+            type: "fill",
+            source: SEARCH_REGION_SOURCE_ID,
+            paint: { "fill-color": "#f2c665", "fill-opacity": 0.12 },
+          });
+          map.addLayer({
+            id: "search-region-line",
+            type: "line",
+            source: SEARCH_REGION_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f2c665", "line-width": 2, "line-dasharray": [2, 1] },
+          });
+        }
+
         setStyleLoaded(true);
       });
 
@@ -476,6 +553,20 @@ export function DubaiMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Save Map View restore: jumps (no animation -- this is "load a saved
+  // state", not a user-triggered pan) to a stored camera position once,
+  // right after a saved search with a map_view is loaded.
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current || !restoreView) return;
+    mapRef.current.jumpTo({
+      center: restoreView.center,
+      zoom: restoreView.zoom,
+      pitch: restoreView.pitch,
+      bearing: restoreView.bearing,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreView, useLiveMap]);
 
   // Marker DOM elements are created once above; keep their displayed count
   // and selected-state styling in sync whenever filters change the
@@ -616,6 +707,40 @@ export function DubaiMap({
 
     source.setData({ type: "FeatureCollection", features });
   }, [projects, useLiveMap, styleLoaded]);
+
+  // Radius Search / Draw Search Area overlay data -- a committed region
+  // (radius circle or finished polygon) renders as a closed ring; an
+  // in-progress draw renders as an open line of the vertices placed so
+  // far, so the user can see the shape take form before clicking Finish.
+  useEffect(() => {
+    if (!useLiveMap || !styleLoaded || !mapRef.current) return;
+    const map = mapRef.current;
+    const source = map.getSource(SEARCH_REGION_SOURCE_ID) as
+      | import("mapbox-gl").GeoJSONSource
+      | undefined;
+    if (!source) return;
+
+    const features: GeoJSON.Feature[] = [];
+    if (geoSearchRegion) {
+      const ring =
+        geoSearchRegion.type === "radius"
+          ? buildCirclePolygon(geoSearchRegion.center, geoSearchRegion.radiusKm)
+          : geoSearchRegion.ring;
+      features.push({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {},
+      });
+    } else if (searchToolMode === "drawing" && drawPoints.length >= 2) {
+      features.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: drawPoints },
+        properties: {},
+      });
+    }
+
+    source.setData({ type: "FeatureCollection", features });
+  }, [geoSearchRegion, searchToolMode, drawPoints, useLiveMap, styleLoaded]);
 
   // Show each individual property's exact pin (small dots) once a
   // community is selected — this is in addition to the community-level

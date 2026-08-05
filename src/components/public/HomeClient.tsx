@@ -17,10 +17,12 @@ import { ProjectListPanel } from "@/components/public/ProjectListPanel";
 import { DubaiMap } from "@/components/public/DubaiMap";
 import { MapFilterChips } from "@/components/public/MapFilterChips";
 import { MapAmenityBar } from "@/components/public/MapAmenityBar";
+import { MapSearchTools } from "@/components/public/MapSearchTools";
 import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
 import { PartnerDevelopersSlider, type SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import { MapAccessOverlay } from "@/components/public/MapAccessOverlay";
-import { getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
+import { approxDistanceKm, getInvestmentScore, isNearMetro } from "@/lib/investmentScore";
+import { pointInPolygon, type GeoSearchRegion, type MapViewState } from "@/lib/geoSearch";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { useSearchTracking } from "@/lib/useSearchTracking";
 import { createClient } from "@/lib/supabase/client";
@@ -93,6 +95,20 @@ export function HomeClient({
   const [activeTab, setActiveTab] = useState<ListingType>("buy");
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);
   const [searchQuery, setSearchQuery] = useState("");
+  // Radius Search / Draw Search Area / Nearby ("Near Me") share one region
+  // filter -- see src/lib/geoSearch.ts. searchToolMode drives what a map
+  // click does right now (idle / picking a radius center / adding a draw
+  // vertex); drawPoints only holds an in-progress polygon before "Finish".
+  const [searchToolMode, setSearchToolMode] = useState<"idle" | "radius-pick" | "drawing">("idle");
+  const [geoSearchRegion, setGeoSearchRegion] = useState<GeoSearchRegion | null>(null);
+  const [radiusKm, setRadiusKm] = useState(5);
+  const [drawPoints, setDrawPoints] = useState<[number, number][]>([]);
+  // Save Map View: the live viewport is read from this ref (kept current
+  // by DubaiMap's onViewChange, fired on every 'moveend') only at the
+  // moment "Save This Search" is clicked -- not held in React state, so
+  // panning/zooming the map never triggers a re-render here.
+  const mapViewRef = useRef<MapViewState | null>(null);
+  const [restoreView, setRestoreView] = useState<MapViewState | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
     null
   );
@@ -216,14 +232,27 @@ export function HomeClient({
     const supabase = createClient();
     supabase
       .from("saved_searches")
-      .select("filters")
+      .select("filters, map_view")
       .eq("id", savedSearchId)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.filters) setFilters(data.filters as ProjectFilters);
+        const view = data?.map_view as MapViewState | null;
+        if (view) {
+          setActiveLayers(view.activeLayers ?? []);
+          setRestoreView(view);
+        }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedSearchId]);
+
+  function handleMapViewChange(view: Omit<MapViewState, "activeLayers">) {
+    mapViewRef.current = { ...view, activeLayers };
+  }
+
+  function getMapView(): MapViewState | null {
+    return mapViewRef.current;
+  }
 
   function toggleLayer(key: string) {
     setActiveLayers((prev) => {
@@ -237,6 +266,69 @@ export function HomeClient({
       }
       return [...prev, key];
     });
+  }
+
+  function handleStartRadiusSearch() {
+    setDrawPoints([]);
+    setSearchToolMode((m) => (m === "radius-pick" ? "idle" : "radius-pick"));
+  }
+
+  function handleStartDraw() {
+    setDrawPoints([]);
+    setSearchToolMode((m) => (m === "drawing" ? "idle" : "drawing"));
+  }
+
+  function handleClearGeoSearch() {
+    setGeoSearchRegion(null);
+    setDrawPoints([]);
+    setSearchToolMode("idle");
+  }
+
+  function handleRadiusChange(km: number) {
+    setRadiusKm(km);
+    setGeoSearchRegion((prev) => (prev?.type === "radius" ? { ...prev, radiusKm: km } : prev));
+  }
+
+  // Real geolocation via the browser's native API -- never an assumed or
+  // fabricated location. Falls back to nothing (button just no-ops with an
+  // alert) in unsupported/denied cases rather than guessing a center.
+  function handleNearMe() {
+    if (!navigator.geolocation) {
+      window.alert("Location services aren't available in this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDrawPoints([]);
+        setSearchToolMode("idle");
+        setGeoSearchRegion({
+          type: "radius",
+          center: [pos.coords.longitude, pos.coords.latitude],
+          radiusKm,
+        });
+      },
+      () => {
+        window.alert("Couldn't get your location. Check your browser's location permission.");
+      }
+    );
+  }
+
+  // Routed from DubaiMap's own map click handler, only while a search tool
+  // is actively picking a center or collecting draw vertices.
+  function handleSearchMapClick(lng: number, lat: number) {
+    if (searchToolMode === "radius-pick") {
+      setGeoSearchRegion({ type: "radius", center: [lng, lat], radiusKm });
+      setSearchToolMode("idle");
+    } else if (searchToolMode === "drawing") {
+      setDrawPoints((prev) => [...prev, [lng, lat]]);
+    }
+  }
+
+  function handleFinishDraw() {
+    if (drawPoints.length < 3) return;
+    setGeoSearchRegion({ type: "polygon", ring: [...drawPoints, drawPoints[0]] });
+    setDrawPoints([]);
+    setSearchToolMode("idle");
   }
 
   const propertyTypes = useMemo(
@@ -317,9 +409,23 @@ export function HomeClient({
         const max = Number(filters.sizeSqftMax);
         if (p.unitSizeSqftMin == null || p.unitSizeSqftMin > max) return false;
       }
+      if (geoSearchRegion) {
+        if (p.lat == null || p.lng == null) return false;
+        if (geoSearchRegion.type === "radius") {
+          const d = approxDistanceKm(
+            p.lat,
+            p.lng,
+            geoSearchRegion.center[1],
+            geoSearchRegion.center[0]
+          );
+          if (d > geoSearchRegion.radiusKm) return false;
+        } else if (!pointInPolygon(p.lng, p.lat, geoSearchRegion.ring)) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [allProjects, activeTab, activeTag, filters, searchQuery, currency]);
+  }, [allProjects, activeTab, activeTag, filters, searchQuery, currency, geoSearchRegion]);
 
   useSearchTracking(searchQuery, "map", filteredProjects.length);
 
@@ -419,6 +525,7 @@ export function HomeClient({
               onApply={setFilters}
               sidebarBanner={sidebarBanner}
               viewerDeveloperId={viewerDeveloperId}
+              getMapView={getMapView}
             />
           </div>
         )}
@@ -455,6 +562,12 @@ export function HomeClient({
             isFullscreen={isFullscreen}
             onFullscreenToggle={handleFullscreenToggle}
             upcomingProjects={upcomingProjects}
+            searchToolMode={searchToolMode}
+            geoSearchRegion={geoSearchRegion}
+            drawPoints={drawPoints}
+            onSearchMapClick={handleSearchMapClick}
+            onViewChange={handleMapViewChange}
+            restoreView={restoreView}
           />
           {featuredProject && (
             <FeaturedProjectCard
@@ -471,6 +584,20 @@ export function HomeClient({
              the 3-column filters+list+map layout can leave the map panel
              itself quite narrow. If it still doesn't fully fit, its own
              overflow-x-auto scrolls rather than overlapping anything. */}
+          <div className="absolute bottom-16 left-4 right-52 z-10">
+            <MapSearchTools
+              mode={searchToolMode}
+              region={geoSearchRegion}
+              radiusKm={radiusKm}
+              drawPointCount={drawPoints.length}
+              onNearMe={handleNearMe}
+              onStartRadius={handleStartRadiusSearch}
+              onStartDraw={handleStartDraw}
+              onFinishDraw={handleFinishDraw}
+              onClear={handleClearGeoSearch}
+              onRadiusChange={handleRadiusChange}
+            />
+          </div>
           <div className="absolute bottom-4 left-4 right-52 z-10">
             <MapAmenityBar active={activeLayers} onToggle={toggleLayer} />
           </div>
@@ -542,6 +669,7 @@ export function HomeClient({
                 }}
                 sidebarBanner={sidebarBanner}
                 viewerDeveloperId={viewerDeveloperId}
+                getMapView={getMapView}
               />
             </div>
           </div>

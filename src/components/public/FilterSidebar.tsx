@@ -8,6 +8,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { LocationAutocomplete } from "@/components/public/LocationAutocomplete";
 import { unitTypeOptions } from "@/lib/unitTypeOptions";
+import type { MapViewState } from "@/lib/geoSearch";
 import type { Community, Developer } from "@/types";
 
 export interface ProjectFilters {
@@ -64,6 +65,7 @@ export function FilterSidebar({
   onApply,
   sidebarBanner,
   viewerDeveloperId = null,
+  getMapView,
 }: {
   developers: Developer[];
   communities: Community[];
@@ -79,6 +81,11 @@ export function FilterSidebar({
    * choice that would just be a no-op (or worse, imply competitors are
    * browsable, which they aren't for these accounts). */
   viewerDeveloperId?: string | null;
+  /** Save Map View: read at save-time (not a live prop) so the map's own
+   * viewport/layers get bundled into the same "Save This Search" action
+   * instead of a separate control. Omitted entirely outside HomeClient
+   * (e.g. no map on this page) simply saves filters only, same as before. */
+  getMapView?: () => MapViewState | null;
 }) {
   const { currency } = useLocale();
   const [draft, setDraft] = useState<ProjectFilters>(filters);
@@ -124,6 +131,7 @@ export function FilterSidebar({
       user_id: user.id,
       label: saveLabel.trim(),
       filters: draft,
+      map_view: getMapView?.() ?? null,
     });
     setSaveStatus(error ? "error" : "saved");
     if (!error) {

@@ -293,13 +293,24 @@ section as modules get built out.
 - Booking & reservation system (Module 14).
 - Mapbox platform: project/community pins, clustering, metro lines,
   major highways, amenity layers, dark theme, 3D building extrusion
-  (zoom 13+), and now a Price Heat Map + an honestly-labeled
-  Investment Score Heat Map (real, transparent 0-100 score from
-  rating/reviews/high-roi tag via the existing `getInvestmentScore()`
-  — never a fabricated ROI/rental-yield figure, since no real
-  per-listing return data exists anywhere in this schema) toggled
-  from the same amenity bar, mutually exclusive with each other
-  (Module 5, partial — no draw-search or travel-time search yet).
+  (zoom 13+), a Price Heat Map + an honestly-labeled Investment
+  Score Heat Map (real, transparent 0-100 score from rating/reviews/
+  high-roi tag via the existing `getInvestmentScore()` — never a
+  fabricated ROI/rental-yield figure, since no real per-listing
+  return data exists anywhere in this schema) toggled from the
+  amenity bar mutually exclusive with each other, and now Radius
+  Search (click the map to set a center, adjustable 1-20km, renders
+  a real circle overlay), Draw Search Area (click to place vertices,
+  Finish to close a real polygon, point-in-polygon filtering — hand-
+  rolled, no new map-drawing dependency), a "Near Me" quick action
+  (browser Geolocation API), and Save Map View (a saved search can
+  now optionally also store the map's camera position + active
+  layers, patch_122, so loading it restores exactly where the map
+  was) (Module 5, partial — no Community Polygons, Travel Time
+  Search, or Route Planning yet; Community Polygons specifically
+  needs a real Dubai community-boundary dataset, which doesn't exist
+  in this codebase — fabricating boundary shapes would be dishonest
+  map data, so it's deferred rather than faked).
 - Notifications: email, in-app, push via service worker (Module 22,
   partial).
 - PWA basics: service worker registered (Module 28/31, partial — no full
