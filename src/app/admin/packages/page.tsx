@@ -22,11 +22,12 @@ export default async function AdminPackagesPage() {
       <div>
         <h1 className="text-xl font-bold text-ink-100">Packages & Plans</h1>
         <p className="text-sm text-ink-400">
-          Manage subscription tiers shown on the Developer Packages page, the
-          Broker Subscription page, and the Salesperson Subscription page.
-          Subscriber counts are real (live counts). Developer plan Feature
-          Limits are actually enforced (listing count, featured pins,
-          homepage banner) — not just pricing-card text. Add-on placements
+          Manage subscription tiers shown on the Broker Subscription page and
+          the Salesperson Subscription page. Developer plans aren&apos;t shown to
+          developers anymore (they get free, unlimited listings), but their
+          Feature Limits are still actually enforced (featured pins, homepage
+          banner) against whichever plan_tier a developer is assigned here.
+          Subscriber counts are real (live counts). Add-on placements
           (Homepage Banner, Sidebar Banner, Sponsored Pin, Community/Project/
           Developer Banner) are requested and approved under Ads, not here.
         </p>

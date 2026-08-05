@@ -63,13 +63,6 @@ export function BillingClient({
         {loading ? "Opening…" : "Manage Billing & Invoices"}
       </button>
       <BankTransferHistory transfers={bankTransfers} />
-
-      {!hasStripeCustomer && (
-        <p className="text-xs text-ink-500">
-          Subscribe to a paid plan on the Packages page first — Stripe creates
-          your billing account automatically at checkout.
-        </p>
-      )}
     </div>
   );
 }
