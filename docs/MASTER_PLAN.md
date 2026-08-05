@@ -292,8 +292,14 @@ section as modules get built out.
   upload, coupons, free access toggles (Module 3).
 - Booking & reservation system (Module 14).
 - Mapbox platform: project/community pins, clustering, metro lines,
-  major highways, amenity layers, dark theme (Module 5, partial — no heat
-  maps, 3D buildings, draw-search, or travel-time search yet).
+  major highways, amenity layers, dark theme, 3D building extrusion
+  (zoom 13+), and now a Price Heat Map + an honestly-labeled
+  Investment Score Heat Map (real, transparent 0-100 score from
+  rating/reviews/high-roi tag via the existing `getInvestmentScore()`
+  — never a fabricated ROI/rental-yield figure, since no real
+  per-listing return data exists anywhere in this schema) toggled
+  from the same amenity bar, mutually exclusive with each other
+  (Module 5, partial — no draw-search or travel-time search yet).
 - Notifications: email, in-app, push via service worker (Module 22,
   partial).
 - PWA basics: service worker registered (Module 28/31, partial — no full

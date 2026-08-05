@@ -35,6 +35,8 @@ interface HomepageBanner {
   developerName?: string;
 }
 
+const HEAT_LAYER_KEYS = ["price-heat", "score-heat"];
+
 export function HomeClient({
   communities,
   developers,
@@ -224,9 +226,17 @@ export function HomeClient({
   }, [savedSearchId]);
 
   function toggleLayer(key: string) {
-    setActiveLayers((prev) =>
-      prev.includes(key) ? prev.filter((l) => l !== key) : [...prev, key]
-    );
+    setActiveLayers((prev) => {
+      const isActive = prev.includes(key);
+      if (isActive) return prev.filter((l) => l !== key);
+      // Price Heat Map and Investment Score Heat Map are both full-map
+      // color fills -- showing both together would just wash each other
+      // out, so turning one on replaces the other instead of stacking.
+      if (HEAT_LAYER_KEYS.includes(key)) {
+        return [...prev.filter((l) => !HEAT_LAYER_KEYS.includes(l)), key];
+      }
+      return [...prev, key];
+    });
   }
 
   const propertyTypes = useMemo(

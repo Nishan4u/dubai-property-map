@@ -24,12 +24,16 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { poiLayers, metroLines, highwayLines } from "@/data/poi";
 import { smoothLine } from "@/lib/smoothLine";
 import { trackProjectEvent } from "@/lib/trackEvent";
+import { getInvestmentScore } from "@/lib/investmentScore";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const POI_SOURCE_ID = "poi-source";
 const LINE_SOURCE_ID = "poi-lines-source";
+const HEAT_SOURCE_ID = "heat-source";
+const PRICE_HEATMAP_LAYER_ID = "price-heatmap";
+const SCORE_HEATMAP_LAYER_ID = "score-heatmap";
 
 export function DubaiMap({
   communities,
@@ -61,6 +65,13 @@ export function DubaiMap({
   const [zoom, setZoom] = useState(1);
   const [satellite, setSatellite] = useState(false);
   const [useLiveMap, setUseLiveMap] = useState(false);
+  // Flips once style.load has run and the heat-map source/layers actually
+  // exist on the map -- unlike the POI effect below (which only ever runs
+  // again once the user clicks a toggle, by which point style.load has long
+  // since finished), the heat-data effect has no such user-driven retrigger,
+  // so without this it can silently no-op forever if it happens to run
+  // before the async style load completes.
+  const [styleLoaded, setStyleLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
@@ -213,6 +224,65 @@ export function DubaiMap({
           );
         }
 
+        // Price / Investment Score heat fields, added beneath the POI
+        // point/line layers below so they never obscure a clickable pin.
+        // Both layers share one source (each feature carries both
+        // weights); only the active one is set visible, toggled purely
+        // via layout.visibility in the activeLayers effect further down --
+        // switching between them never needs to touch the source data.
+        if (!map.getSource(HEAT_SOURCE_ID)) {
+          map.addSource(HEAT_SOURCE_ID, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: PRICE_HEATMAP_LAYER_ID,
+            type: "heatmap",
+            source: HEAT_SOURCE_ID,
+            layout: { visibility: "none" },
+            paint: {
+              "heatmap-weight": ["get", "priceWeight"],
+              "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 3],
+              "heatmap-color": [
+                "interpolate",
+                ["linear"],
+                ["heatmap-density"],
+                0, "rgba(0,0,0,0)",
+                0.2, "#2a6df4",
+                0.4, "#22c55e",
+                0.6, "#f2c665",
+                0.8, "#f97316",
+                1, "#ef4444",
+              ],
+              "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 15, 15, 35],
+              "heatmap-opacity": 0.75,
+            },
+          });
+          map.addLayer({
+            id: SCORE_HEATMAP_LAYER_ID,
+            type: "heatmap",
+            source: HEAT_SOURCE_ID,
+            layout: { visibility: "none" },
+            paint: {
+              "heatmap-weight": ["get", "scoreWeight"],
+              "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 3],
+              "heatmap-color": [
+                "interpolate",
+                ["linear"],
+                ["heatmap-density"],
+                0, "rgba(0,0,0,0)",
+                0.2, "#312e81",
+                0.4, "#6d28d9",
+                0.6, "#a855f7",
+                0.8, "#f2c665",
+                1, "#22c55e",
+              ],
+              "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 15, 15, 35],
+              "heatmap-opacity": 0.75,
+            },
+          });
+        }
+
         if (!map.getSource(LINE_SOURCE_ID)) {
           map.addSource(LINE_SOURCE_ID, {
             type: "geojson",
@@ -361,6 +431,8 @@ export function DubaiMap({
             });
           });
         }
+
+        setStyleLoaded(true);
       });
 
       communities.forEach((c) => {
@@ -487,7 +559,63 @@ export function DubaiMap({
       }
       lineSource.setData({ type: "FeatureCollection", features: lineFeatures });
     }
+
+    if (map.getLayer(PRICE_HEATMAP_LAYER_ID)) {
+      map.setLayoutProperty(
+        PRICE_HEATMAP_LAYER_ID,
+        "visibility",
+        activeLayers.includes("price-heat") ? "visible" : "none"
+      );
+    }
+    if (map.getLayer(SCORE_HEATMAP_LAYER_ID)) {
+      map.setLayoutProperty(
+        SCORE_HEATMAP_LAYER_ID,
+        "visibility",
+        activeLayers.includes("score-heat") ? "visible" : "none"
+      );
+    }
   }, [activeLayers, useLiveMap]);
+
+  // Heat map weights, kept in their own effect (keyed on the project set
+  // rather than activeLayers) since the underlying data only changes when
+  // the filtered project list changes -- switching which heat layer is
+  // visible above never needs to recompute or re-send this data. Price is
+  // normalized against the current project set's own min/max so the fill
+  // is always relative to what's actually on the map; the investment score
+  // is already a real, transparent 0-100 value (rating/reviews/high-roi
+  // tag) computed by getInvestmentScore -- never a fabricated ROI/yield
+  // figure. Also keyed on styleLoaded: unlike the POI effect above (which
+  // always gets a free retrigger once the user clicks a toggle, by which
+  // point style.load has long since finished), this effect has no such
+  // user-driven retrigger, so without it this can run before the source
+  // exists and silently no-op forever.
+  useEffect(() => {
+    if (!useLiveMap || !styleLoaded || !mapRef.current) return;
+    const map = mapRef.current;
+    const source = map.getSource(HEAT_SOURCE_ID) as
+      | import("mapbox-gl").GeoJSONSource
+      | undefined;
+    if (!source) return;
+
+    const withCoords = projects.filter(
+      (p) => p.lat != null && p.lng != null && p.priceFromAed != null
+    );
+    const prices = withCoords.map((p) => p.priceFromAed as number);
+    const minPrice = prices.length ? Math.min(...prices) : 0;
+    const maxPrice = prices.length ? Math.max(...prices) : 0;
+    const priceRange = maxPrice - minPrice || 1;
+
+    const features: GeoJSON.Feature<GeoJSON.Point>[] = withCoords.map((p) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [p.lng as number, p.lat as number] },
+      properties: {
+        priceWeight: ((p.priceFromAed as number) - minPrice) / priceRange,
+        scoreWeight: getInvestmentScore(p) / 100,
+      },
+    }));
+
+    source.setData({ type: "FeatureCollection", features });
+  }, [projects, useLiveMap, styleLoaded]);
 
   // Show each individual property's exact pin (small dots) once a
   // community is selected — this is in addition to the community-level
