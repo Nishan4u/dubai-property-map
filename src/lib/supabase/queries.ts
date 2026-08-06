@@ -1545,7 +1545,7 @@ export async function getSalespersonReferralSummary(salespersonId: string) {
 // also pulls full referral/history lists the Subscription page doesn't need.
 export async function getBrokerReferralWalletAndSettings(accountType: "broker" | "salesperson", accountId: string) {
   const supabase = await createClient();
-  const [{ data: settings }, { data: wallet }, { data: pendingSignup }] = await Promise.all([
+  const [{ data: settings }, { data: wallet }, { data: pendingSignup }, { data: appliedSignup }] = await Promise.all([
     supabase
       .from("broker_referral_settings")
       .select("program_enabled, discount_enabled, discount_percent, discount_eligible_plan_keys, wallet_new_purchase_enabled")
@@ -1558,6 +1558,18 @@ export async function getBrokerReferralWalletAndSettings(accountType: "broker" |
       .eq(`referee_${accountType}_id`, accountId)
       .eq("status", "pending_subscription")
       .maybeSingle(),
+    // Only one referral signup ever exists per referee (unique index) --
+    // this reflects whether a discount was actually applied on this
+    // account's subscription, for display on the "Current subscription"
+    // card, separate from pendingDiscount above (which drives the
+    // pre-checkout "you have a discount available" messaging and clears
+    // once a signup is no longer pending_subscription).
+    supabase
+      .from("broker_referral_signups")
+      .select("discount_percent_applied, discount_amount_aed")
+      .eq(`referee_${accountType}_id`, accountId)
+      .not("discount_percent_applied", "is", null)
+      .maybeSingle(),
   ]);
 
   return {
@@ -1568,6 +1580,13 @@ export async function getBrokerReferralWalletAndSettings(accountType: "broker" |
         ? {
             percent: Number(settings.discount_percent),
             eligiblePlanKeys: (settings.discount_eligible_plan_keys as string[] | null) ?? null,
+          }
+        : null,
+    appliedDiscount:
+      appliedSignup?.discount_percent_applied != null
+        ? {
+            percent: Number(appliedSignup.discount_percent_applied),
+            amountAed: appliedSignup.discount_amount_aed != null ? Number(appliedSignup.discount_amount_aed) : null,
           }
         : null,
   };

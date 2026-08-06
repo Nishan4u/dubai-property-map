@@ -30,6 +30,11 @@ interface PendingDiscount {
   eligiblePlanKeys: string[] | null;
 }
 
+interface AppliedDiscount {
+  percent: number;
+  amountAed: number | null;
+}
+
 export function BrokerSubscriptionClient({
   plans,
   currentPlanKey,
@@ -42,6 +47,7 @@ export function BrokerSubscriptionClient({
   walletBalance,
   walletNewPurchaseEnabled,
   pendingDiscount,
+  appliedDiscount,
 }: {
   plans: Plan[];
   currentPlanKey: string | null;
@@ -54,6 +60,7 @@ export function BrokerSubscriptionClient({
   walletBalance: number;
   walletNewPurchaseEnabled: boolean;
   pendingDiscount: PendingDiscount | null;
+  appliedDiscount: AppliedDiscount | null;
 }) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -224,6 +231,13 @@ export function BrokerSubscriptionClient({
               {!!plan.vat_percent && vatAmount != null && (
                 <p className="mt-1 text-xs text-ink-500">
                   Includes {plan.vat_percent}% VAT (AED {vatAmount.toFixed(2)})
+                </p>
+              )}
+              {isCurrent && appliedDiscount && (
+                <p className="mt-1 flex items-center gap-1 text-xs font-medium text-gold-400">
+                  <Gift className="h-3.5 w-3.5 shrink-0" />
+                  Referral discount applied: {appliedDiscount.percent}% off
+                  {appliedDiscount.amountAed != null && ` (saved AED ${appliedDiscount.amountAed.toFixed(2)})`}
                 </p>
               )}
               <ul className="mt-4 space-y-2 text-xs text-ink-300">

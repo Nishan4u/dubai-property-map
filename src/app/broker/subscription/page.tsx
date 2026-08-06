@@ -53,6 +53,7 @@ export default async function BrokerSubscriptionPage() {
         walletBalance={referralInfo.walletBalance}
         walletNewPurchaseEnabled={referralInfo.walletNewPurchaseEnabled}
         pendingDiscount={referralInfo.pendingDiscount}
+        appliedDiscount={referralInfo.appliedDiscount}
       />
     </div>
   );
