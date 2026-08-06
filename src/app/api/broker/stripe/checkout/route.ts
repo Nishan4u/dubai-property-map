@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // created fresh here rather than reused, since the discount % is
     // admin-configurable at any time and a Stripe Coupon's percent_off is
     // immutable once created.
-    const eligibleReferral = await applyReferralDiscountIfEligible("broker", profile.broker_id, plan);
+    const eligibleReferral = await applyReferralDiscountIfEligible("broker", profile.broker_id, plan, referralCode);
     let discounts: { coupon: string }[] | undefined;
     if (eligibleReferral) {
       const coupon = await stripe.coupons.create({

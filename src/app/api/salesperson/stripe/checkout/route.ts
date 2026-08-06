@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // See the broker checkout route for why this is a fresh coupon rather
     // than a persistent one, and why the metadata key is distinct from
     // `referral_code` above (unrelated internal-staff commission system).
-    const eligibleReferral = await applyReferralDiscountIfEligible("salesperson", profile.salesperson_id, plan);
+    const eligibleReferral = await applyReferralDiscountIfEligible("salesperson", profile.salesperson_id, plan, referralCode);
     let discounts: { coupon: string }[] | undefined;
     if (eligibleReferral) {
       const coupon = await stripe.coupons.create({

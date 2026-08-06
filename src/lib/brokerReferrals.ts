@@ -47,7 +47,8 @@ async function isEmailVerified(admin: Admin, accountType: AccountType, accountId
 export async function applyReferralDiscountIfEligible(
   accountType: AccountType,
   accountId: string,
-  planKey: string
+  planKey: string,
+  referralCodeInput?: string | null
 ): Promise<{ signupId: string; discountPercent: number; firstSubscriptionOnly: boolean } | null> {
   const admin = createAdminClient();
   const settings = await getSettings(admin);
@@ -62,13 +63,91 @@ export async function applyReferralDiscountIfEligible(
     .eq(`referee_${accountType}_id`, accountId)
     .eq("status", "pending_subscription")
     .maybeSingle();
-  if (!signup) return null;
+
+  let signupId = signup?.id ?? null;
+
+  // Late redemption: no code was captured at registration (the Referral
+  // Code field on the Subscription page used to be purely cosmetic --
+  // typing a code there never created an attribution row). As long as
+  // this account has never had a subscription before, apply the exact
+  // same eligibility rules the claim_*_profile RPC uses at registration
+  // time and create the row right now, at checkout. Silently no-ops on
+  // any invalid/expired/self-referral code -- never blocks checkout.
+  if (!signupId && referralCodeInput && referralCodeInput.trim()) {
+    signupId = await tryLateReferralAttribution(admin, accountType, accountId, referralCodeInput.trim());
+  }
+
+  if (!signupId) return null;
 
   return {
-    signupId: signup.id,
+    signupId,
     discountPercent: Number(settings.discount_percent),
     firstSubscriptionOnly: settings.discount_first_subscription_only,
   };
+}
+
+async function lookupActiveReferralCode(
+  admin: Admin,
+  code: string
+): Promise<{ accountType: AccountType; id: string; email: string; mobile: string | null } | null> {
+  const { data: broker } = await admin
+    .from("brokers")
+    .select("id, email, mobile, referral_code_status, referral_code_expires_at")
+    .eq("referral_code", code)
+    .maybeSingle();
+  if (broker) {
+    if (broker.referral_code_status !== "active") return null;
+    if (broker.referral_code_expires_at && new Date(broker.referral_code_expires_at) <= new Date()) return null;
+    return { accountType: "broker", id: broker.id, email: broker.email, mobile: broker.mobile };
+  }
+
+  const { data: sp } = await admin
+    .from("salespersons")
+    .select("id, email, mobile, referral_code_status, referral_code_expires_at")
+    .eq("referral_code", code)
+    .maybeSingle();
+  if (sp) {
+    if (sp.referral_code_status !== "active") return null;
+    if (sp.referral_code_expires_at && new Date(sp.referral_code_expires_at) <= new Date()) return null;
+    return { accountType: "salesperson", id: sp.id, email: sp.email, mobile: sp.mobile };
+  }
+
+  return null;
+}
+
+async function tryLateReferralAttribution(
+  admin: Admin,
+  accountType: AccountType,
+  accountId: string,
+  code: string
+): Promise<string | null> {
+  const table = accountType === "broker" ? "brokers" : "salespersons";
+  const { data: referee } = await admin
+    .from(table)
+    .select("email, mobile, subscription_status")
+    .eq("id", accountId)
+    .maybeSingle();
+  // Gating on "never subscribed before" mirrors discount_first_subscription_only's
+  // intent even when it's off for future checkouts -- a late code can only
+  // ever attribute a person's genuine first subscription, never a renewal.
+  if (!referee || referee.subscription_status !== "no_subscription") return null;
+
+  const referrer = await lookupActiveReferralCode(admin, code);
+  if (!referrer) return null;
+  if (referrer.accountType === accountType && referrer.id === accountId) return null;
+  if (referrer.email.toLowerCase() === (referee.email ?? "").toLowerCase()) return null;
+  if (referrer.mobile && referee.mobile && referrer.mobile === referee.mobile) return null;
+
+  const insertRow: Record<string, unknown> = {
+    referrer_account_type: referrer.accountType,
+    referral_code_used: code,
+    referee_account_type: accountType,
+  };
+  insertRow[referrer.accountType === "broker" ? "referrer_broker_id" : "referrer_salesperson_id"] = referrer.id;
+  insertRow[accountType === "broker" ? "referee_broker_id" : "referee_salesperson_id"] = accountId;
+
+  const { data: inserted } = await admin.from("broker_referral_signups").insert(insertRow).select("id").maybeSingle();
+  return inserted?.id ?? null;
 }
 
 // Referrer's cashback + the referee's own discount-consumption record.

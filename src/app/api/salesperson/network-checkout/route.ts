@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   const basePrice = isRenewal && planRow.renewal_price_aed != null ? planRow.renewal_price_aed : planRow.price_aed;
-  const eligibleReferral = await applyReferralDiscountIfEligible("salesperson", profile.salesperson_id, plan);
+  const eligibleReferral = await applyReferralDiscountIfEligible("salesperson", profile.salesperson_id, plan, referralCode);
   const amountAed = eligibleReferral ? basePrice * (1 - eligibleReferral.discountPercent / 100) : basePrice;
 
   const origin = request.headers.get("origin") ?? "http://localhost:3000";
