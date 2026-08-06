@@ -1,20 +1,22 @@
 import { StatCard } from "@/components/ui/StatCard";
 import { PaymentsTable } from "@/components/admin/PaymentsTable";
+import { AllPaymentsTable } from "@/components/admin/AllPaymentsTable";
 import { PaymentsExportButton } from "@/components/admin/PaymentsExportButton";
 import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getPaymentsOverviewStats } from "@/lib/supabase/queries";
+import { getPaymentsFeedAdmin, getPaymentsOverviewStats } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
-  const [{ data: developers }, stats] = await Promise.all([
+  const [{ data: developers }, stats, paymentsFeed] = await Promise.all([
     supabase
       .from("developers")
       .select("id, name, plan_tier, subscription_status, stripe_customer_id")
       .order("name"),
     getPaymentsOverviewStats(),
+    getPaymentsFeedAdmin(150),
   ]);
 
   const rows = developers ?? [];
@@ -49,12 +51,24 @@ export default async function AdminPaymentsPage() {
 
       <PaymentsExportButton />
 
-      <PaymentsTable rows={rows} />
-      <p className="text-xs text-ink-500">
-        The table below shows developer subscriptions only, at the UAE&apos;s standard 5% VAT rate for
-        display purposes. Use the export above for a full cross-account-type payment report with each
-        plan&apos;s actual configured VAT rate.
-      </p>
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-ink-100">All Payments</h2>
+        <p className="mb-3 text-xs text-ink-500">
+          Every developer, broker, salesperson, and broker agency payment — Stripe, Bank Transfer, Network
+          International, and Referral Wallet — most recent {paymentsFeed.length} shown. Use the export
+          above for a full historical report with VAT broken out per plan.
+        </p>
+        <AllPaymentsTable rows={paymentsFeed} />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-ink-100">Developer Accounts</h2>
+        <p className="mb-3 text-xs text-ink-500">
+          Every developer&apos;s current plan and subscription status, at the UAE&apos;s standard 5% VAT
+          rate for display purposes — including accounts with no payment yet.
+        </p>
+        <PaymentsTable rows={rows} />
+      </div>
     </div>
   );
 }

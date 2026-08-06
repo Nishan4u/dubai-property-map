@@ -151,10 +151,18 @@ async function tryLateReferralAttribution(
 }
 
 // Referrer's cashback + the referee's own discount-consumption record.
-// Only fires once, guarded by the unique index on
-// broker_referral_wallet_transactions(referral_signup_id) where
-// type = 'cashback_earned' -- safe to call repeatedly (Stripe webhook
-// retries, or the verify-email retry path landing after this already ran).
+// Idempotent under retries (Stripe webhook retries, or the verify-email
+// retry path landing after this already ran) via an explicit
+// check-then-insert against broker_referral_wallet_transactions --
+// deliberately NOT a Postgres upsert with onConflict: the table's
+// idempotency guard is a *partial* unique index (on referral_signup_id
+// where type = 'cashback_earned'), and PostgREST's upsert can only
+// target a conflict on the plain column list, not a partial index's
+// predicate, so an upsert here always fails with "no unique or exclusion
+// constraint matching" -- silently, since the caller only reads back
+// `data`, never `error`. That bug shipped originally and meant no
+// cashback was ever actually credited despite signups flipping to
+// "completed".
 async function finalizeCashback(admin: Admin, signupId: string) {
   const { data: signup } = await admin.from("broker_referral_signups").select("*").eq("id", signupId).maybeSingle();
   if (!signup || signup.status === "completed" || signup.status === "disqualified" || signup.status === "expired") return;
@@ -187,23 +195,14 @@ async function finalizeCashback(admin: Admin, signupId: string) {
 
   const cashbackAmount = Number(settings.cashback_amount_aed);
 
-  const { data: inserted } = await admin
+  const { data: existingTx } = await admin
     .from("broker_referral_wallet_transactions")
-    .upsert(
-      {
-        wallet_id: wallet.id,
-        type: "cashback_earned",
-        amount_aed: cashbackAmount,
-        referral_signup_id: signupId,
-        related_payment_type: signup.payment_source,
-        plan_key: signup.plan_key,
-      },
-      { onConflict: "referral_signup_id", ignoreDuplicates: true }
-    )
     .select("id")
+    .eq("referral_signup_id", signupId)
+    .eq("type", "cashback_earned")
     .maybeSingle();
 
-  if (!inserted) {
+  if (existingTx) {
     // Already credited by an earlier call (webhook retry) -- still make
     // sure the signup row reflects completion in case that update didn't
     // land the first time.
@@ -213,6 +212,19 @@ async function finalizeCashback(admin: Admin, signupId: string) {
       .eq("id", signupId);
     return;
   }
+
+  const { error: insertError } = await admin.from("broker_referral_wallet_transactions").insert({
+    wallet_id: wallet.id,
+    type: "cashback_earned",
+    amount_aed: cashbackAmount,
+    referral_signup_id: signupId,
+    related_payment_type: signup.payment_source,
+    plan_key: signup.plan_key,
+  });
+  // Lost a race with a concurrent call for the same signup -- the other
+  // call's insert wins, this one backs off and leaves the signup row for
+  // that call (or the next retry) to mark completed.
+  if (insertError) return;
 
   await admin
     .from("broker_referral_wallets")

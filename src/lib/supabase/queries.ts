@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { categorySlug, documentCategories } from "@/lib/documentCategories";
 import { exteriorGalleryCategories, gallerySlug, interiorGalleryCategories } from "@/lib/galleryCategories";
+import { getStripe } from "@/lib/stripe";
 import type { ProjectWithRelations } from "@/types/database";
 
 export async function getCurrentProfile() {
@@ -1709,6 +1710,154 @@ export async function getPaymentsOverviewStats() {
     totalWalletPayments: walletTx?.length ?? 0,
     totalWalletPaymentAmount: (walletTx ?? []).reduce((sum, t) => sum + Number(t.amount_aed), 0),
   };
+}
+
+export interface PaymentFeedRow {
+  id: string;
+  date: string; // yyyy-mm-dd
+  accountType: "developer" | "broker" | "salesperson" | "broker_agency";
+  accountName: string;
+  paymentMethod: "stripe" | "bank_transfer" | "wallet" | "network_international";
+  plan: string;
+  amountAed: number;
+}
+
+// Recent cross-account-type payment feed for the /admin/payments page's
+// on-page table -- every developer/broker/salesperson/broker-agency
+// payment, not developers only. A lighter sibling of
+// /api/admin/payments/export (that route paginates Stripe's *entire*
+// invoice history for VAT filing; this caps at the most recent ones so
+// the page stays fast to load). Stripe invoices don't carry an app-level
+// account id, so they're matched to an account by stripe_customer_id,
+// same approach as the export route.
+export async function getPaymentsFeedAdmin(limit = 100): Promise<PaymentFeedRow[]> {
+  const supabase = await createClient();
+
+  const [{ data: plans }, { data: brokers }, { data: salespersons }, { data: developers }, { data: brokerages }, { data: bankTransfers }, { data: walletTx }, { data: networkOrders }] =
+    await Promise.all([
+      supabase.from("subscription_plans").select("key, price_aed, stripe_price_id, promo_stripe_price_id"),
+      supabase.from("brokers").select("id, full_name, stripe_customer_id"),
+      supabase.from("salespersons").select("id, full_name, stripe_customer_id"),
+      supabase.from("developers").select("id, name, stripe_customer_id"),
+      supabase.from("brokerages").select("id, name, stripe_customer_id"),
+      supabase
+        .from("subscription_bank_transfers")
+        .select("id, account_type, broker_id, salesperson_id, developer_id, brokerage_id, plan_key, amount_aed, reviewed_at, created_at")
+        .eq("status", "paid")
+        .order("created_at", { ascending: false })
+        .limit(limit),
+      supabase
+        .from("broker_referral_wallet_transactions")
+        .select("id, plan_key, amount_aed, created_at, broker_referral_wallets(account_type, broker_id, salesperson_id)")
+        .in("type", ["used_for_renewal", "used_for_new_subscription"])
+        .order("created_at", { ascending: false })
+        .limit(limit),
+      supabase
+        .from("network_international_orders")
+        .select("id, account_type, broker_id, salesperson_id, plan_key, amount_aed, paid_at, created_at")
+        .eq("status", "paid")
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    ]);
+
+  const planByStripePriceId = new Map<string, string>();
+  for (const p of plans ?? []) {
+    if (p.stripe_price_id) planByStripePriceId.set(p.stripe_price_id, p.key);
+    if (p.promo_stripe_price_id) planByStripePriceId.set(p.promo_stripe_price_id, p.key);
+  }
+
+  const accountByCustomerId = new Map<string, { type: PaymentFeedRow["accountType"]; name: string }>();
+  for (const b of brokers ?? []) if (b.stripe_customer_id) accountByCustomerId.set(b.stripe_customer_id, { type: "broker", name: b.full_name });
+  for (const s of salespersons ?? []) if (s.stripe_customer_id) accountByCustomerId.set(s.stripe_customer_id, { type: "salesperson", name: s.full_name });
+  for (const d of developers ?? []) if (d.stripe_customer_id) accountByCustomerId.set(d.stripe_customer_id, { type: "developer", name: d.name });
+  for (const a of brokerages ?? []) if (a.stripe_customer_id) accountByCustomerId.set(a.stripe_customer_id, { type: "broker_agency", name: a.name });
+
+  const brokerById = new Map((brokers ?? []).map((b) => [b.id, b.full_name]));
+  const salespersonById = new Map((salespersons ?? []).map((s) => [s.id, s.full_name]));
+  const developerById = new Map((developers ?? []).map((d) => [d.id, d.name]));
+  const brokerageById = new Map((brokerages ?? []).map((a) => [a.id, a.name]));
+
+  const rows: PaymentFeedRow[] = [];
+
+  // ---------- Stripe invoices (most recent, live) ----------
+  try {
+    const stripe = getStripe();
+    const page = await stripe.invoices.list({ status: "paid", limit });
+    for (const inv of page.data) {
+      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
+      const account = customerId ? accountByCustomerId.get(customerId) : undefined;
+      if (!account) continue; // not a subscription customer of ours (e.g. a stray/test Stripe customer)
+      const priceRef = inv.lines.data[0]?.pricing?.price_details?.price;
+      const priceId = typeof priceRef === "string" ? priceRef : priceRef?.id;
+      rows.push({
+        id: `stripe-${inv.id}`,
+        date: new Date(inv.created * 1000).toISOString().slice(0, 10),
+        accountType: account.type,
+        accountName: account.name,
+        paymentMethod: "stripe",
+        plan: (priceId && planByStripePriceId.get(priceId)) ?? "",
+        amountAed: (inv.total ?? 0) / 100,
+      });
+    }
+  } catch {
+    // STRIPE_SECRET_KEY not configured, or Stripe unreachable -- the feed
+    // still shows bank transfer + wallet rows rather than failing.
+  }
+
+  // ---------- Bank transfers (approved) ----------
+  for (const bt of bankTransfers ?? []) {
+    const accountName =
+      bt.account_type === "broker"
+        ? brokerById.get(bt.broker_id ?? "")
+        : bt.account_type === "salesperson"
+          ? salespersonById.get(bt.salesperson_id ?? "")
+          : bt.account_type === "developer"
+            ? developerById.get(bt.developer_id ?? "")
+            : brokerageById.get(bt.brokerage_id ?? "");
+    rows.push({
+      id: `bank-${bt.id}`,
+      date: (bt.reviewed_at ?? bt.created_at).slice(0, 10),
+      accountType: bt.account_type as PaymentFeedRow["accountType"],
+      accountName: accountName ?? "(unknown account)",
+      paymentMethod: "bank_transfer",
+      plan: bt.plan_key,
+      amountAed: Number(bt.amount_aed),
+    });
+  }
+
+  // ---------- Referral Wallet payments (renewal / new subscription) ----------
+  for (const tx of walletTx ?? []) {
+    const wallet = Array.isArray(tx.broker_referral_wallets) ? tx.broker_referral_wallets[0] : tx.broker_referral_wallets;
+    const accountName =
+      wallet?.account_type === "broker" ? brokerById.get(wallet.broker_id ?? "") : salespersonById.get(wallet?.salesperson_id ?? "");
+    rows.push({
+      id: `wallet-${tx.id}`,
+      date: tx.created_at.slice(0, 10),
+      accountType: (wallet?.account_type as PaymentFeedRow["accountType"]) ?? "broker",
+      accountName: accountName ?? "(unknown account)",
+      paymentMethod: "wallet",
+      plan: tx.plan_key ?? "",
+      amountAed: Number(tx.amount_aed),
+    });
+  }
+
+  // ---------- Network International orders (broker + salesperson) ----------
+  for (const order of networkOrders ?? []) {
+    const accountName =
+      order.account_type === "broker" ? brokerById.get(order.broker_id ?? "") : salespersonById.get(order.salesperson_id ?? "");
+    rows.push({
+      id: `ni-${order.id}`,
+      date: (order.paid_at ?? order.created_at).slice(0, 10),
+      accountType: order.account_type as PaymentFeedRow["accountType"],
+      accountName: accountName ?? "(unknown account)",
+      paymentMethod: "network_international",
+      plan: order.plan_key,
+      amountAed: Number(order.amount_aed),
+    });
+  }
+
+  rows.sort((a, b) => b.date.localeCompare(a.date));
+  return rows.slice(0, limit);
 }
 
 function monthKey(dateStr: string): string {
