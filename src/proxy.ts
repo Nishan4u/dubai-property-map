@@ -116,6 +116,66 @@ async function checkBrokerDevice(request: NextRequest, response: NextResponse) {
   return response;
 }
 
+interface SubscriptionGate {
+  pathPrefix: string;
+  subscribePath: string;
+  profileColumn: "broker_id" | "salesperson_id" | "broker_agency_id";
+  table: "brokers" | "salespersons" | "brokerages";
+}
+
+const SUBSCRIPTION_GATES: SubscriptionGate[] = [
+  { pathPrefix: "/broker", subscribePath: "/broker/subscription", profileColumn: "broker_id", table: "brokers" },
+  { pathPrefix: "/salesperson", subscribePath: "/salesperson/subscription", profileColumn: "salesperson_id", table: "salespersons" },
+  { pathPrefix: "/broker-agency", subscribePath: "/broker-agency/subscription", profileColumn: "broker_agency_id", table: "brokerages" },
+];
+
+// Full portal lockout until subscription_status is 'active' -- previously
+// the only place that actually checked subscription status was the
+// property-request submission panel; every other page (dashboard home,
+// clients, calendar, referral, etc.) rendered fine regardless. Deliberately
+// exempts each portal's own /subscription path, otherwise a never-
+// subscribed account could never reach the one page that lets them pay.
+//
+// No extra awareness of account_status/license-upload/deactivation state
+// is needed here: each portal's layout.tsx already renders its own
+// pending-approval / rejected / suspended / license-upload / deactivated
+// screen unconditionally, for whatever child path was requested --
+// including the subscription path this redirects to -- so those accounts
+// see the *correct* status screen either way, this redirect is just a
+// safe no-op for them.
+async function checkSubscriptionGate(request: NextRequest, response: NextResponse) {
+  const { pathname } = request.nextUrl;
+  const gate = SUBSCRIPTION_GATES.find((g) => pathname === g.pathPrefix || pathname.startsWith(`${g.pathPrefix}/`));
+  if (!gate || pathname === gate.subscribePath) return response;
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: () => {},
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return response; // not signed in -- the layout's own check redirects to /login
+
+  const { data: profile } = await supabase.from("profiles").select(gate.profileColumn).eq("id", user.id).maybeSingle();
+  const accountId = (profile as Record<string, string | null> | null)?.[gate.profileColumn];
+  if (!accountId) return response; // onboarding not finished yet -- let the layout handle it
+
+  const { data: account } = await supabase.from(gate.table).select("subscription_status").eq("id", accountId).maybeSingle();
+  if (account && account.subscription_status !== "active") {
+    return NextResponse.redirect(new URL(gate.subscribePath, request.url));
+  }
+
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const redirects = await getRedirects();
   const match = redirects.get(request.nextUrl.pathname);
@@ -126,12 +186,18 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  const response = await updateSession(request);
+  let response = await updateSession(request);
 
   const { pathname } = request.nextUrl;
   if (pathname === "/broker" || pathname.startsWith("/broker/")) {
-    return checkBrokerDevice(request, response);
+    const deviceResult = await checkBrokerDevice(request, response);
+    if (deviceResult !== response) return deviceResult;
+    response = deviceResult;
   }
+
+  const gateResult = await checkSubscriptionGate(request, response);
+  if (gateResult !== response) return gateResult;
+  response = gateResult;
 
   // /admin/settings is deliberately exempted so a super-admin can always
   // reach it to fix a misconfigured allowlist -- it's still gated by the
