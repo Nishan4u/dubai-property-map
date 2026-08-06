@@ -387,3 +387,146 @@ export async function clawbackReferralCashback(accountType: AccountType, account
     `AED ${clawbackAmount.toLocaleString()} referral cashback was reversed from your wallet -- the referred subscription was cancelled or refunded.`
   );
 }
+
+// Referral Wallet cashback withdrawal -- see patch_116's header comment
+// for why this is a manual, admin-mediated request/approve flow rather
+// than an automated payout. Balance is only ever deducted at approval
+// time (never at request time), so a rejected request has zero effect on
+// the wallet -- "available to withdraw" is computed here as the current
+// balance minus whatever's already tied up in the requester's own other
+// pending requests, so they can't request more than they actually have.
+export async function requestWithdrawal(
+  accountType: AccountType,
+  accountId: string,
+  input: { amountAed: number; bankAccountName: string; bankName: string; bankIban: string }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!(input.amountAed > 0)) return { ok: false, error: "Enter a valid amount." };
+  if (!input.bankAccountName.trim() || !input.bankName.trim() || !input.bankIban.trim()) {
+    return { ok: false, error: "Bank account name, bank name, and IBAN/account number are all required." };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: wallet } = await admin
+    .from("broker_referral_wallets")
+    .select("balance_aed")
+    .eq(`${accountType}_id`, accountId)
+    .maybeSingle();
+  if (!wallet) return { ok: false, error: "No referral wallet found for this account." };
+
+  const { data: pending } = await admin
+    .from("broker_referral_withdrawal_requests")
+    .select("amount_aed")
+    .eq(`${accountType}_id`, accountId)
+    .eq("status", "pending");
+  const pendingTotal = (pending ?? []).reduce((sum, r) => sum + Number(r.amount_aed), 0);
+  const available = Number(wallet.balance_aed) - pendingTotal;
+
+  if (input.amountAed > available) {
+    return { ok: false, error: `You can withdraw up to AED ${available.toFixed(2)} right now.` };
+  }
+
+  const insertRow: Record<string, unknown> = {
+    account_type: accountType,
+    amount_aed: input.amountAed,
+    bank_account_name: input.bankAccountName.trim(),
+    bank_name: input.bankName.trim(),
+    bank_iban: input.bankIban.trim(),
+  };
+  insertRow[`${accountType}_id`] = accountId;
+
+  const { error } = await admin.from("broker_referral_withdrawal_requests").insert(insertRow);
+  if (error) return { ok: false, error: "Could not submit your withdrawal request. Please try again." };
+  return { ok: true };
+}
+
+export async function approveWithdrawal(requestId: string, adminProfileId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const admin = createAdminClient();
+  const { data: reqRow } = await admin.from("broker_referral_withdrawal_requests").select("*").eq("id", requestId).maybeSingle();
+  if (!reqRow) return { ok: false, error: "Withdrawal request not found." };
+  if (reqRow.status !== "pending") return { ok: false, error: "This request has already been reviewed." };
+
+  const accountType = reqRow.account_type as AccountType;
+  const accountId = (accountType === "broker" ? reqRow.broker_id : reqRow.salesperson_id) as string;
+
+  const { data: wallet } = await admin
+    .from("broker_referral_wallets")
+    .select("id, balance_aed, total_used_aed")
+    .eq(`${accountType}_id`, accountId)
+    .maybeSingle();
+  if (!wallet) return { ok: false, error: "Referral wallet not found." };
+  const amount = Number(reqRow.amount_aed);
+  if (Number(wallet.balance_aed) < amount) {
+    return { ok: false, error: "Wallet balance is now lower than the requested amount -- reject or adjust before paying." };
+  }
+
+  const { data: tx } = await admin
+    .from("broker_referral_wallet_transactions")
+    .insert({
+      wallet_id: wallet.id,
+      type: "withdrawal",
+      amount_aed: amount,
+      note: `Withdrawn to ${reqRow.bank_name} (${reqRow.bank_iban})`,
+      created_by: adminProfileId,
+    })
+    .select("id")
+    .maybeSingle();
+
+  await admin
+    .from("broker_referral_wallets")
+    .update({
+      balance_aed: Number(wallet.balance_aed) - amount,
+      total_used_aed: Number(wallet.total_used_aed) + amount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", wallet.id);
+
+  await admin
+    .from("broker_referral_withdrawal_requests")
+    .update({
+      status: "paid",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: adminProfileId,
+      wallet_transaction_id: tx?.id ?? null,
+    })
+    .eq("id", requestId);
+
+  await notifyAccount(
+    admin,
+    accountType,
+    accountId,
+    `Your AED ${amount.toLocaleString()} referral wallet withdrawal has been paid.`
+  );
+  return { ok: true };
+}
+
+export async function rejectWithdrawal(
+  requestId: string,
+  adminProfileId: string,
+  reason: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const admin = createAdminClient();
+  const { data: reqRow } = await admin.from("broker_referral_withdrawal_requests").select("*").eq("id", requestId).maybeSingle();
+  if (!reqRow) return { ok: false, error: "Withdrawal request not found." };
+  if (reqRow.status !== "pending") return { ok: false, error: "This request has already been reviewed." };
+
+  await admin
+    .from("broker_referral_withdrawal_requests")
+    .update({
+      status: "rejected",
+      rejection_reason: reason.trim() || null,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: adminProfileId,
+    })
+    .eq("id", requestId);
+
+  const accountType = reqRow.account_type as AccountType;
+  const accountId = (accountType === "broker" ? reqRow.broker_id : reqRow.salesperson_id) as string;
+  await notifyAccount(
+    admin,
+    accountType,
+    accountId,
+    `Your AED ${Number(reqRow.amount_aed).toLocaleString()} referral wallet withdrawal request was declined.${reason.trim() ? ` Reason: ${reason.trim()}` : ""}`
+  );
+  return { ok: true };
+}

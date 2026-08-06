@@ -1,12 +1,15 @@
 import { Gift } from "lucide-react";
 import { BrokerReferralClient } from "@/components/broker/BrokerReferralClient";
-import { requireBrokerProfile, getBrokerReferralSummary } from "@/lib/supabase/queries";
+import { requireBrokerProfile, getBrokerReferralSummary, getWithdrawalRequestsForOwner } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function BrokerReferralPage() {
   const profile = await requireBrokerProfile();
-  const summary = await getBrokerReferralSummary(profile.broker_id);
+  const [summary, withdrawalRequests] = await Promise.all([
+    getBrokerReferralSummary(profile.broker_id),
+    getWithdrawalRequestsForOwner("broker", profile.broker_id),
+  ]);
 
   return (
     <div className="space-y-4 p-6">
@@ -22,11 +25,13 @@ export default async function BrokerReferralPage() {
 
       <BrokerReferralClient
         referralCode={summary.referralCode}
+        discountPercent={summary.discountPercent}
         totalReferrals={summary.totalReferrals}
         successfulReferrals={summary.successfulReferrals}
         pendingReferrals={summary.pendingReferrals}
         wallet={summary.wallet}
         history={summary.history}
+        withdrawalRequests={withdrawalRequests}
       />
     </div>
   );

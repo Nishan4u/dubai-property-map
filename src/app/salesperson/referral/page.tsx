@@ -1,12 +1,15 @@
 import { Gift } from "lucide-react";
 import { SalespersonReferralClient } from "@/components/salesperson/SalespersonReferralClient";
-import { requireSalespersonProfile, getSalespersonReferralSummary } from "@/lib/supabase/queries";
+import { requireSalespersonProfile, getSalespersonReferralSummary, getWithdrawalRequestsForOwner } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function SalespersonReferralPage() {
   const profile = await requireSalespersonProfile();
-  const summary = await getSalespersonReferralSummary(profile.salesperson_id);
+  const [summary, withdrawalRequests] = await Promise.all([
+    getSalespersonReferralSummary(profile.salesperson_id),
+    getWithdrawalRequestsForOwner("salesperson", profile.salesperson_id),
+  ]);
 
   return (
     <div className="space-y-4 p-6">
@@ -22,11 +25,13 @@ export default async function SalespersonReferralPage() {
 
       <SalespersonReferralClient
         referralCode={summary.referralCode}
+        discountPercent={summary.discountPercent}
         totalReferrals={summary.totalReferrals}
         successfulReferrals={summary.successfulReferrals}
         pendingReferrals={summary.pendingReferrals}
         wallet={summary.wallet}
         history={summary.history}
+        withdrawalRequests={withdrawalRequests}
       />
     </div>
   );

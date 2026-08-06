@@ -1497,6 +1497,11 @@ async function getReferralSummary(accountType: "broker" | "salesperson", account
   const referrerCol = `referrer_${accountType}_id`;
 
   const { data: account } = await supabase.from(table).select("referral_code, referral_code_status").eq("id", accountId).maybeSingle();
+  const { data: settings } = await supabase
+    .from("broker_referral_settings")
+    .select("program_enabled, discount_enabled, discount_percent")
+    .eq("id", true)
+    .maybeSingle();
   const { data: wallet } = await supabase
     .from("broker_referral_wallets")
     .select("id, balance_aed, total_earned_aed, total_used_aed, pending_aed")
@@ -1523,6 +1528,10 @@ async function getReferralSummary(accountType: "broker" | "salesperson", account
   return {
     referralCode: account?.referral_code ?? null,
     referralCodeStatus: account?.referral_code_status ?? "active",
+    discountPercent:
+      settings?.program_enabled && settings?.discount_enabled && settings.discount_percent != null
+        ? Number(settings.discount_percent)
+        : null,
     wallet: wallet ?? { id: null, balance_aed: 0, total_earned_aed: 0, total_used_aed: 0, pending_aed: 0 },
     totalReferrals,
     successfulReferrals,
@@ -1537,6 +1546,35 @@ export async function getBrokerReferralSummary(brokerId: string) {
 
 export async function getSalespersonReferralSummary(salespersonId: string) {
   return getReferralSummary("salesperson", salespersonId);
+}
+
+export async function getWithdrawalRequestsForOwner(accountType: "broker" | "salesperson", accountId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_referral_withdrawal_requests")
+    .select("id, amount_aed, bank_name, bank_iban, status, rejection_reason, created_at, reviewed_at")
+    .eq(`${accountType}_id`, accountId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
+export async function getAllWithdrawalRequestsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_referral_withdrawal_requests")
+    .select("*, brokers(full_name), salespersons(full_name)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return [];
+    throw error;
+  }
+  return data ?? [];
 }
 
 // Lean fetch for the Subscription page: just the wallet balance + the bits

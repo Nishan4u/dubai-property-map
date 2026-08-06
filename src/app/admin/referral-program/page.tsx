@@ -1,13 +1,19 @@
 import { AdminReferralProgramTabs } from "@/components/admin/AdminReferralProgramTabs";
-import { getBrokerReferralSettings, getAdminReferralProgramStats, getReferralEligiblePlans } from "@/lib/supabase/queries";
+import {
+  getBrokerReferralSettings,
+  getAdminReferralProgramStats,
+  getReferralEligiblePlans,
+  getAllWithdrawalRequestsAdmin,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminReferralProgramPage() {
-  const [settings, stats, plans] = await Promise.all([
+  const [settings, stats, plans, withdrawals] = await Promise.all([
     getBrokerReferralSettings(),
     getAdminReferralProgramStats(),
     getReferralEligiblePlans(),
+    getAllWithdrawalRequestsAdmin(),
   ]);
 
   return (
@@ -20,7 +26,7 @@ export default async function AdminReferralProgramPage() {
         </p>
       </div>
 
-      <AdminReferralProgramTabs settings={settings} stats={stats} plans={plans} />
+      <AdminReferralProgramTabs settings={settings} stats={stats} plans={plans} withdrawals={withdrawals} />
     </div>
   );
 }
