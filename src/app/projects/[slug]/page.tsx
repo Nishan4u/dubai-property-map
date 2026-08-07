@@ -171,7 +171,7 @@ export default async function ProjectDetailsPage({
     "@type": "RealEstateListing",
     name: project.name,
     description: project.description || undefined,
-    url: `https://dubaipropertymap.com/projects/${project.slug}`,
+    url: `https://dubaipropertymap.ae/projects/${project.slug}`,
     address: {
       "@type": "PostalAddress",
       addressLocality: community?.name,

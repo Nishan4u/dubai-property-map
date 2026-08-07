@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/dashboard", "/admin", "/account", "/auth"],
     },
-    sitemap: "https://dubaipropertymap.com/sitemap.xml",
+    sitemap: "https://dubaipropertymap.ae/sitemap.xml",
   };
 }

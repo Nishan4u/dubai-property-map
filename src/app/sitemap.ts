@@ -6,7 +6,7 @@ import {
   getPublishedBlogPosts,
 } from "@/lib/supabase/queries";
 
-const BASE_URL = "https://dubaipropertymap.com";
+const BASE_URL = "https://dubaipropertymap.ae";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [projects, communities, developers, posts] = await Promise.all([
