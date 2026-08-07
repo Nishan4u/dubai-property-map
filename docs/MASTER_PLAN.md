@@ -1061,6 +1061,43 @@ section as modules get built out.
   Brokerages, Salespersons, Users, Payments, Subscriptions) already had
   one from an earlier pass. Switched to `SearchableDataTable`, matching
   that exact precedent (search by project name or developer name).
+- Referral discount at post-registration checkout, wallet cashback
+  crediting, applied-discount display, and cashback withdrawals (Module
+  15 rest): the Subscription page's Referral Code field looked live but
+  never did anything past registration-time entry — `applyReferralDiscountIfEligible`
+  now creates the attribution row on the fly for a first-time
+  subscriber. Separately, cashback crediting silently failed on every
+  attempt (a Postgres upsert targeted a column whose uniqueness is
+  actually a *partial* index, which PostgREST's upsert can't match) —
+  fixed with an explicit check-then-insert, plus a one-off backfill for
+  the one real payout that fell through. Added an "applied discount"
+  line on the active plan card (previously only showed pre-checkout),
+  the discount percent in the referral share message, and a full
+  withdrawal request/admin-approve-or-reject flow for the Referral
+  Wallet (previously balance could only ever be spent on renewal, never
+  cashed out).
+- Full subscription-lockout for broker/salesperson/broker-agency
+  portals (Module 27 adjacent): only the property-request submission
+  panel ever actually checked subscription status — every other page
+  (dashboard, clients, calendar, referral, etc.) rendered normally
+  regardless. Added a proxy-level gate (`src/proxy.ts`, matching its
+  existing device-conflict/admin-IP pattern) redirecting any non-active
+  subscription to that portal's own Subscription page for every other
+  route.
+- Broker Agency feature parity (Module 11): the agency portal was
+  missing everything the individual Broker Module has except Brokers/
+  Subscription/Profile/Security — added My Requests (a viewer for the
+  already-existing `agency_property_requests` data), Clients, Calendar,
+  and Collections (extending `crm_clients`/`crm_appointments`/
+  `crm_collections`/`crm_integrations`'s existing owner-discriminator
+  pattern with a `brokerage_id` column, reusing the same broker
+  components' logic rather than duplicating a parallel data model), and
+  Notifications/Integrations (both already owner-type-generic, needed
+  no new table at all). Deliberately excludes the Referral Program —
+  broker_agency was never part of it and this batch doesn't change
+  that. The Clients detail view is intentionally scoped to contact info
+  + notes only (no tasks/reservations/email-history/communication-log
+  parity yet) — a reasonable first pass, not a 1:1 port.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

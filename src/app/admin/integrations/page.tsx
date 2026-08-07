@@ -12,8 +12,8 @@ export default async function AdminIntegrationsPage() {
       <div>
         <h1 className="text-xl font-bold text-ink-100">CRM Integrations</h1>
         <p className="text-sm text-ink-400">
-          Read-only oversight of every broker/salesperson/developer-connected CRM webhook and feed. Owners manage
-          their own integrations from their portal — nothing here is editable.
+          Read-only oversight of every broker/salesperson/developer/broker-agency-connected CRM webhook and feed.
+          Owners manage their own integrations from their portal — nothing here is editable.
         </p>
       </div>
 
@@ -22,7 +22,7 @@ export default async function AdminIntegrationsPage() {
           { header: "Name", render: (i) => <span className="font-medium text-ink-100">{i.name}</span> },
           {
             header: "Owner",
-            render: (i) => i.brokers?.full_name ?? i.salespersons?.full_name ?? i.developers?.name ?? "—",
+            render: (i) => i.brokers?.full_name ?? i.salespersons?.full_name ?? i.developers?.name ?? i.brokerages?.name ?? "—",
           },
           { header: "Type", render: (i) => <Badge tone="blue">{i.owner_type}</Badge> },
           { header: "Events", render: (i) => i.events.join(", ") },

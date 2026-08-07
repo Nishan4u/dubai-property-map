@@ -19,15 +19,31 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, broker_id, salesperson_id, developer_id")
+    .select("role, broker_id, salesperson_id, developer_id, broker_agency_id")
     .eq("id", user.id)
     .single();
 
-  const ownerType = profile?.role === "broker" ? "broker" : profile?.role === "salesperson" ? "salesperson" : profile?.role === "developer" ? "developer" : null;
-  const ownerId = ownerType === "broker" ? profile?.broker_id : ownerType === "salesperson" ? profile?.salesperson_id : profile?.developer_id;
+  const ownerType =
+    profile?.role === "broker"
+      ? "broker"
+      : profile?.role === "salesperson"
+        ? "salesperson"
+        : profile?.role === "developer"
+          ? "developer"
+          : profile?.role === "broker_agency"
+            ? "broker_agency"
+            : null;
+  const ownerId =
+    ownerType === "broker"
+      ? profile?.broker_id
+      : ownerType === "salesperson"
+        ? profile?.salesperson_id
+        : ownerType === "developer"
+          ? profile?.developer_id
+          : profile?.broker_agency_id;
 
   if (!ownerType || !ownerId) {
-    return NextResponse.json({ error: "No broker, salesperson, or developer account found." }, { status: 403 });
+    return NextResponse.json({ error: "No broker, salesperson, developer, or broker agency account found." }, { status: 403 });
   }
 
   const { name, webhookUrl, events } = (await request.json()) as {
@@ -49,6 +65,7 @@ export async function POST(request: NextRequest) {
       broker_id: ownerType === "broker" ? ownerId : null,
       salesperson_id: ownerType === "salesperson" ? ownerId : null,
       developer_id: ownerType === "developer" ? ownerId : null,
+      brokerage_id: ownerType === "broker_agency" ? ownerId : null,
       name: name.trim(),
       webhook_url: webhookUrl?.trim() || null,
       secret,

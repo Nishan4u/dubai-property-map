@@ -49,6 +49,14 @@ export async function requireSalespersonProfile() {
   return profile as NonNullable<typeof profile> & { salesperson_id: string };
 }
 
+export async function requireBrokerAgencyProfile() {
+  const profile = await getCurrentProfile();
+  if (!profile?.broker_agency_id) {
+    redirect("/login");
+  }
+  return profile as NonNullable<typeof profile> & { broker_agency_id: string };
+}
+
 export async function requireStaffProfile() {
   const profile = await getCurrentProfile();
   if (!profile?.staff_id) {
@@ -827,6 +835,24 @@ export async function getPropertyRequestsForBroker(brokerId: string, status?: st
   return data ?? [];
 }
 
+// agency_property_requests is a deliberately separate table from
+// property_requests (patch_68) -- an agency's own requests are never
+// mixed with, or linked to, any individual broker's clients, so unlike
+// getPropertyRequestsForBroker this has no crm_clients join at all.
+export async function getPropertyRequestsForBrokerAgency(brokerageId: string, status?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("agency_property_requests")
+    .select("*, projects(name), developers(name), salespersons(full_name)")
+    .eq("brokerage_id", brokerageId)
+    .order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
 // Extracted from the inline query in src/app/salesperson/leads/page.tsx so
 // the AI Sales Assistant's get_my_leads tool can share it.
 export async function getPropertyRequestsForSalesperson(salespersonId: string, status?: string) {
@@ -893,6 +919,17 @@ export async function getCrmClientsForDeveloper(developerId: string): Promise<Cr
   return data ?? [];
 }
 
+export async function getCrmClientsForBrokerAgency(brokerageId: string): Promise<CrmClientRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_clients")
+    .select("id, full_name, email, phone, whatsapp, source, status, created_at, updated_at")
+    .eq("brokerage_id", brokerageId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getReservationsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -914,7 +951,10 @@ export async function getAllReservationsAdmin() {
   return data ?? [];
 }
 
-async function getAppointments(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string) {
+async function getAppointments(
+  ownerColumn: "broker_id" | "salesperson_id" | "developer_id" | "brokerage_id",
+  ownerId: string
+) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("crm_appointments")
@@ -937,7 +977,14 @@ export async function getAppointmentsForDeveloper(developerId: string) {
   return getAppointments("developer_id", developerId);
 }
 
-async function getCollections(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string) {
+export async function getAppointmentsForBrokerAgency(brokerageId: string) {
+  return getAppointments("brokerage_id", brokerageId);
+}
+
+async function getCollections(
+  ownerColumn: "broker_id" | "salesperson_id" | "developer_id" | "brokerage_id",
+  ownerId: string
+) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("crm_collections")
@@ -960,7 +1007,15 @@ export async function getCollectionsForDeveloper(developerId: string) {
   return getCollections("developer_id", developerId);
 }
 
-async function getCrmClientDetail(ownerColumn: "broker_id" | "salesperson_id" | "developer_id", ownerId: string, clientId: string) {
+export async function getCollectionsForBrokerAgency(brokerageId: string) {
+  return getCollections("brokerage_id", brokerageId);
+}
+
+async function getCrmClientDetail(
+  ownerColumn: "broker_id" | "salesperson_id" | "developer_id" | "brokerage_id",
+  ownerId: string,
+  clientId: string
+) {
   const supabase = await createClient();
   const { data: client, error } = await supabase
     .from("crm_clients")
@@ -1026,12 +1081,22 @@ export async function getCrmClientDetailForDeveloper(clientId: string, developer
   return getCrmClientDetail("developer_id", developerId, clientId);
 }
 
-export async function getCrmIntegrationsForOwner(ownerType: "broker" | "salesperson" | "developer", ownerId: string) {
+export async function getCrmClientDetailForBrokerAgency(clientId: string, brokerageId: string) {
+  return getCrmClientDetail("brokerage_id", brokerageId, clientId);
+}
+
+export async function getCrmIntegrationsForOwner(
+  ownerType: "broker" | "salesperson" | "developer" | "broker_agency",
+  ownerId: string
+) {
   const supabase = await createClient();
+  // broker_agency's owning column is brokerage_id, not broker_agency_id --
+  // every other owner type's column name matches its ownerType directly.
+  const ownerColumn = ownerType === "broker_agency" ? "brokerage_id" : `${ownerType}_id`;
   const { data: integrations, error } = await supabase
     .from("crm_integrations")
     .select("*")
-    .eq(`${ownerType}_id`, ownerId)
+    .eq(ownerColumn, ownerId)
     .order("created_at", { ascending: false });
 
   if (error || !integrations?.length) return [];
@@ -1055,7 +1120,7 @@ export async function getAllCrmIntegrationsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("crm_integrations")
-    .select("*, brokers(full_name), salespersons(full_name), developers(name)")
+    .select("*, brokers(full_name), salespersons(full_name), developers(name), brokerages(name)")
     .order("created_at", { ascending: false });
 
   if (error) return [];
