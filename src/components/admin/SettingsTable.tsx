@@ -15,6 +15,7 @@ const liveWiredKeys = new Set([
   "gtm_container_id",
   "meta_pixel_id",
   "tiktok_pixel_id",
+  "google_adsense_publisher_id",
 ]);
 
 export function SettingsTable({ settings }: { settings: Setting[] }) {

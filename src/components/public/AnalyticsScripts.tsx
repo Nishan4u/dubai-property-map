@@ -1,26 +1,73 @@
 import Script from "next/script";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
+// platform_settings' only RLS policy is "admin manages" (using is_admin()),
+// which is correct for the genuinely sensitive rows in that table (API
+// secrets, SMTP config) but was also silently blocking every real, logged-
+// out visitor from ever receiving these 5 rows -- meaning GA/GTM/Meta/
+// TikTok/AdSense have never actually reached a real visitor, only an admin
+// who happened to be browsing signed in. A service-role read is the right
+// fix here rather than a new public RLS policy on the whole table: these
+// five values are IDs meant to be embedded in every page's public
+// HTML anyway (that's how a <script src="...client=ca-pub-...."> works),
+// so there's nothing a service-role read exposes that isn't already
+// visible in any page's view-source.
 export async function AnalyticsScripts() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("platform_settings")
-    .select("key, value")
-    .in("key", [
-      "google_analytics_id",
-      "gtm_container_id",
-      "meta_pixel_id",
-      "tiktok_pixel_id",
-    ]);
-
-  const settings = Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
+  let settings: Record<string, string> = {};
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("platform_settings")
+      .select("key, value")
+      .in("key", [
+        "google_analytics_id",
+        "gtm_container_id",
+        "meta_pixel_id",
+        "tiktok_pixel_id",
+        "google_adsense_publisher_id",
+      ]);
+    settings = Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
+  } catch {
+    // Missing SUPABASE_SERVICE_ROLE_KEY, transient DB error, etc. -- this
+    // component is mounted in the root layout for every page on the site,
+    // so it must never throw and take the whole app down over an optional
+    // tracking script.
+  }
   const gaId = settings.google_analytics_id;
   const gtmId = settings.gtm_container_id;
   const metaPixelId = settings.meta_pixel_id;
   const tiktokPixelId = settings.tiktok_pixel_id;
+  // patch_23 seeded this row (label "Google AdSense Publisher ID") already
+  // populated with the real "pub-XXXXXXXXXXXXXXXX" id -- same format/value
+  // as public/ads.txt -- but it was never read by any script until now.
+  // AdSense's own JS snippet needs a "ca-" prefix on top of that id; adding
+  // it here (rather than storing "ca-pub-..." in the setting itself) keeps
+  // the stored value consistent with ads.txt and tolerates an admin pasting
+  // either "pub-..." or "ca-pub-..." into the settings field.
+  const rawAdsensePublisherId = settings.google_adsense_publisher_id;
+  const adsenseClientId = rawAdsensePublisherId
+    ? rawAdsensePublisherId.startsWith("ca-")
+      ? rawAdsensePublisherId
+      : `ca-${rawAdsensePublisherId}`
+    : null;
 
   return (
     <>
+      {adsenseClientId && (
+        // beforeInteractive is the one next/script strategy Next.js
+        // guarantees lands inside <head> regardless of where the component
+        // itself renders (docs: "Scripts with beforeInteractive will always
+        // be injected inside the head") -- matching Google's own
+        // instruction to paste this snippet "in between the <head></head>
+        // tags" so Auto Ads can discover ad slots as early as possible.
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+      )}
+
       {gaId && (
         <>
           <Script
