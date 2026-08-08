@@ -1,4 +1,5 @@
 import Script from "next/script";
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // platform_settings' only RLS policy is "admin manages" (using is_admin()),
@@ -13,6 +14,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // so there's nothing a service-role read exposes that isn't already
 // visible in any page's view-source.
 export async function AnalyticsScripts() {
+  // Set by proxy.ts on /admin, /dashboard, /broker, /broker-agency,
+  // /salesperson, /staff, and /embed -- no ads on internal admin/portal
+  // pages, or inside the Developer Embeddable Map Widget's third-party
+  // iframe. GA/GTM/Meta/TikTok are unaffected -- only the ad script below
+  // checks this.
+  const noAds = (await headers()).get("x-no-ads") === "1";
+
   let settings: Record<string, string> = {};
   try {
     const supabase = createAdminClient();
@@ -44,7 +52,7 @@ export async function AnalyticsScripts() {
   // it here (rather than storing "ca-pub-..." in the setting itself) keeps
   // the stored value consistent with ads.txt and tolerates an admin pasting
   // either "pub-..." or "ca-pub-..." into the settings field.
-  const rawAdsensePublisherId = settings.google_adsense_publisher_id;
+  const rawAdsensePublisherId = noAds ? null : settings.google_adsense_publisher_id;
   const adsenseClientId = rawAdsensePublisherId
     ? rawAdsensePublisherId.startsWith("ca-")
       ? rawAdsensePublisherId

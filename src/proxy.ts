@@ -176,6 +176,16 @@ async function checkSubscriptionGate(request: NextRequest, response: NextRespons
   return response;
 }
 
+// Same portal-page list AiChatWidget.tsx already hides itself on (admin/
+// developer/broker/broker-agency/salesperson/staff), plus /embed -- the
+// Developer Embeddable Map Widget renders inside an <iframe> on someone
+// else's website, where injecting AdSense would be an unwanted intrusion
+// into a page this site doesn't own. Forwarded to AnalyticsScripts.tsx via
+// the x-no-ads request header (see updateSession) so it can skip rendering
+// the adsbygoogle.js script on exactly these paths -- GA/GTM/Meta/TikTok
+// are untouched, only ads are suppressed here.
+const NO_ADS_PATH_PREFIXES = ["/admin", "/dashboard", "/broker", "/broker-agency", "/salesperson", "/staff", "/embed"];
+
 export async function proxy(request: NextRequest) {
   const redirects = await getRedirects();
   const match = redirects.get(request.nextUrl.pathname);
@@ -186,9 +196,9 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  let response = await updateSession(request);
-
   const { pathname } = request.nextUrl;
+  const isNoAdsPath = NO_ADS_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  let response = await updateSession(request, { "x-no-ads": isNoAdsPath ? "1" : "0" });
   if (pathname === "/broker" || pathname.startsWith("/broker/")) {
     const deviceResult = await checkBrokerDevice(request, response);
     if (deviceResult !== response) return deviceResult;
