@@ -604,6 +604,33 @@ export function DubaiMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoreView, useLiveMap]);
 
+  // Auto-fit the initial camera to every community that actually has a
+  // visible pin (projectsCount > 0 -- the same set the marker-visibility
+  // effect below computes), instead of always sitting at the fixed
+  // DUBAI_DEFAULT_VIEW zoom regardless of how spread out today's real
+  // listings are. Runs once, the first time there's something to fit --
+  // guarded so it never fires again on a later filter change (that would
+  // yank the camera around every time someone adjusts a filter) and never
+  // fights a restored saved-search view.
+  const hasAutoFitRef = useRef(false);
+  useEffect(() => {
+    if (!useLiveMap || !mapRef.current || hasAutoFitRef.current || restoreView) return;
+    if (visibleCommunities.length === 0) return;
+    hasAutoFitRef.current = true;
+    const map = mapRef.current;
+    import("mapbox-gl").then((mapboxgl) => {
+      const bounds = new mapboxgl.default.LngLatBounds();
+      visibleCommunities.forEach((c) => bounds.extend([c.lng, c.lat]));
+      map.fitBounds(bounds, {
+        padding: 80,
+        maxZoom: 12,
+        pitch: DUBAI_DEFAULT_VIEW.pitch,
+        bearing: DUBAI_DEFAULT_VIEW.bearing,
+        duration: 0,
+      });
+    });
+  }, [visibleCommunities, useLiveMap, restoreView]);
+
   // Marker DOM elements are created once above; keep their displayed count
   // and selected-state styling in sync whenever filters change the
   // underlying project set (communities themselves never change).

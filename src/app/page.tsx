@@ -40,6 +40,19 @@ export default async function Home() {
     : viewerProfile.role === "developer" || viewerProfile.role === "salesperson"
       ? "disabled"
       : "link";
+  // A broker/broker-agency/salesperson with an active paid subscription
+  // gets an ad-free homepage -- mapAccessStatus === "ok" for exactly these
+  // 3 roles already means "resolveSubscriptionMapAccess confirmed an
+  // active plan" (see getMapAccessStatus above), so this reuses that same
+  // signal rather than re-querying subscription_status a second time.
+  // Buyers/admins/developers always get "ok" too but aren't subscribers in
+  // this sense, so they're excluded and keep seeing ads as before.
+  const isSubscribedPortalAccount =
+    !!viewerProfile &&
+    (viewerProfile.role === "broker" ||
+      viewerProfile.role === "broker_agency" ||
+      viewerProfile.role === "salesperson") &&
+    mapAccessStatus === "ok";
 
   const [
     communityRows,
@@ -90,7 +103,7 @@ export default async function Home() {
       subscriptionHref={subscriptionHref}
       developerInactiveForSalesperson={developerInactiveForSalesperson}
       banner={
-        banner
+        banner && !isSubscribedPortalAccount
           ? {
               id: banner.id,
               title: banner.title,
@@ -101,7 +114,7 @@ export default async function Home() {
           : null
       }
       sidebarBanner={
-        sidebarBanner
+        sidebarBanner && !isSubscribedPortalAccount
           ? {
               id: sidebarBanner.id,
               title: sidebarBanner.title,
@@ -118,7 +131,7 @@ export default async function Home() {
       viewerDeveloperId={viewerDeveloperId}
       sliderClickBehavior={sliderClickBehavior}
       upcomingProjects={scopedUpcomingProjects}
-      adsEnabled={adsEnabled}
+      adsEnabled={adsEnabled && !isSubscribedPortalAccount}
     />
   );
 }
