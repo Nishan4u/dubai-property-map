@@ -1204,6 +1204,35 @@ section as modules get built out.
   gallery/floor-plan uploads use a lean custom picker, not the full
   category-based `ProjectFileManager.tsx` gallery system projects have.
 
+- Agency White-Label Storefront (Module 11's "Agency Branding" spec
+  line): a broker agency can claim a subdomain
+  (`{slug}.dubaipropertymap.ae`, `/broker-agency/profile`) and curate a
+  persistent, public list of properties (`/broker-agency/storefront`).
+  Visiting that subdomain renders a standalone branded page (agency
+  logo/name/contact in place of Dubai Property Map's own, no header/
+  nav/footer/floating widgets — same "reads as their own material"
+  treatment `/present/[token]` already gets) showing that curated grid,
+  each card linking back to the real project page on the main domain.
+  `src/proxy.ts` rewrites any `*.dubaipropertymap.ae` host that isn't a
+  small reserved-word list (`www`/`api`/`admin`/etc., checked against a
+  constant, not a DB lookup, so the middleware adds no extra round-trip
+  on every request) to `/agency-storefront/[subdomain]`; the page itself
+  does a service-role lookup (mirrors `/api/presentations/[token]`) and
+  renders a clean not-found state for an unclaimed/typo'd one, same as
+  a stale `/present`/`/l` link today. `patch_135_agency_storefront.sql`
+  adds `brokerages.subdomain` (format + reserved-word check constraints,
+  unique index) and a new `brokerage_storefront_items` table — kept
+  separate from `crm_collections` since that table's meaning is a
+  private, client-specific share link (has `client_id`/`share_token`/
+  hide-info toggles), not a public, persistent, agency-wide page.
+  Scoped to broker agencies only (individual brokers already have
+  `/brokers/[slug]` from the Broker Directory module) and to subdomains
+  only, not arbitrary customer-owned domains — no SSH access to the VPS
+  means per-domain SSL can't be automated per signup; a wildcard cert
+  covers every agency subdomain from one one-time setup instead. That
+  one-time DNS/Nginx/wildcard-SSL setup is a real, separate hand-off
+  (not app code) still pending as of this entry.
+
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
   Lockout, and IP Restrictions are now built (see "Substantially built"

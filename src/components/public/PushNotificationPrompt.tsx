@@ -27,9 +27,10 @@ export function PushNotificationPrompt() {
   const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
-    // Never on the Developer Embeddable Map Widget, or a shared branded
-    // agent presentation -- see InstallAppPrompt's identical guard for why.
-    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present")) return;
+    // Never on the Developer Embeddable Map Widget, a shared branded
+    // agent presentation, or an agency's white-label storefront -- see
+    // InstallAppPrompt's identical guard for why.
+    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present") || pathname?.startsWith("/agency-storefront")) return;
 
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;

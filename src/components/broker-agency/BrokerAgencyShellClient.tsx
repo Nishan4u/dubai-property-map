@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Plug,
   ShieldCheck,
+  Store,
   UserRound,
   Users,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Clients", href: "/clients", icon: Contact },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
   { label: "Collections", href: "/collections", icon: FolderOpen },
+  { label: "Storefront", href: "/storefront", icon: Store },
   { label: "My Brokers", href: "/brokers", icon: Users },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
   { label: "Notifications", href: "/notifications", icon: Bell },

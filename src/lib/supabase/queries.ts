@@ -1046,6 +1046,22 @@ export async function getCollectionsForBrokerAgency(brokerageId: string) {
   return getCollections("brokerage_id", brokerageId);
 }
 
+// Agency White-Label Storefront -- the agency's own persistent, public
+// project picks (distinct from crm_collections, which are private/
+// client-specific share links). Same "select *, throw on error" shape as
+// getCollections() above -- acceptable here since this only runs on the
+// agency's own new /broker-agency/storefront page, not any existing one.
+export async function getStorefrontItemsForBrokerAgency(brokerageId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("brokerage_storefront_items")
+    .select("id, project_id, sort_order")
+    .eq("brokerage_id", brokerageId)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 async function getCrmClientDetail(
   ownerColumn: "broker_id" | "salesperson_id" | "developer_id" | "brokerage_id",
   ownerId: string,

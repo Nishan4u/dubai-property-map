@@ -35,6 +35,9 @@ const HIDDEN_PATH_PREFIXES = [
   // to create, and it's also outside the buyer-facing catalogue this
   // widget searches.
   "/present",
+  // Same reasoning for an agency's white-label storefront -- served on
+  // the agency's own subdomain, meant to read as their page, not ours.
+  "/agency-storefront",
 ];
 
 function formatPrice(aed: number): string {
