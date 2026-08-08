@@ -230,7 +230,11 @@ export async function proxy(request: NextRequest) {
   // a tenant subdomain. A pure no-op for the normal dubaipropertymap.ae/
   // www host and for local dev (localhost never matches ROOT_DOMAIN).
   const tenantSubdomain = getTenantSubdomain(request);
-  if (tenantSubdomain) {
+  // API routes must never be rewritten -- the storefront page's own
+  // client-side fetch("/api/agency-storefront/...") runs on this same
+  // tenant host and would otherwise get caught by this same rewrite,
+  // turning its JSON request into the page's HTML instead of real data.
+  if (tenantSubdomain && !request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.rewrite(new URL(`/agency-storefront/${tenantSubdomain}`, request.url));
   }
 
