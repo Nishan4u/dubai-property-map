@@ -236,6 +236,11 @@ export function ProjectForm({
       bedrooms_to: Number(formData.get("bedrooms_to")) || 0,
       handover_quarter: String(formData.get("handover_quarter") ?? ""),
       handover_year: Number(formData.get("handover_year")) || null,
+      // Only meaningful for a Ready listing -- cleared (not just hidden) if
+      // the developer switches back to Off Plan, so a stale age never
+      // lingers on a listing_type where it no longer applies.
+      building_age_years:
+        saleStatus === "ready" ? Number(formData.get("building_age_years")) || null : null,
       description: String(formData.get("description") ?? ""),
       video_url: String(formData.get("video_url") ?? "").trim() || null,
       virtual_tour_url: String(formData.get("virtual_tour_url") ?? "").trim() || null,
@@ -389,6 +394,15 @@ export function ProjectForm({
                 <option value="ready">Ready</option>
               </select>
             </div>
+          )}
+          {saleStatus === "ready" && (
+            <Field
+              label="Building Age (Years)"
+              name="building_age_years"
+              type="number"
+              defaultValue={project?.buildingAgeYears?.toString()}
+              placeholder="e.g. 3"
+            />
           )}
         </div>
         {!project && activeUpcomingProjects.length > 0 && (

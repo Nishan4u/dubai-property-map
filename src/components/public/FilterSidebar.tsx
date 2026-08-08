@@ -23,6 +23,9 @@ export interface ProjectFilters {
   paymentPlan: string;
   offPlan: boolean;
   ready: boolean;
+  /** Only meaningful alongside a Ready property -- an off-plan project has
+   * no building age yet. "3" means "3 years old or newer". */
+  buildingAgeMax: string;
   nearMetro: boolean;
   minInvestmentScore: string;
   escrowStatus: string;
@@ -45,6 +48,7 @@ export const emptyFilters: ProjectFilters = {
   paymentPlan: "",
   offPlan: false,
   ready: false,
+  buildingAgeMax: "",
   nearMetro: false,
   minInvestmentScore: "",
   escrowStatus: "",
@@ -301,6 +305,19 @@ export function FilterSidebar({
               </label>
             </div>
           </div>
+
+          <CompactSelect
+            label="Building Age"
+            placeholder="Any"
+            value={draft.buildingAgeMax}
+            onChange={(v) => set("buildingAgeMax", v)}
+            options={[
+              { label: "Up to 1 Year", value: "1" },
+              { label: "Up to 3 Years", value: "3" },
+              { label: "Up to 5 Years", value: "5" },
+              { label: "Up to 10 Years", value: "10" },
+            ]}
+          />
 
           <label className="flex items-center gap-1.5 text-xs text-ink-300">
             <input

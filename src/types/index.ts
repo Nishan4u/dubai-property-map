@@ -99,6 +99,9 @@ export interface Project {
   constructionProgressPercent?: number;
   escrowStatus?: "available" | "not_available" | null;
   furnishing?: "furnished" | "unfurnished" | "semi_furnished" | null;
+  /** Only meaningful when listingType === "ready" -- how many years old the
+   * building is. Null/undefined for off-plan projects or when not set. */
+  buildingAgeYears?: number | null;
   updatedAt?: string;
   // Derived from the project_unit_types child table when the list query
   // joins it (spec section 12: Unit Type / Size sqft search filters).

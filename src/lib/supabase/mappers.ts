@@ -50,6 +50,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     constructionProgressPercent: row.construction_progress_percent ?? 0,
     escrowStatus: row.escrow_status ?? null,
     furnishing: row.furnishing ?? null,
+    buildingAgeYears: row.building_age_years ?? null,
     updatedAt: row.updated_at,
     createdAt: row.created_at,
     developerName: row.developers?.name,

@@ -1146,6 +1146,19 @@ section as modules get built out.
   `increment_developer_embed_views()` RPC (mirrors `increment_project_
   views`, patch_17) so the dashboard page can show all-time embed views;
   degrades to a silent no-op pre-migration.
+- Building Age filter (Module 30/12 adjacent): a Ready-listing project
+  can now carry a "Building Age (Years)" value — a new field on
+  `ProjectForm.tsx` (shared by the developer dashboard and admin panel)
+  that only appears once Sale Status is set to Ready, cleared back to
+  null if switched back to Off Plan so a stale age never lingers on a
+  listing type where it no longer applies. Search & Filters
+  (`FilterSidebar.tsx`) gets a matching "Building Age" filter (Up to 1/3/
+  5/10 Years buckets, wired into both `HomeClient.tsx` and
+  `AllProjectsClient.tsx`'s filter predicates), and the project detail
+  page's Project Status section shows it inline next to the handover
+  line when set. `patch_126` adds one nullable `projects.building_age_
+  years int` column — no default, since it's only meaningful for Ready
+  listings.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

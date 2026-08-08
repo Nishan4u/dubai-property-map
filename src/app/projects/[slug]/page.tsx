@@ -517,6 +517,9 @@ export default async function ProjectDetailsPage({
                 <p className="text-xs text-ink-500">
                   {project.handoverQuarter} {project.handoverYear} handover ·{" "}
                   {project.listingType === "ready" ? "Ready" : "Off-plan"}
+                  {project.listingType === "ready" && project.buildingAgeYears != null && (
+                    <> · {project.buildingAgeYears} {project.buildingAgeYears === 1 ? "year" : "years"} old</>
+                  )}
                 </p>
 
                 {project.listingType !== "ready" && (

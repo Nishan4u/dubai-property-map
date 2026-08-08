@@ -123,6 +123,10 @@ export function AllProjectsClient({
         const allowed = [...(filters.offPlan ? ["off-plan"] : []), ...(filters.ready ? ["ready"] : [])];
         if (!allowed.includes(p.listingType)) return false;
       }
+      if (filters.buildingAgeMax) {
+        const max = Number(filters.buildingAgeMax);
+        if (p.buildingAgeYears == null || p.buildingAgeYears > max) return false;
+      }
       if (filters.nearMetro && !isNearMetro(p)) return false;
       if (filters.minInvestmentScore && getInvestmentScore(p) < Number(filters.minInvestmentScore)) return false;
       if (filters.escrowStatus && p.escrowStatus !== filters.escrowStatus) return false;

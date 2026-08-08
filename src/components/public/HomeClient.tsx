@@ -388,6 +388,10 @@ export function HomeClient({
         ];
         if (!allowed.includes(p.listingType)) return false;
       }
+      if (filters.buildingAgeMax) {
+        const max = Number(filters.buildingAgeMax);
+        if (p.buildingAgeYears == null || p.buildingAgeYears > max) return false;
+      }
       if (filters.nearMetro && !isNearMetro(p)) return false;
       if (
         filters.minInvestmentScore &&

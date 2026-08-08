@@ -266,6 +266,9 @@ export interface ProjectRow {
   construction_progress_percent: number;
   escrow_status: "available" | "not_available" | null;
   furnishing: "furnished" | "unfurnished" | "semi_furnished" | null;
+  // Only meaningful for listing_type = "ready" -- an off-plan project has
+  // no age yet. Nullable, no default (see patch_126_building_age.sql).
+  building_age_years: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
