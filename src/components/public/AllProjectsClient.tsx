@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { clsx } from "clsx";
 import type { Project, Developer, Community } from "@/types";
@@ -15,6 +15,12 @@ import { isNearMetro, getInvestmentScore } from "@/lib/investmentScore";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { useSearchTracking } from "@/lib/useSearchTracking";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
+import { AdUnit } from "@/components/ads/AdUnit";
+import { AD_SLOTS } from "@/lib/adSlots";
+
+// One in-feed ad after every 8 cards -- frequent enough to matter on a
+// long "Load More" list, not so frequent it dominates the grid.
+const IN_FEED_EVERY = 8;
 
 const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
 type SortOption = (typeof sortOptions)[number];
@@ -249,8 +255,15 @@ export function AllProjectsClient({
             ) : (
               <>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {sortedProjects.slice(0, visible).map((project) => (
-                    <ProjectCard key={project.id} project={project} />
+                  {sortedProjects.slice(0, visible).map((project, i) => (
+                    <Fragment key={project.id}>
+                      <ProjectCard project={project} />
+                      {(i + 1) % IN_FEED_EVERY === 0 && (
+                        <div className="col-span-full">
+                          <AdUnit slot={AD_SLOTS.projectsListingInFeed} />
+                        </div>
+                      )}
+                    </Fragment>
                   ))}
                 </div>
                 {sortedProjects.length === 0 && (

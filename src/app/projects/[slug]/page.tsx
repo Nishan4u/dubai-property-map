@@ -13,6 +13,8 @@ import { GalleryLightbox } from "@/components/public/GalleryLightbox";
 import { NearbyDistances } from "@/components/public/NearbyDistances";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
+import { AdUnit } from "@/components/ads/AdUnit";
+import { AD_SLOTS } from "@/lib/adSlots";
 import { getCurrency, formatPrice } from "@/lib/i18n/locale";
 import { findNearestByCategory } from "@/lib/investmentScore";
 import {
@@ -599,6 +601,8 @@ export default async function ProjectDetailsPage({
               brochureUrl={brochureDoc?.url}
               developerPhone={developer?.phone}
             />
+
+            <AdUnit slot={AD_SLOTS.projectDetailSidebar} />
 
             <ProjectCalculatorsPanel priceAed={project.priceFromAed} paymentPlanDetails={project.paymentPlanDetails} />
 

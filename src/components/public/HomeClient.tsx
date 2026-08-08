@@ -25,6 +25,8 @@ import { pointInPolygon, type GeoSearchRegion, type MapViewState } from "@/lib/g
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { useSearchTracking } from "@/lib/useSearchTracking";
 import { createClient } from "@/lib/supabase/client";
+import { AdUnit } from "@/components/ads/AdUnit";
+import { AD_SLOTS } from "@/lib/adSlots";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
 import type { UpcomingProjectPublicRow } from "@/types/database";
@@ -507,7 +509,10 @@ export function HomeClient({
         </div>
       )}
       {!isFullscreen && (
-        <PartnerDevelopersSlider developers={developers} clickBehavior={sliderClickBehavior} />
+        <>
+          <AdUnit slot={AD_SLOTS.homepageBanner} className="px-4 pt-2 sm:px-6" />
+          <PartnerDevelopersSlider developers={developers} clickBehavior={sliderClickBehavior} />
+        </>
       )}
       <div className="relative flex min-h-0 flex-1">
         <div
