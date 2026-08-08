@@ -65,6 +65,7 @@ export function DubaiMap({
   onFinishDraw,
   radiusKm = 5,
   onRadiusChange,
+  onExpressInterest,
 }: {
   communities: Community[];
   projects: Project[];
@@ -101,6 +102,10 @@ export function DubaiMap({
   onFinishDraw?: () => void;
   radiusKm?: number;
   onRadiusChange?: (km: number) => void;
+  /** Fired when a broker clicks "I'm Interested" on a Coming Soon pin's
+   * popup -- HomeClient owns the actual modal (broker-only submission
+   * form), this component only needs to bubble up which pin was clicked. */
+  onExpressInterest?: (upcoming: UpcomingProjectPublicRow) => void;
 }) {
   const { formatPrice } = useLocale();
   const [zoom, setZoom] = useState(1);
@@ -126,6 +131,12 @@ export function DubaiMap({
   // the listener -- same pattern as selectedCommunityIdRef above.
   const searchToolModeRef = useRef(searchToolMode);
   searchToolModeRef.current = searchToolMode;
+  // Same "ref mirrors the latest prop, read inside a listener registered
+  // once" pattern as searchToolModeRef -- the Coming Soon markers effect
+  // only re-runs when upcomingProjects/useLiveMap change, not on every
+  // onExpressInterest identity change from a parent re-render.
+  const onExpressInterestRef = useRef(onExpressInterest);
+  onExpressInterestRef.current = onExpressInterest;
   const onSearchMapClickRef = useRef(onSearchMapClick);
   onSearchMapClickRef.current = onSearchMapClick;
   const onViewChangeRef = useRef(onViewChange);
@@ -858,7 +869,23 @@ export function DubaiMap({
         textWrap.appendChild(labelEl);
         content.appendChild(textWrap);
 
-        const popup = new mapboxgl.default.Popup({ closeButton: false, offset: 16 }).setDOMContent(content);
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(content);
+
+        if (onExpressInterestRef.current) {
+          const interestBtn = document.createElement("button");
+          interestBtn.type = "button";
+          interestBtn.textContent = "I'm Interested";
+          interestBtn.style.cssText =
+            "margin-top:8px;width:100%;padding:5px 0;border-radius:6px;background:#eab308;color:#0a0f1c;font-size:11px;font-weight:700;cursor:pointer;border:none;";
+          interestBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            onExpressInterestRef.current?.(u);
+          });
+          wrapper.appendChild(interestBtn);
+        }
+
+        const popup = new mapboxgl.default.Popup({ closeButton: false, offset: 16 }).setDOMContent(wrapper);
         const marker = new mapboxgl.default.Marker({ element: el })
           .setLngLat([u.lng, u.lat])
           .setPopup(popup)

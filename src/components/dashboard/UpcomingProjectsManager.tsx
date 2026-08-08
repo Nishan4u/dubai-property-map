@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Rocket, Trash2, Upload, X } from "lucide-react";
+import { Mail, MessageCircle, Pencil, Plus, Rocket, Trash2, Upload, Users, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
@@ -10,12 +10,29 @@ import type { UpcomingProjectRow } from "@/types/database";
 
 const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
 
+// Shape returned by getUpcomingProjectInterestsForDeveloper's join --
+// broker's interest enquiry against one of this developer's Coming Soon
+// pins (patch_131), with the pin's own internal name and the submitting
+// broker's name/slug joined in for display.
+interface UpcomingProjectInterest {
+  id: string;
+  name: string;
+  email: string | null;
+  whatsapp: string | null;
+  message: string | null;
+  created_at: string;
+  upcoming_projects: { internal_name: string } | null;
+  brokers: { full_name: string; slug: string } | null;
+}
+
 export function UpcomingProjectsManager({
   developerId,
   initialUpcomingProjects,
+  interests = [],
 }: {
   developerId: string;
   initialUpcomingProjects: UpcomingProjectRow[];
+  interests?: UpcomingProjectInterest[];
 }) {
   const [items, setItems] = useState(initialUpcomingProjects);
   const [name, setName] = useState("");
@@ -258,6 +275,57 @@ export function UpcomingProjectsManager({
         >
           <Plus className="h-3.5 w-3.5" /> {saving ? "Adding…" : "Add Upcoming Project"}
         </button>
+      </div>
+
+      <div className="rounded-lg border border-navy-700 bg-navy-900 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-300">
+          <Users className="h-3.5 w-3.5 text-gold-400" /> Broker Interest ({interests.length})
+        </p>
+        {interests.length === 0 ? (
+          <p className="text-xs text-ink-500">
+            No brokers have expressed interest in a Coming Soon pin yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {interests.map((i) => (
+              <div key={i.id} className="rounded-lg border border-navy-700 bg-navy-850 p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-ink-100">{i.name}</p>
+                    <p className="text-xs text-ink-500">
+                      {i.brokers ? `Broker: ${i.brokers.full_name}` : "Broker"}
+                      {i.upcoming_projects ? ` · re: ${i.upcoming_projects.internal_name}` : ""}
+                    </p>
+                  </div>
+                  <p className="text-xs text-ink-500">
+                    {new Date(i.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                  {i.email && (
+                    <a
+                      href={`mailto:${i.email}`}
+                      className="flex items-center gap-1 text-ink-300 hover:text-gold-400"
+                    >
+                      <Mail className="h-3.5 w-3.5" /> {i.email}
+                    </a>
+                  )}
+                  {i.whatsapp && (
+                    <a
+                      href={`https://wa.me/${i.whatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-ink-300 hover:text-gold-400"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> {i.whatsapp}
+                    </a>
+                  )}
+                </div>
+                {i.message && <p className="mt-2 text-xs text-ink-400">{i.message}</p>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

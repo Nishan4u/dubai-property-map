@@ -1,11 +1,18 @@
 import { UpcomingProjectsManager } from "@/components/dashboard/UpcomingProjectsManager";
-import { getUpcomingProjectsForDeveloper, requireDeveloperProfile } from "@/lib/supabase/queries";
+import {
+  getUpcomingProjectInterestsForDeveloper,
+  getUpcomingProjectsForDeveloper,
+  requireDeveloperProfile,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function UpcomingProjectsPage() {
   const profile = await requireDeveloperProfile();
-  const upcomingProjects = await getUpcomingProjectsForDeveloper(profile.developer_id);
+  const [upcomingProjects, interests] = await Promise.all([
+    getUpcomingProjectsForDeveloper(profile.developer_id),
+    getUpcomingProjectInterestsForDeveloper(profile.developer_id),
+  ]);
 
   return (
     <div className="space-y-4 p-6">
@@ -22,6 +29,7 @@ export default async function UpcomingProjectsPage() {
       <UpcomingProjectsManager
         developerId={profile.developer_id}
         initialUpcomingProjects={upcomingProjects}
+        interests={interests}
       />
     </div>
   );

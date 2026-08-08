@@ -2812,6 +2812,25 @@ export async function getUpcomingProjectsForDeveloper(developerId: string) {
   return data ?? [];
 }
 
+// Broker interest enquiries against any of this developer's "Coming Soon"
+// pins (patch_131) -- the collection view for /dashboard/upcoming-projects.
+// Returns [] rather than throwing pre-migration (this table is new and
+// won't exist until the handed-off patch is run), matching this table's
+// own graceful-degradation contract rather than the older sibling
+// functions above, which can safely throw since upcoming_projects has
+// existed since patch_80.
+export async function getUpcomingProjectInterestsForDeveloper(developerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("upcoming_project_interests")
+    .select("*, upcoming_projects!inner(internal_name, developer_id), brokers(full_name, slug)")
+    .eq("upcoming_projects.developer_id", developerId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getActiveUpcomingProjectsForDeveloper(developerId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

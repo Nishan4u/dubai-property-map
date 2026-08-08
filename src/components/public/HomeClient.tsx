@@ -27,6 +27,7 @@ import { useSearchTracking } from "@/lib/useSearchTracking";
 import { createClient } from "@/lib/supabase/client";
 import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
+import { UpcomingProjectInterestModal } from "@/components/public/UpcomingProjectInterestModal";
 import type { MapAccessStatus } from "@/lib/supabase/queries";
 import type { Community, Developer, ListingType, Project, ProjectTag } from "@/types";
 import type { UpcomingProjectPublicRow } from "@/types/database";
@@ -115,6 +116,10 @@ export function HomeClient({
     null
   );
   const [bannerOpen, setBannerOpen] = useState(true);
+  // Set when a broker clicks "I'm Interested" on a Coming Soon pin's
+  // popup (DubaiMap's onExpressInterest) -- the modal itself resolves
+  // whether the viewer is actually a signed-in broker.
+  const [interestUpcoming, setInterestUpcoming] = useState<UpcomingProjectPublicRow | null>(null);
   const [activeLayers, setActiveLayers] = useState<string[]>([]);
   const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
@@ -591,6 +596,7 @@ export function HomeClient({
             onFinishDraw={handleFinishDraw}
             radiusKm={radiusKm}
             onRadiusChange={handleRadiusChange}
+            onExpressInterest={setInterestUpcoming}
           />
           {featuredProject && (
             <FeaturedProjectCard
@@ -683,6 +689,15 @@ export function HomeClient({
             </div>
           </div>
         </div>
+      )}
+
+      {interestUpcoming && (
+        <UpcomingProjectInterestModal
+          upcomingProjectId={interestUpcoming.id}
+          developerId={interestUpcoming.developer_id}
+          developerName={interestUpcoming.developer_name}
+          onClose={() => setInterestUpcoming(null)}
+        />
       )}
     </div>
   );

@@ -334,6 +334,21 @@ export interface UpcomingProjectPublicRow {
   developer_id: string;
 }
 
+// A broker's interest enquiry against a developer's "Coming Soon" pin
+// (patch_131) -- broker -> developer, the opposite direction from
+// broker_project_enquiries (buyer -> broker).
+export interface UpcomingProjectInterestRow {
+  id: string;
+  upcoming_project_id: string;
+  broker_id: string;
+  created_by: string | null;
+  name: string;
+  email: string | null;
+  whatsapp: string | null;
+  message: string | null;
+  created_at: string;
+}
+
 export interface ProjectEventRow {
   id: string;
   project_id: string;
