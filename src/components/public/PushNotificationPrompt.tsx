@@ -98,8 +98,11 @@ export function PushNotificationPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 lg:justify-end lg:px-6">
-      <div className="w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
+    // Same pointer-events split as InstallAppPrompt.tsx -- the outer
+    // box's transparent area must never swallow taps meant for whatever
+    // is genuinely underneath it.
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 lg:justify-end lg:px-6">
+      <div className="pointer-events-auto w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-500/15">
             <Bell className="h-5 w-5 text-gold-400" />

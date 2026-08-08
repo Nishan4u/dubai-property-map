@@ -88,8 +88,14 @@ export function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-40 lg:justify-end lg:px-6 lg:pb-28">
-      <div className="w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
+    // pointer-events-none on the outer box + pointer-events-auto on just
+    // the visible card: without this, the box's own transparent
+    // padding area (the gap between "bottom-0" and the card, sized by
+    // pb-40/pb-28) still intercepts taps meant for whatever is
+    // genuinely underneath it -- e.g. the map's zoom/layer controls on
+    // the homepage, which sit in exactly that band on mobile.
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-40 lg:justify-end lg:px-6 lg:pb-28">
+      <div className="pointer-events-auto w-full max-w-sm rounded-xl border border-navy-700 bg-navy-900 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <Image
             src="/icons/icon-192.png"
