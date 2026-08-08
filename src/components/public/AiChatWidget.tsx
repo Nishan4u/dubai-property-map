@@ -25,6 +25,10 @@ const HIDDEN_PATH_PREFIXES = [
   "/broker-agency",
   "/salesperson",
   "/staff",
+  // The Developer Embeddable Map Widget renders inside an <iframe> on a
+  // developer's own external website -- a floating chat bubble there would
+  // be a broken, unwanted intrusion on someone else's page.
+  "/embed",
 ];
 
 function formatPrice(aed: number): string {

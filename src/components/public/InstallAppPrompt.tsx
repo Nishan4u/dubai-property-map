@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, X } from "lucide-react";
 
 const STORAGE_KEY = "dpm_install_prompt_dismissed";
@@ -12,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallAppPrompt() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
     null
@@ -19,6 +21,11 @@ export function InstallAppPrompt() {
   const [showIosTip, setShowIosTip] = useState(false);
 
   useEffect(() => {
+    // Never on the Developer Embeddable Map Widget -- that route renders
+    // inside an <iframe> on someone else's website, where a
+    // "install this app" prompt would be a broken, out-of-place intrusion.
+    if (pathname?.startsWith("/embed")) return;
+
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;
     } catch {
@@ -50,6 +57,9 @@ export function InstallAppPrompt() {
       window.removeEventListener("appinstalled", onAppInstalled);
       clearTimeout(timer);
     };
+    // Only ever needs to read pathname once on mount, matching this
+    // effect's existing mount-once contract (empty deps) everywhere else.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function dismiss() {

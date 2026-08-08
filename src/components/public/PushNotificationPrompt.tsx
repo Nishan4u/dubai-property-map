@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Bell, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -21,10 +22,15 @@ function urlBase64ToUint8Array(base64String: string) {
 // signed-in user (mirrors AuthStatus.tsx's client-side auth-detection
 // pattern, since push subscriptions need a real user_id to attach to).
 export function PushNotificationPrompt() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
+    // Never on the Developer Embeddable Map Widget -- see InstallAppPrompt's
+    // identical guard for why.
+    if (pathname?.startsWith("/embed")) return;
+
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;
     } catch {
@@ -46,6 +52,9 @@ export function PushNotificationPrompt() {
     return () => {
       cancelled = true;
     };
+    // Only ever needs to read pathname once on mount, matching this
+    // effect's existing mount-once contract (empty deps) everywhere else.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function dismiss() {

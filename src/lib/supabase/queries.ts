@@ -611,6 +611,36 @@ export async function getProjectPreviewBySlug(slug: string): Promise<ProjectPrev
   return data;
 }
 
+// Powers the Developer Embeddable Map Widget (/embed/developer/[slug]) --
+// same public-safe view as getProjectPreviewBySlug, just filtered to one
+// developer instead of looked up by project slug. Works for a completely
+// unauthenticated visitor on the developer's own external website, exactly
+// like every other projects_public_meta read.
+export async function getProjectPreviewsForDeveloper(developerId: string): Promise<ProjectPreview[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects_public_meta")
+    .select("*")
+    .eq("developer_id", developerId)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Best-effort, never throws -- mirrors incrementProjectViews. Degrades to a
+// silent no-op before patch_125 is applied (RPC doesn't exist yet), same
+// "not configured yet, not fabricated" contract as every other optional
+// counter/integration in this codebase.
+export async function incrementDeveloperEmbedViews(developerId: string) {
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("increment_developer_embed_views", { p_id: developerId });
+  } catch {
+    // Pre-migration or transient error -- never block the embed page render.
+  }
+}
+
 export async function getProjectSitemapEntries() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("projects_public_meta").select("slug, updated_at");

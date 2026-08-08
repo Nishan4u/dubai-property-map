@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CalendarDays,
   ClipboardCheck,
+  Code2,
   CreditCard,
   FileText,
   FolderOpen,
@@ -46,6 +47,7 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Security", href: "/security", icon: ShieldCheck },
   { label: "Integrations", href: "/integrations", icon: Plug },
+  { label: "Embed Widget", href: "/embed", icon: Code2 },
 ];
 
 export function DeveloperShellClient({

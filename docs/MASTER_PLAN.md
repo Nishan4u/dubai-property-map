@@ -1123,6 +1123,29 @@ section as modules get built out.
   inline `PublicDetailGateCard` shown below the real summary (replaces
   `GatedDetailPlaceholder` on just these two routes; the map and every
   other gated surface are untouched).
+- Developer Embeddable Map Widget (Module 30 adjacent): any developer can
+  now embed a live, interactive map of their own projects on their own
+  external website via `<iframe src="https://dubaipropertymap.ae/embed/
+  developer/{slug}">` — copyable snippet + live preview on a new
+  `/dashboard/embed` page (`EmbedCodeGenerator.tsx`). The embed route
+  (`/embed/developer/[slug]`) is a bare, chrome-free page (no header/
+  nav/footer, no AI chat/install/push prompts — those three now
+  self-suppress via a `pathname.startsWith("/embed")` guard, the same
+  pattern `AiChatWidget` already used for portal routes) rendering a new
+  purpose-built `EmbedDeveloperMap.tsx` (plain `mapbox-gl`, not a cut-
+  down `DubaiMap.tsx` — that component is deeply wired into the full
+  site's search-tools/heatmap/fullscreen state machine, so a small
+  standalone component is safer than entangling it with an embed-only
+  code path). Data comes from the existing public-safe
+  `projects_public_meta` view (`getProjectPreviewsForDeveloper`, patch_82/
+  87) and the already-RLS-public `developers` table — no new RLS. Each
+  pin's popup links back to the real project page on
+  dubaipropertymap.ae (`target="_blank"`), and the widget carries a
+  small "Powered by Dubai Property Map" attribution bar. `patch_125` adds
+  one counter column (`developers.embed_views`) + a
+  `increment_developer_embed_views()` RPC (mirrors `increment_project_
+  views`, patch_17) so the dashboard page can show all-time embed views;
+  degrades to a silent no-op pre-migration.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
