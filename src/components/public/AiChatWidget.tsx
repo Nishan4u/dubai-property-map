@@ -29,6 +29,12 @@ const HIDDEN_PATH_PREFIXES = [
   // developer's own external website -- a floating chat bubble there would
   // be a broken, unwanted intrusion on someone else's page.
   "/embed",
+  // A shared, branded agent presentation (/present/[token]) is meant to
+  // read as that agent's own material -- Dubai Property Map's own chat
+  // bubble floating on top would dilute the branding this feature exists
+  // to create, and it's also outside the buyer-facing catalogue this
+  // widget searches.
+  "/present",
 ];
 
 function formatPrice(aed: number): string {

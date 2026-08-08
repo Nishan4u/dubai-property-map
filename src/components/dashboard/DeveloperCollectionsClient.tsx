@@ -42,6 +42,12 @@ export function DeveloperCollectionsClient({
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  // "Hide info to prompt engagement" toggles -- the buyer sees "Contact
+  // agent" instead of the real value and has to reach out, matching the
+  // same tactic real estate presentation tools (e.g. Reelly) offer.
+  const [hideDeveloperName, setHideDeveloperName] = useState(false);
+  const [hidePrice, setHidePrice] = useState(false);
+  const [hideLocation, setHideLocation] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shareOpenId, setShareOpenId] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -57,16 +63,31 @@ export function DeveloperCollectionsClient({
     setSaving(true);
     const supabase = createClient();
 
-    const { data: collection, error } = await supabase
+    const basePayload = {
+      owner_type: "developer",
+      developer_id: developerId,
+      client_id: clientId || null,
+      title: title.trim(),
+    };
+
+    let { data: collection, error } = await supabase
       .from("crm_collections")
-      .insert({
-        owner_type: "developer",
-        developer_id: developerId,
-        client_id: clientId || null,
-        title: title.trim(),
-      })
+      .insert({ ...basePayload, hide_developer_name: hideDeveloperName, hide_price: hidePrice, hide_location: hideLocation })
       .select("*, crm_clients(full_name)")
       .single();
+
+    // hide_* columns are a newer addition (patch_134) that may not be
+    // migrated on every environment yet -- Postgres errors on the whole
+    // insert when it references an unknown column, which would otherwise
+    // break collection creation entirely until the migration runs. Retry
+    // without the new fields so the existing feature keeps working.
+    if (error) {
+      ({ data: collection, error } = await supabase
+        .from("crm_collections")
+        .insert(basePayload)
+        .select("*, crm_clients(full_name)")
+        .single());
+    }
 
     if (error || !collection) {
       setSaving(false);
@@ -86,6 +107,9 @@ export function DeveloperCollectionsClient({
     setTitle("");
     setClientId("");
     setSelectedProjectIds([]);
+    setHideDeveloperName(false);
+    setHidePrice(false);
+    setHideLocation(false);
     setSaving(false);
   }
 
@@ -167,6 +191,43 @@ export function DeveloperCollectionsClient({
                 </label>
               ))}
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Hide info to prompt engagement (optional)
+            </label>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border border-navy-600 bg-navy-800 p-2.5">
+              <label className="flex items-center gap-1.5 text-xs text-ink-200">
+                <input
+                  type="checkbox"
+                  checked={hideDeveloperName}
+                  onChange={(e) => setHideDeveloperName(e.target.checked)}
+                  className="accent-gold-500"
+                />
+                Hide developer name
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-ink-200">
+                <input
+                  type="checkbox"
+                  checked={hidePrice}
+                  onChange={(e) => setHidePrice(e.target.checked)}
+                  className="accent-gold-500"
+                />
+                Hide price
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-ink-200">
+                <input
+                  type="checkbox"
+                  checked={hideLocation}
+                  onChange={(e) => setHideLocation(e.target.checked)}
+                  className="accent-gold-500"
+                />
+                Hide location
+              </label>
+            </div>
+            <p className="mt-1 text-[11px] text-ink-500">
+              Hidden fields show as &quot;Contact agent&quot; on the shared link, so the buyer has to reach out to you.
+            </p>
           </div>
           <div className="flex gap-2">
             <button
