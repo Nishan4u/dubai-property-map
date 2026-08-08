@@ -3,6 +3,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
+import { isAdsEnabled } from "@/lib/adsEnabled";
 import { getBlogPostBySlug } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
+  const [post, adsEnabled] = await Promise.all([getBlogPostBySlug(slug), isAdsEnabled()]);
   if (!post || !post.published) notFound();
 
   // Every existing blog post was seeded with literal "\n" (backslash + n)
@@ -72,7 +73,9 @@ export default async function BlogPostPage({
         </div>
         {secondHalf && (
           <>
-            <AdUnit slot={AD_SLOTS.blogPostInArticle} format="fluid" layout="in-article" className="my-6" />
+            {adsEnabled && (
+              <AdUnit slot={AD_SLOTS.blogPostInArticle} format="fluid" layout="in-article" className="my-6" />
+            )}
             <div className="space-y-4 whitespace-pre-line text-sm leading-relaxed text-ink-300">
               {secondHalf}
             </div>

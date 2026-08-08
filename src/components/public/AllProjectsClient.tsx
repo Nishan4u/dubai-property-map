@@ -60,6 +60,7 @@ export function AllProjectsClient({
   mapAccessStatus,
   subscriptionHref,
   viewerDeveloperId,
+  adsEnabled = true,
 }: {
   projects: Project[];
   developers: Developer[];
@@ -67,6 +68,9 @@ export function AllProjectsClient({
   mapAccessStatus: MapAccessStatus;
   subscriptionHref: string;
   viewerDeveloperId: string | null;
+  /** Admin's AdSense on/off switch (/admin/settings) -- resolved
+   * server-side by the parent page via isAdsEnabled(). */
+  adsEnabled?: boolean;
 }) {
   const { currency } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
@@ -258,7 +262,7 @@ export function AllProjectsClient({
                   {sortedProjects.slice(0, visible).map((project, i) => (
                     <Fragment key={project.id}>
                       <ProjectCard project={project} />
-                      {(i + 1) % IN_FEED_EVERY === 0 && (
+                      {adsEnabled && (i + 1) % IN_FEED_EVERY === 0 && (
                         <div className="col-span-full">
                           <AdUnit slot={AD_SLOTS.projectsListingInFeed} format="horizontal" />
                         </div>

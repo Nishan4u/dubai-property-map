@@ -16,6 +16,7 @@ import {
 import type { SliderClickBehavior } from "@/components/public/PartnerDevelopersSlider";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
 import { getCmsMetadata } from "@/components/public/CmsPage";
+import { isAdsEnabled } from "@/lib/adsEnabled";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export default async function Home() {
     sponsoredPinIds,
     navLinks,
     upcomingProjects,
+    adsEnabled,
   ] = await Promise.all([
     getCommunities(),
     getDevelopers(),
@@ -66,6 +68,7 @@ export default async function Home() {
     // "Coming Soon" pins are deliberately public teasers (spec section 13)
     // -- unlike real listings, these are never gated behind mapAccessStatus.
     getUpcomingProjectsPublic(),
+    isAdsEnabled(),
   ]);
 
   const communities = communityRows.map((c) => mapCommunity(c));
@@ -115,6 +118,7 @@ export default async function Home() {
       viewerDeveloperId={viewerDeveloperId}
       sliderClickBehavior={sliderClickBehavior}
       upcomingProjects={scopedUpcomingProjects}
+      adsEnabled={adsEnabled}
     />
   );
 }

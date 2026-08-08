@@ -228,7 +228,7 @@ export function AdminCreateBannerForm({
             </div>
           )}
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-ink-400">Title</label>
             <input
               value={title}
@@ -238,22 +238,13 @@ export function AdminCreateBannerForm({
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Target URL</label>
-            <input
-              value={targetUrl}
-              onChange={(e) => setTargetUrl(e.target.value)}
-              placeholder="https://…"
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 rounded-lg border border-dashed border-navy-600 p-3">
             <label className="mb-1 block text-xs font-medium text-ink-400">
               Banner Image (optional)
             </label>
             <p className="mb-2 text-[11px] text-ink-500">
-              Uploaded design is shown as the banner instead of the plain text version below.
+              Uploaded design is shown as the banner instead of the plain text version above/below
+              — set the Link field right below so clicking the image opens that page.
             </p>
             {imageUrl && !uploadingFile && (
               <div className="mb-2 flex items-center gap-2">
@@ -284,11 +275,25 @@ export function AdminCreateBannerForm({
                 />
               </div>
             )}
-            <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-navy-600 px-3 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100">
+            <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-navy-600 px-3 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100">
               <Upload className="h-3.5 w-3.5" />
               {imageUrl ? "Replace image" : "Upload image"}
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
+
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Link {imageUrl ? "(opens when the image above is clicked)" : "(opens when the banner is clicked)"}
+            </label>
+            <input
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              placeholder="https://…"
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+            />
+            <p className="mt-1 text-[11px] text-ink-500">
+              Leave empty for a non-clickable banner. Every click is tracked and redirected
+              through <code className="text-ink-400">/api/ads/click/[id]</code> to this URL.
+            </p>
           </div>
 
           <div>

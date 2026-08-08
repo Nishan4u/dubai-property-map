@@ -15,6 +15,7 @@ import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { Badge } from "@/components/ui/Badge";
 import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
+import { isAdsEnabled } from "@/lib/adsEnabled";
 import { getCurrency, formatPrice } from "@/lib/i18n/locale";
 import { findNearestByCategory } from "@/lib/investmentScore";
 import {
@@ -140,7 +141,7 @@ export default async function ProjectDetailsPage({
     .slice(0, 3)
     .map((p) => mapProject(p));
 
-  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes, unitAvailability] = await Promise.all([
+  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes, unitAvailability, adsEnabled] = await Promise.all([
     getProjectMediaFiles(project.id, "gallery"),
     getProjectGallerySections(project.id),
     getProjectDocumentsByCategory(project.id),
@@ -148,6 +149,7 @@ export default async function ProjectDetailsPage({
     getActiveProjectBanner(project.id),
     getProjectUnitTypes(project.id),
     getProjectUnitAvailability(project.id),
+    isAdsEnabled(),
   ]);
   const unitTypeFloorPlans: Record<string, Awaited<ReturnType<typeof getUnitTypeFloorPlans>>> =
     Object.fromEntries(
@@ -609,7 +611,7 @@ export default async function ProjectDetailsPage({
               developerPhone={developer?.phone}
             />
 
-            <AdUnit slot={AD_SLOTS.projectDetailSidebar} />
+            {adsEnabled && <AdUnit slot={AD_SLOTS.projectDetailSidebar} />}
 
             <ProjectCalculatorsPanel priceAed={project.priceFromAed} paymentPlanDetails={project.paymentPlanDetails} />
 

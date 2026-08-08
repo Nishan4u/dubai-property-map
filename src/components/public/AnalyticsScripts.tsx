@@ -33,6 +33,7 @@ export async function AnalyticsScripts() {
         "meta_pixel_id",
         "tiktok_pixel_id",
         "google_adsense_publisher_id",
+        "adsense_enabled",
       ]);
     settings = Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
   } catch {
@@ -52,7 +53,10 @@ export async function AnalyticsScripts() {
   // it here (rather than storing "ca-pub-..." in the setting itself) keeps
   // the stored value consistent with ads.txt and tolerates an admin pasting
   // either "pub-..." or "ca-pub-..." into the settings field.
-  const rawAdsensePublisherId = noAds ? null : settings.google_adsense_publisher_id;
+  // Admin's own on/off switch for AdSense (/admin/settings, patch_132) --
+  // separate from the publisher id so switching off never loses it.
+  const adsenseEnabled = settings.adsense_enabled !== "false";
+  const rawAdsensePublisherId = noAds || !adsenseEnabled ? null : settings.google_adsense_publisher_id;
   const adsenseClientId = rawAdsensePublisherId
     ? rawAdsensePublisherId.startsWith("ca-")
       ? rawAdsensePublisherId

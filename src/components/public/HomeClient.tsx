@@ -56,6 +56,7 @@ export function HomeClient({
   developerInactiveForSalesperson = false,
   sliderClickBehavior = "guest",
   upcomingProjects = [],
+  adsEnabled = true,
 }: {
   communities: Community[];
   developers: Developer[];
@@ -84,6 +85,9 @@ export function HomeClient({
    * from mapAccessStatus, which covers the salesperson's own subscription). */
   developerInactiveForSalesperson?: boolean;
   sliderClickBehavior?: SliderClickBehavior;
+  /** Admin's AdSense on/off switch (/admin/settings) -- resolved
+   * server-side by page.tsx via isAdsEnabled(). */
+  adsEnabled?: boolean;
 }) {
   const { currency } = useLocale();
   const validTags: (ProjectTag | "all")[] = [
@@ -523,7 +527,9 @@ export function HomeClient({
       )}
       {!isFullscreen && (
         <>
-          <AdUnit slot={AD_SLOTS.homepageBanner} format="horizontal" className="px-4 pt-2 sm:px-6" />
+          {adsEnabled && (
+            <AdUnit slot={AD_SLOTS.homepageBanner} format="horizontal" className="px-4 pt-2 sm:px-6" />
+          )}
           <PartnerDevelopersSlider developers={developers} clickBehavior={sliderClickBehavior} />
         </>
       )}

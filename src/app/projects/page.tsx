@@ -9,6 +9,7 @@ import {
   getViewerProjectScope,
 } from "@/lib/supabase/queries";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
+import { isAdsEnabled } from "@/lib/adsEnabled";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,13 @@ export default async function AllProjectsPage() {
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const { blocked: developerInactiveForSalesperson } = await getSalespersonDeveloperAccess();
 
-  const [communityRows, developerRows, projectRows] = await Promise.all([
+  const [communityRows, developerRows, projectRows, adsEnabled] = await Promise.all([
     getCommunities(),
     getDevelopers(),
     mapAccessStatus === "ok" && !developerInactiveForSalesperson
       ? getPublishedProjects(viewerDeveloperId ?? undefined)
       : Promise.resolve([]),
+    isAdsEnabled(),
   ]);
 
   return (
@@ -46,6 +48,7 @@ export default async function AllProjectsPage() {
         mapAccessStatus={mapAccessStatus}
         subscriptionHref={subscriptionHref}
         viewerDeveloperId={viewerDeveloperId}
+        adsEnabled={adsEnabled}
       />
     </PublicShell>
   );

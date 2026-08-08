@@ -4,6 +4,7 @@ import { RegistrationTypeSettingsPanel } from "@/components/admin/RegistrationTy
 import { FreeAccessSettingsPanel } from "@/components/admin/FreeAccessSettingsPanel";
 import { SiteAccessSettingsPanel } from "@/components/admin/SiteAccessSettingsPanel";
 import { IpRestrictionsPanel } from "@/components/admin/IpRestrictionsPanel";
+import { AdSenseTogglePanel } from "@/components/admin/AdSenseTogglePanel";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/queries";
 
@@ -54,9 +55,14 @@ export default async function AdminSettingsPage() {
       />
       <RegistrationTypeSettingsPanel settings={registrationTypes ?? []} />
       <FreeAccessSettingsPanel settings={freeAccessTypes ?? []} />
+      <AdSenseTogglePanel
+        initialEnabled={(settings ?? []).find((s) => s.key === "adsense_enabled")?.value !== "false"}
+      />
       <div>
         <h2 className="mb-3 text-sm font-semibold text-ink-200">Integrations</h2>
-        <SettingsTable settings={settings ?? []} />
+        {/* adsense_enabled has its own toggle above -- excluded here so it
+           doesn't also show up as a plain "true"/"false" text row below. */}
+        <SettingsTable settings={(settings ?? []).filter((s) => s.key !== "adsense_enabled")} />
       </div>
     </div>
   );
