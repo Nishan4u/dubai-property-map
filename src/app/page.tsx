@@ -88,7 +88,13 @@ export default async function Home() {
       developerInactiveForSalesperson={developerInactiveForSalesperson}
       banner={
         banner
-          ? { id: banner.id, title: banner.title, targetUrl: banner.target_url, developerName: banner.developers?.name }
+          ? {
+              id: banner.id,
+              title: banner.title,
+              targetUrl: banner.target_url,
+              developerName: banner.developers?.name,
+              imageUrl: banner.image_url,
+            }
           : null
       }
       sidebarBanner={
@@ -98,6 +104,7 @@ export default async function Home() {
               title: sidebarBanner.title,
               targetUrl: sidebarBanner.target_url,
               developerName: sidebarBanner.developers?.name,
+              imageUrl: sidebarBanner.image_url,
             }
           : null
       }

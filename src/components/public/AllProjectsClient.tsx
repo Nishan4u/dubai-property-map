@@ -18,9 +18,9 @@ import type { MapAccessStatus } from "@/lib/supabase/queries";
 import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
 
-// One in-feed ad after every 8 cards -- frequent enough to matter on a
+// One in-feed ad after every 9 cards -- frequent enough to matter on a
 // long "Load More" list, not so frequent it dominates the grid.
-const IN_FEED_EVERY = 8;
+const IN_FEED_EVERY = 9;
 
 const sortOptions = ["Featured", "Newest", "Recently Updated", "Lowest Price", "Highest Price", "High ROI", "Handover"] as const;
 type SortOption = (typeof sortOptions)[number];
@@ -260,7 +260,7 @@ export function AllProjectsClient({
                       <ProjectCard project={project} />
                       {(i + 1) % IN_FEED_EVERY === 0 && (
                         <div className="col-span-full">
-                          <AdUnit slot={AD_SLOTS.projectsListingInFeed} />
+                          <AdUnit slot={AD_SLOTS.projectsListingInFeed} format="horizontal" />
                         </div>
                       )}
                     </Fragment>

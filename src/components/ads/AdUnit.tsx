@@ -5,9 +5,12 @@ import { AD_CLIENT } from "@/lib/adSlots";
 
 interface AdUnitProps {
   slot: string;
-  /** "fluid" is required for the in-article layout; every other placement
-   * here uses the default responsive "auto" format. */
-  format?: "auto" | "fluid";
+  /** "auto" lets Google pick any shape, including a tall rectangle --
+   * "horizontal" asks specifically for a short, wide banner shape instead
+   * (used for the homepage banner and the projects in-feed slot, both of
+   * which sit inside a fixed-height strip rather than open page flow).
+   * "fluid" is required for the in-article layout. */
+  format?: "auto" | "fluid" | "horizontal";
   /** Set to "in-article" for an in-article unit -- pairs with format="fluid". */
   layout?: "in-article";
   className?: string;

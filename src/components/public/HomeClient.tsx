@@ -36,6 +36,7 @@ interface HomepageBanner {
   title: string;
   targetUrl: string | null;
   developerName?: string;
+  imageUrl?: string | null;
 }
 
 const HEAT_LAYER_KEYS = ["price-heat", "score-heat"];
@@ -483,14 +484,21 @@ export function HomeClient({
         searchDisabled={mapAccessStatus !== "ok"}
       />
       {banner && bannerOpen && (
-        <div className="flex items-center justify-between gap-3 bg-gold-500/15 px-6 py-2 text-xs">
+        <div className="relative flex items-center gap-3 bg-gold-500/15 px-6 py-2 text-xs">
           <Link
             href={banner.targetUrl ? `/api/ads/click/${banner.id}` : "#"}
             className="flex-1 truncate text-ink-200 hover:text-gold-300"
           >
-            <span className="font-semibold text-gold-400">Sponsored</span>{" "}
-            {banner.title}
-            {banner.developerName ? ` — ${banner.developerName}` : ""}
+            {banner.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={banner.imageUrl} alt={banner.title} className="h-10 w-full object-cover" />
+            ) : (
+              <>
+                <span className="font-semibold text-gold-400">Sponsored</span>{" "}
+                {banner.title}
+                {banner.developerName ? ` — ${banner.developerName}` : ""}
+              </>
+            )}
           </Link>
           <button
             onClick={() => setBannerOpen(false)}
@@ -510,7 +518,7 @@ export function HomeClient({
       )}
       {!isFullscreen && (
         <>
-          <AdUnit slot={AD_SLOTS.homepageBanner} className="px-4 pt-2 sm:px-6" />
+          <AdUnit slot={AD_SLOTS.homepageBanner} format="horizontal" className="px-4 pt-2 sm:px-6" />
           <PartnerDevelopersSlider developers={developers} clickBehavior={sliderClickBehavior} />
         </>
       )}

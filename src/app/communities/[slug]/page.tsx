@@ -240,14 +240,21 @@ export default async function CommunityPage({
         {communityBanner && (
           <Link
             href={communityBanner.target_url ? `/api/ads/click/${communityBanner.id}` : "#"}
-            className="mt-4 block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
+            className="mt-4 block overflow-hidden rounded-xl border border-gold-500/30 bg-gold-500/10 hover:border-gold-500/50"
           >
-            <p className="text-xs font-semibold text-gold-400">Sponsored</p>
-            <p className="mt-1 text-sm font-medium text-ink-100">{communityBanner.title}</p>
-            {communityBanner.developers?.name && (
-              <p className="mt-0.5 text-xs text-ink-500">
-                by {communityBanner.developers.name}
-              </p>
+            {communityBanner.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={communityBanner.image_url} alt={communityBanner.title} className="w-full object-cover" />
+            ) : (
+              <div className="p-4">
+                <p className="text-xs font-semibold text-gold-400">Sponsored</p>
+                <p className="mt-1 text-sm font-medium text-ink-100">{communityBanner.title}</p>
+                {communityBanner.developers?.name && (
+                  <p className="mt-0.5 text-xs text-ink-500">
+                    by {communityBanner.developers.name}
+                  </p>
+                )}
+              </div>
             )}
           </Link>
         )}

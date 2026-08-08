@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
+import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
+import { UploadProgressItem } from "@/components/ui/UploadProgress";
 
 const PLACEMENT_OPTIONS = [
   { value: "homepage_banner", label: "Homepage Banner" },
@@ -47,8 +49,35 @@ export function AdminCreateBannerForm({
   const [targetUrl, setTargetUrl] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadError, setUploadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingFile(file);
+    setUploadPercent(0);
+    setUploadError("");
+
+    const supabase = createClient();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `ad-banners/${Date.now()}-${safeName}`;
+    const { promise } = uploadFileWithProgress("project-media", path, file, setUploadPercent);
+    const { error: uploadErr } = await promise;
+    if (uploadErr) {
+      setUploadError(uploadErr.message);
+      setUploadingFile(null);
+      return;
+    }
+    const { data } = supabase.storage.from("project-media").getPublicUrl(path);
+    setImageUrl(data.publicUrl);
+    setUploadingFile(null);
+  }
 
   const needsProject = placementType === "sponsored_pin" || placementType === "project_page_banner";
   const needsCommunity = placementType === "community_banner";
@@ -62,6 +91,8 @@ export function AdminCreateBannerForm({
     setTargetUrl("");
     setStartsAt("");
     setEndsAt("");
+    setImageUrl("");
+    setUploadingFile(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -90,6 +121,7 @@ export function AdminCreateBannerForm({
         target_url: targetUrl.trim() || null,
         starts_at: startsAt || null,
         ends_at: endsAt || null,
+        image_url: imageUrl || null,
         status: "active",
       })
       .select()
@@ -214,6 +246,49 @@ export function AdminCreateBannerForm({
               placeholder="https://…"
               className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-ink-400">
+              Banner Image (optional)
+            </label>
+            <p className="mb-2 text-[11px] text-ink-500">
+              Uploaded design is shown as the banner instead of the plain text version below.
+            </p>
+            {imageUrl && !uploadingFile && (
+              <div className="mb-2 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt="Banner preview"
+                  className="h-16 w-auto rounded-lg border border-navy-600 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImageUrl("")}
+                  className="flex items-center gap-1 text-xs text-ink-400 hover:text-rose-400"
+                >
+                  <X className="h-3.5 w-3.5" /> Remove
+                </button>
+              </div>
+            )}
+            {uploadingFile && (
+              <div className="mb-2">
+                <UploadProgressItem
+                  fileName={uploadingFile.name}
+                  fileSize={uploadingFile.size}
+                  state={uploadError ? "error" : uploadPercent >= 100 ? "complete" : "uploading"}
+                  percent={uploadPercent}
+                  errorMessage={uploadError || undefined}
+                  onCancel={() => setUploadingFile(null)}
+                />
+              </div>
+            )}
+            <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-navy-600 px-3 py-1.5 text-xs font-medium text-ink-300 hover:text-ink-100">
+              <Upload className="h-3.5 w-3.5" />
+              {imageUrl ? "Replace image" : "Upload image"}
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
           </div>
 
           <div>

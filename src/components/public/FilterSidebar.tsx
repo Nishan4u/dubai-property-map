@@ -78,7 +78,13 @@ export function FilterSidebar({
   handoverYears: number[];
   filters: ProjectFilters;
   onApply: (filters: ProjectFilters) => void;
-  sidebarBanner?: { id: string; title: string; targetUrl: string | null; developerName?: string } | null;
+  sidebarBanner?: {
+    id: string;
+    title: string;
+    targetUrl: string | null;
+    developerName?: string;
+    imageUrl?: string | null;
+  } | null;
   /** Set for logged-in Developer/Salesperson accounts — the results are
    * already locked to this one developer, so the developer picker and the
    * other-developers directory widget are hidden rather than offered as a
@@ -469,12 +475,19 @@ export function FilterSidebar({
       {sidebarBanner && (
         <Link
           href={sidebarBanner.targetUrl ? `/api/ads/click/${sidebarBanner.id}` : "#"}
-          className="block rounded-xl border border-gold-500/30 bg-gold-500/10 p-4 hover:border-gold-500/50"
+          className="block overflow-hidden rounded-xl border border-gold-500/30 bg-gold-500/10 hover:border-gold-500/50"
         >
-          <p className="text-xs font-semibold text-gold-400">Sponsored</p>
-          <p className="mt-1 text-sm font-medium text-ink-100">{sidebarBanner.title}</p>
-          {sidebarBanner.developerName && (
-            <p className="mt-0.5 text-xs text-ink-500">by {sidebarBanner.developerName}</p>
+          {sidebarBanner.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={sidebarBanner.imageUrl} alt={sidebarBanner.title} className="w-full object-cover" />
+          ) : (
+            <div className="p-4">
+              <p className="text-xs font-semibold text-gold-400">Sponsored</p>
+              <p className="mt-1 text-sm font-medium text-ink-100">{sidebarBanner.title}</p>
+              {sidebarBanner.developerName && (
+                <p className="mt-0.5 text-xs text-ink-500">by {sidebarBanner.developerName}</p>
+              )}
+            </div>
           )}
         </Link>
       )}
