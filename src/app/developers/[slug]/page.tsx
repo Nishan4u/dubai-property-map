@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Award, BadgeCheck } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCard } from "@/components/public/ProjectCard";
-import { GatedDetailPlaceholder } from "@/components/public/GatedDetailPlaceholder";
+import { DeveloperPublicSummary } from "@/components/public/DeveloperPublicSummary";
 import { DeveloperReviews } from "@/components/public/DeveloperReviews";
 import { DeveloperContactForm } from "@/components/public/DeveloperContactForm";
 import { ShareButton } from "@/components/public/ShareButton";
@@ -38,10 +38,12 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: { canonical: `/developers/${developer.slug}` },
     openGraph: {
       title,
       description,
       type: "website",
+      url: `/developers/${developer.slug}`,
       ...(developer.logo_url ? { images: [developer.logo_url] } : {}),
     },
   };
@@ -65,16 +67,23 @@ export default async function DeveloperProfilePage({
   const developerName = locale === "ar" && developer.name_ar ? developer.name_ar : developer.name;
   const developerDescription = locale === "ar" && developer.description_ar ? developer.description_ar : developer.description;
 
-  // Same protection as every other project-listing surface (spec sections
-  // 20-21: "Direct URL" must be protected too, not just the directory).
-  // Guests/unsubscribed viewers get a generic placeholder shell -- the
-  // real developer name/description/awards/reviews never reach the page
-  // payload at all.
+  // Guests/unsubscribed viewers see a real, public-safe summary (name,
+  // logo, description) -- the `developers` table is already publicly
+  // readable at the RLS level for active developers, so this is purely
+  // an app-layer choice of what to render. The project list, awards,
+  // reviews and contact form stay behind the register/subscribe gate
+  // rendered inside DeveloperPublicSummary.
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   if (mapAccessStatus !== "ok") {
     return (
       <PublicShell>
-        <GatedDetailPlaceholder status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="this developer's profile" />
+        <DeveloperPublicSummary
+          developer={developer}
+          developerName={developerName}
+          developerDescription={developerDescription}
+          status={mapAccessStatus}
+          subscriptionHref={subscriptionHref}
+        />
       </PublicShell>
     );
   }
@@ -94,8 +103,21 @@ export default async function DeveloperProfilePage({
   ).length;
   const underConstructionCount = devProjectRows.length - completedCount;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: developerName,
+    description: developerDescription || undefined,
+    url: `https://dubaipropertymap.ae/developers/${developer.slug}`,
+    ...(developer.logo_url ? { logo: developer.logo_url } : {}),
+  };
+
   return (
     <PublicShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mx-auto max-w-6xl px-6 py-10">
         {developerBanner && (
           <Link

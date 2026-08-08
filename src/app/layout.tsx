@@ -21,10 +21,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://dubaipropertymap.ae";
+const SITE_TITLE = "Dubai Property Map | Find Off-Plan & Ready Properties";
+const SITE_DESCRIPTION =
+  "Explore Dubai's premium property market on an interactive map — off-plan launches, ready homes, developers, and communities.";
+
 export const metadata: Metadata = {
-  title: "Dubai Property Map | Find Off-Plan & Ready Properties",
-  description:
-    "Explore Dubai's premium property market on an interactive map — off-plan launches, ready homes, developers, and communities.",
+  // Resolves relative OG/canonical URLs against the real domain (was
+  // unset, so any page not supplying an absolute URL of its own would
+  // fall back to Next.js's default localhost base -- a real gap for
+  // link-unfurling/crawlers, not just a build-time warning).
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: "%s | Dubai Property Map" },
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }],
@@ -37,6 +46,24 @@ export const metadata: Metadata = {
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
+  },
+  // Site-wide OG/Twitter defaults -- individual pages (projects, developers,
+  // communities, blog) already override title/description/images via their
+  // own generateMetadata; this is only the fallback for pages that don't
+  // (homepage, about, faq, etc.) and for og:site_name / og:locale, which no
+  // page-level metadata was setting.
+  openGraph: {
+    siteName: "Dubai Property Map",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    type: "website",
+    locale: "en_AE",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 

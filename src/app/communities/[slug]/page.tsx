@@ -67,7 +67,8 @@ export async function generateMetadata({
   return {
     title,
     description,
-    openGraph: { title, description, type: "website" },
+    alternates: { canonical: `/communities/${community.slug}` },
+    openGraph: { title, description, type: "website", url: `/communities/${community.slug}` },
   };
 }
 
@@ -180,8 +181,26 @@ export default async function CommunityPage({
         attractions: origin ? nearestPoints(origin, poiPoints("attractions"), 3) : [],
       };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Place",
+    name: communityName,
+    description: community.description || undefined,
+    url: `https://dubaipropertymap.ae/communities/${community.slug}`,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: community.region || communityName,
+      addressRegion: "Dubai",
+      addressCountry: "AE",
+    },
+  };
+
   return (
     <PublicShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-navy-700 bg-navy-850 p-6">
           <div>

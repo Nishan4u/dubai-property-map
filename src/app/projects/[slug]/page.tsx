@@ -4,7 +4,7 @@ import { BadgeCheck, Building2, Download, FileText, MapPin, Play, Star } from "l
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectCalculatorsPanel } from "@/components/public/ProjectCalculatorsPanel";
 import { ProjectCard } from "@/components/public/ProjectCard";
-import { GatedDetailPlaceholder } from "@/components/public/GatedDetailPlaceholder";
+import { ProjectPublicSummary } from "@/components/public/ProjectPublicSummary";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
@@ -66,10 +66,12 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: { canonical: `/projects/${project.slug}` },
     openGraph: {
       title,
       description,
       type: "website",
+      url: `/projects/${project.slug}`,
       ...(images.length ? { images } : {}),
     },
   };
@@ -100,15 +102,23 @@ export default async function ProjectDetailsPage({
   const viewerDeveloperId = await getViewerProjectScope();
   if (viewerDeveloperId && preview.developer_id !== viewerDeveloperId) notFound();
 
-  // Same protection as the map/homepage/communities/developer pages (spec
-  // sections 20-22): guests and unsubscribed brokers/salespersons/agencies
-  // get a generic placeholder shell, never the real project fields, so
-  // there's nothing for "view source" or disabling CSS to recover.
+  // Guests and unsubscribed brokers/salespersons/agencies see a real,
+  // public-safe summary (name, developer, community, starting price,
+  // description) sourced only from `projects_public_meta` -- the same
+  // curated view already used for generateMetadata above, which never
+  // contains payment plan, unit types, amenities, gallery, documents or
+  // contact info. Those deeper fields stay behind the register/subscribe
+  // gate rendered inside ProjectPublicSummary.
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   if (mapAccessStatus !== "ok") {
     return (
       <PublicShell>
-        <GatedDetailPlaceholder status={mapAccessStatus} subscriptionHref={subscriptionHref} contentLabel="this project's details" />
+        <ProjectPublicSummary
+          preview={preview}
+          currency={currency}
+          status={mapAccessStatus}
+          subscriptionHref={subscriptionHref}
+        />
       </PublicShell>
     );
   }

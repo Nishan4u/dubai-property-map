@@ -1098,6 +1098,31 @@ section as modules get built out.
   that. The Clients detail view is intentionally scoped to contact info
   + notes only (no tasks/reservations/email-history/communication-log
   parity yet) — a reasonable first pass, not a 1:1 port.
+- SEO hardening (Module 30): fixed a domain typo (`dubaipropertymap.com`
+  hardcoded in `sitemap.ts`/`robots.ts`/the projects JSON-LD instead of
+  the real `.ae` domain), added `ads.txt` for Google AdSense
+  verification, set `metadataBase` + site-wide `openGraph`/`twitter`
+  defaults in the root layout (previously unset, so any page without
+  its own absolute URL fell back to a localhost base), added
+  `alternates.canonical` to Projects/Communities/Developers/Blog, and
+  added `Place`/`Organization` JSON-LD to Communities/Developers
+  (Projects already had `RealEstateListing`).
+- Public project/developer pages now show a real, crawlable summary to
+  guests and unsubscribed viewers instead of a fully generic blurred
+  placeholder — name, developer, community, property type, starting
+  price and description for projects (`ProjectPublicSummary.tsx`,
+  sourced only from the pre-existing `projects_public_meta` safe view);
+  name, logo and description for developers (`DeveloperPublicSummary.tsx`,
+  the `developers` table was already RLS-public for active developers).
+  Both render real JSON-LD too, so search engines and share-link
+  unfurls finally see genuine content on these URLs, not an empty gate.
+  Deeper content — payment plan, unit types, amenities, gallery, video,
+  documents, exact location, contact/enquiry forms, similar projects for
+  projects; full project list, awards, reviews, contact form for
+  developers — still requires registering or subscribing, via a new
+  inline `PublicDetailGateCard` shown below the real summary (replaces
+  `GatedDetailPlaceholder` on just these two routes; the map and every
+  other gated surface are untouched).
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
