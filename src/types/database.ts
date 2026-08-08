@@ -409,6 +409,8 @@ export interface BrokerageRow {
   updated_at: string;
 }
 
+export type DbBrokerVerificationStatus = "none" | "pending_payment" | "active" | "rejected" | "revoked" | "expired";
+
 export interface BrokerRow {
   id: string;
   brokerage_id: string;
@@ -433,12 +435,93 @@ export interface BrokerRow {
   payment_type: DbPaymentType | null;
   approved_at: string | null;
   approved_by: string | null;
+  // Broker Directory & Property Listing Module (patch_127)
+  slug: string;
+  bio: string | null;
+  experience_years: number | null;
+  languages: string[];
+  verification_status: DbBrokerVerificationStatus;
+  verification_expires_at: string | null;
+  featured: boolean;
+  profile_views: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface BrokerWithRelations extends BrokerRow {
   brokerages: BrokerageRow;
+}
+
+// ============ Broker Directory & Property Listing Module (patch_127) ============
+
+export type DbBrokerListingType = "sale" | "rent" | "lease";
+export type DbBrokerListingAvailability = "available" | "under_offer" | "sold" | "rented";
+export type DbBrokerListingModeration = "pending" | "approved" | "rejected" | "archived";
+
+export interface BrokerListingRow {
+  id: string;
+  broker_id: string;
+  slug: string;
+  title: string;
+  property_type: string;
+  listing_type: DbBrokerListingType;
+  price_aed: number;
+  community_id: string | null;
+  location_text: string | null;
+  lat: number | null;
+  lng: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  size_sqft: number | null;
+  description: string | null;
+  amenities: string[];
+  availability_status: DbBrokerListingAvailability;
+  moderation_status: DbBrokerListingModeration;
+  rejection_reason: string | null;
+  whatsapp: string | null;
+  views: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrokerProjectLinkRow {
+  id: string;
+  broker_id: string;
+  project_id: string;
+  created_at: string;
+}
+
+export interface BrokerProjectEnquiryRow {
+  id: string;
+  broker_id: string;
+  project_id: string;
+  created_by: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  message: string | null;
+  created_at: string;
+}
+
+// brokers_public_profile view -- deliberately excludes email/mobile/
+// whatsapp/orn/rera_card_path/stripe fields, see patch_127.
+export interface BrokerPublicProfileRow {
+  id: string;
+  slug: string;
+  full_name: string;
+  photo_url: string | null;
+  bio: string | null;
+  experience_years: number | null;
+  languages: string[];
+  brn: string;
+  verification_status: DbBrokerVerificationStatus;
+  verification_expires_at: string | null;
+  featured: boolean;
+  profile_views: number;
+  created_at: string;
+  brokerage_id: string | null;
+  brokerage_name: string | null;
+  brokerage_verified: boolean | null;
 }
 
 export interface SalespersonRow {

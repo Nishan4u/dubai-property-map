@@ -63,6 +63,19 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      if (session.metadata?.kind === "broker_verification") {
+        const brokerId = session.metadata.broker_id;
+        if (brokerId) {
+          const expiresAt = new Date();
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          await supabase
+            .from("brokers")
+            .update({ verification_status: "active", verification_expires_at: expiresAt.toISOString().slice(0, 10) })
+            .eq("id", brokerId);
+        }
+        break;
+      }
+
       if (session.metadata?.kind === "broker_subscription") {
         const brokerId = session.metadata.broker_id;
         const plan = session.metadata.plan;

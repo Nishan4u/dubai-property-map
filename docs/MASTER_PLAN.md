@@ -1159,6 +1159,50 @@ section as modules get built out.
   line when set. `patch_126` adds one nullable `projects.building_age_
   years int` column — no default, since it's only meaningful for Ready
   listings.
+- Broker Directory & Property Listing Module (new, real estate
+  marketplace layer for individual brokers): brokers can now list their
+  own Sale/Rent/Lease properties (`/broker/listings`, gallery + floor-
+  plan uploads to a new `broker-listing-media` storage bucket, admin
+  moderation queue at `/admin/broker-listings`), add live Developer
+  Projects to their own public profile (`/broker/projects` — ownership
+  stays with the developer; enquiries submitted from the broker's
+  profile go to the broker via a brand-new `broker_project_enquiries`
+  channel, completely separate from the existing developer-facing
+  leads/property_requests/`ProjectEnquiryPanel` flow, which is
+  untouched), and a public Brokers Directory (`/brokers`, search/filter/
+  sort per spec, guest-browsable) + public Broker Profile page
+  (`/brokers/[slug]`, About/Listings/Projects/Contact tabs). Contact
+  info (WhatsApp/phone/email) is withheld from guests server-side —
+  `/api/brokers/[slug]/contact` returns 401 for anyone who isn't a real
+  registered+verified+active account (reuses the exact same
+  `is_verified_active_user()` bar already enforced for leads/bookings,
+  patch_48) — never just hidden client-side; verified live (guest
+  requests genuinely 401, the profile payload never contains the
+  fields). An optional Verified Broker membership (AED 50/year, fee
+  editable via the existing generic `/admin/settings` key-value editor —
+  no new UI needed) is self-serve via Stripe checkout
+  (`/api/broker/verification-checkout`, flat one-time payment mirroring
+  `/api/developer/feature-project-checkout`'s pattern) or admin-granted
+  (`/api/admin/brokers/[id]/verification`: approve/reject/renew/revoke/
+  feature). `brokers_public_profile` is a new curated view (mirrors
+  `projects_public_meta`'s exact philosophy) exposing only safe profile
+  fields — email/mobile/whatsapp/ORN/RERA-card-path/Stripe fields are
+  never in it. `patch_127_broker_directory.sql` (brokers table
+  extensions + `broker_listings`/`broker_project_links`/
+  `broker_project_enquiries` tables + the view; `claim_broker_profile()`
+  re-created with its exact current signature, so the existing broker
+  registration flow is unchanged) and `patch_128_broker_listing_media_
+  storage.sql` (needs a `broker-listing-media` public bucket created in
+  the Supabase dashboard first, same as every other storage patch this
+  project uses). All public-facing reads degrade to empty/null rather
+  than throwing when these aren't migrated yet, matching this session's
+  standing "never crash on missing pre-migration schema" contract.
+  Known, honest scope limits: a restricted (non-full) custom admin role
+  scoped to "Brokers: manage" won't automatically see the new "Broker
+  Listings" nav item without also being granted that specific module key
+  (Module 2's existing app-layer-only enforcement limit, not a new one);
+  gallery/floor-plan uploads use a lean custom picker, not the full
+  category-based `ProjectFileManager.tsx` gallery system projects have.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

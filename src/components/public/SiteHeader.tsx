@@ -211,6 +211,7 @@ export function SiteHeader({
 
 const defaultSecondaryLinks = [
   { label: "Developers", url: "/developers" },
+  { label: "Brokers", url: "/brokers" },
   { label: "Communities", url: "/communities" },
   { label: "New Launches", url: "/?tag=new-launch" },
   { label: "Calculators", url: "/calculators" },

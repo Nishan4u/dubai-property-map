@@ -3,8 +3,17 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { BrokerForceLogoutButton } from "@/components/admin/BrokerForceLogoutButton";
+import { BrokerVerificationPanel } from "@/components/admin/BrokerVerificationPanel";
+import { BrokerListingModerationActions } from "@/components/admin/BrokerListingModerationActions";
 import { createClient } from "@/lib/supabase/server";
-import type { DbBrokerAccountStatus, DbBrokerSubscriptionStatus } from "@/types/database";
+import type { DbBrokerAccountStatus, DbBrokerSubscriptionStatus, DbBrokerListingModeration } from "@/types/database";
+
+const listingModerationTone: Record<DbBrokerListingModeration, "green" | "gold" | "red" | "neutral"> = {
+  pending: "gold",
+  approved: "green",
+  rejected: "red",
+  archived: "neutral",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +42,10 @@ export default async function AdminBrokerDetailPage({ params }: { params: Promis
   const { data: broker } = await supabase.from("brokers").select("*, brokerages(name)").eq("id", id).single();
   if (!broker) notFound();
 
-  const [{ data: sessions }, { data: requests }] = await Promise.all([
+  const [{ data: sessions }, { data: requests }, { data: listings }] = await Promise.all([
     supabase.from("broker_sessions").select("*").eq("broker_id", id).order("created_at", { ascending: false }),
     supabase.from("property_requests").select("request_id, status, created_at, projects(name)").eq("broker_id", id).order("created_at", { ascending: false }),
+    supabase.from("broker_listings").select("*").eq("broker_id", id).order("created_at", { ascending: false }),
   ]);
 
   let reraSignedUrl: string | null = null;
@@ -70,6 +80,31 @@ export default async function AdminBrokerDetailPage({ params }: { params: Promis
           <p className="text-xs text-ink-500">Contact</p>
           <p className="text-sm text-ink-100">{broker.mobile} · {broker.email}</p>
         </div>
+      </div>
+
+      {/* Falls back safely before patch_127 is applied (new columns don't
+          exist yet on the brokers table, so select("*") just omits them
+          rather than erroring -- these defaults keep this page from
+          crashing on undefined instead of "not configured yet"). */}
+      <BrokerVerificationPanel
+        brokerId={id}
+        verificationStatus={broker.verification_status ?? "none"}
+        verificationExpiresAt={broker.verification_expires_at ?? null}
+        featured={broker.featured ?? false}
+      />
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-ink-100">Property Listings ({(listings ?? []).length})</h2>
+        <DataTable
+          columns={[
+            { header: "Title", render: (l) => l.title },
+            { header: "Type", render: (l) => <span className="capitalize">{l.listing_type}</span> },
+            { header: "Price", render: (l) => `AED ${l.price_aed.toLocaleString()}` },
+            { header: "Review", render: (l) => <Badge tone={listingModerationTone[l.moderation_status as DbBrokerListingModeration]}>{l.moderation_status}</Badge> },
+            { header: "Actions", render: (l) => <BrokerListingModerationActions listingId={l.id} /> },
+          ]}
+          rows={listings ?? []}
+        />
       </div>
 
       <div>

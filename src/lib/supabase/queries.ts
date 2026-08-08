@@ -3,7 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { categorySlug, documentCategories } from "@/lib/documentCategories";
 import { exteriorGalleryCategories, gallerySlug, interiorGalleryCategories } from "@/lib/galleryCategories";
 import { getStripe } from "@/lib/stripe";
-import type { ProjectWithRelations } from "@/types/database";
+import type {
+  ProjectWithRelations,
+  DbBrokerVerificationStatus,
+  DbBrokerListingType,
+  BrokerPublicProfileRow,
+} from "@/types/database";
 
 export async function getCurrentProfile() {
   const supabase = await createClient();
@@ -1247,6 +1252,240 @@ export async function getAllBrokersAdmin() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
+  return data ?? [];
+}
+
+// ============================================================
+// Broker Directory & Property Listing Module (patch_127)
+// ============================================================
+
+export interface BrokerDirectoryRow {
+  id: string;
+  slug: string;
+  full_name: string;
+  photo_url: string | null;
+  brokerage_name: string | null;
+  brokerage_verified: boolean;
+  verification_status: DbBrokerVerificationStatus;
+  featured: boolean;
+  profile_views: number;
+  created_at: string;
+  languages: string[];
+  listings_count: number;
+  projects_count: number;
+  /** Distinct community/property-type/listing-type values across this
+   * broker's own approved listings -- powers client-side directory
+   * filtering without a second round-trip per filter. */
+  listingCommunityIds: string[];
+  listingPropertyTypes: string[];
+  listingTypes: DbBrokerListingType[];
+}
+
+// Public Brokers Directory (spec section 3/7) -- reads brokers_public_
+// profile (never the raw brokers table, so contact fields never reach a
+// guest's payload) and merges listing/project counts computed the same
+// way DevelopersPage merges project counts: fetch once, group in JS,
+// rather than a fragile embedded-aggregate query.
+// Degrades to an empty directory before patch_127 is applied (view/tables
+// don't exist yet) -- same "not configured yet, not fabricated, never
+// crash the page" contract as every other optional feature this session.
+export async function getBrokersDirectory(): Promise<BrokerDirectoryRow[]> {
+  const supabase = await createClient();
+  const [{ data: brokers, error }, { data: listings }, { data: links }] = await Promise.all([
+    supabase
+      .from("brokers_public_profile")
+      .select("*")
+      .order("featured", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("broker_listings")
+      .select("broker_id, community_id, property_type, listing_type")
+      .eq("moderation_status", "approved"),
+    supabase.from("broker_project_links").select("broker_id"),
+  ]);
+  if (error) return [];
+
+  const listingsByBroker = new Map<string, { community_id: string | null; property_type: string; listing_type: DbBrokerListingType }[]>();
+  for (const row of listings ?? []) {
+    const arr = listingsByBroker.get(row.broker_id) ?? [];
+    arr.push(row);
+    listingsByBroker.set(row.broker_id, arr);
+  }
+  const projectCountMap = new Map<string, number>();
+  for (const row of links ?? []) {
+    projectCountMap.set(row.broker_id, (projectCountMap.get(row.broker_id) ?? 0) + 1);
+  }
+
+  return (brokers ?? []).map((b: BrokerPublicProfileRow) => {
+    const own = listingsByBroker.get(b.id) ?? [];
+    return {
+      id: b.id,
+      slug: b.slug,
+      full_name: b.full_name,
+      photo_url: b.photo_url,
+      brokerage_name: b.brokerage_name,
+      brokerage_verified: b.brokerage_verified ?? false,
+      verification_status: b.verification_status,
+      featured: b.featured,
+      profile_views: b.profile_views,
+      created_at: b.created_at,
+      languages: b.languages ?? [],
+      listings_count: own.length,
+      projects_count: projectCountMap.get(b.id) ?? 0,
+      listingCommunityIds: [...new Set(own.map((l) => l.community_id).filter((v): v is string => Boolean(v)))],
+      listingPropertyTypes: [...new Set(own.map((l) => l.property_type))],
+      listingTypes: [...new Set(own.map((l) => l.listing_type))],
+    };
+  });
+}
+
+// Broker Profile Page (spec section 4) -- public-safe fields only.
+// Degrades to null (404) rather than throwing before patch_127 is applied.
+export async function getBrokerPublicProfile(slug: string): Promise<BrokerPublicProfileRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("brokers_public_profile").select("*").eq("slug", slug).maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+export async function incrementBrokerProfileViews(brokerId: string) {
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("increment_broker_profile_views", { p_id: brokerId });
+  } catch {
+    // Pre-migration or transient error -- never block the profile render.
+  }
+}
+
+export async function getBrokerListingsPublic(brokerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*, communities(name, slug)")
+    .eq("broker_id", brokerId)
+    .eq("moderation_status", "approved")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getBrokerListingBySlugPublic(slug: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*, communities(name, slug), brokers!inner(id, slug, full_name, photo_url, verification_status, brokerage_id, brokerages(name))")
+    .eq("slug", slug)
+    .eq("moderation_status", "approved")
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
+export async function incrementBrokerListingViews(listingId: string) {
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("increment_broker_listing_views", { p_id: listingId });
+  } catch {
+    // Pre-migration or transient error -- never block the listing render.
+  }
+}
+
+// Developer Projects linked to a broker's profile (spec section 2) --
+// joins the same public-safe projects_public_meta view used everywhere
+// else on the guest-facing site, never the RLS-protected full projects
+// table, so a guest browsing a broker's profile never sees more of a
+// project than they would on the project's own page.
+export async function getBrokerProjectLinksPublic(brokerId: string) {
+  const supabase = await createClient();
+  const { data: links, error } = await supabase
+    .from("broker_project_links")
+    .select("id, project_id, created_at")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  if (!links || links.length === 0) return [];
+
+  const { data: previews } = await supabase
+    .from("projects_public_meta")
+    .select("*")
+    .in("id", links.map((l) => l.project_id));
+
+  const previewMap = new Map((previews ?? []).map((p: ProjectPreview) => [p.id, p]));
+  return links
+    .map((l) => ({ linkId: l.id, linkedAt: l.created_at, project: previewMap.get(l.project_id) ?? null }))
+    .filter((row): row is { linkId: string; linkedAt: string; project: ProjectPreview } => row.project !== null);
+}
+
+// ---------- Broker's own portal (My Listings / My Projects) ----------
+
+export async function getBrokerListingsForOwner(brokerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*, communities(name)")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getBrokerListingForOwner(brokerId: string, listingId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*")
+    .eq("broker_id", brokerId)
+    .eq("id", listingId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
+export async function getBrokerProjectLinksForOwner(brokerId: string) {
+  const supabase = await createClient();
+  const { data: links, error } = await supabase
+    .from("broker_project_links")
+    .select("id, project_id, created_at")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  if (!links || links.length === 0) return [];
+
+  const { data: previews } = await supabase
+    .from("projects_public_meta")
+    .select("*")
+    .in("id", links.map((l) => l.project_id));
+
+  const previewMap = new Map((previews ?? []).map((p: ProjectPreview) => [p.id, p]));
+  return links.map((l) => ({ linkId: l.id, linkedAt: l.created_at, project: previewMap.get(l.project_id) ?? null }));
+}
+
+export async function getBrokerProjectEnquiriesForOwner(brokerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_project_enquiries")
+    .select("*, projects(name, slug)")
+    .eq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+// ---------- Admin ----------
+
+export async function getAllBrokerListingsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*, brokers(id, full_name), communities(name)")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
   return data ?? [];
 }
 
