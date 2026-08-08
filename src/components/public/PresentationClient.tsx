@@ -75,7 +75,7 @@ export function PresentationClient({ token }: { token: string }) {
               href={`/projects/${p.slug}`}
               className="overflow-hidden rounded-xl border border-navy-700 bg-navy-850 transition-colors hover:border-gold-500/40"
             >
-              <ProjectThumb gradient={p.gradient} imageUrl={p.coverImageUrl} className="h-40 w-full" />
+              <ProjectThumb gradient={p.gradient} imageUrl={p.coverImageUrl} imageAlt={p.name} className="h-40 w-full" />
               <div className="p-4">
                 <p className="text-sm font-semibold text-ink-100">{p.name}</p>
                 <p className="mt-0.5 truncate text-xs text-ink-400">

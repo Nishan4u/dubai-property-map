@@ -38,7 +38,11 @@ export function ProjectCard({
       <ProjectThumb
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
+        imageAlt={
+          communityName ? `${project.name} in ${communityName}, Dubai` : `${project.name}, Dubai`
+        }
         logoUrl={project.logoUrl ?? project.developerLogoUrl}
+        logoAlt={developerName ? `${developerName} logo` : ""}
         logoSize="lg"
         className="h-24 w-28 shrink-0 rounded-lg"
       />

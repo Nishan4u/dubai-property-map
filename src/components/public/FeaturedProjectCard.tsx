@@ -60,6 +60,7 @@ export function FeaturedProjectCard({
           <ProjectThumb
             gradient={project.gradient}
             imageUrl={project.coverImageUrl}
+            imageAlt={project.name}
             logoUrl={project.logoUrl ?? project.developerLogoUrl}
             logoSize="sm"
             className="h-10 w-10 shrink-0 rounded-lg"
@@ -108,6 +109,7 @@ export function FeaturedProjectCard({
         <ProjectThumb
           gradient={project.gradient}
           imageUrl={project.coverImageUrl}
+          imageAlt={project.name}
           logoUrl={project.logoUrl ?? project.developerLogoUrl}
           className="h-20 w-full sm:h-32"
         />

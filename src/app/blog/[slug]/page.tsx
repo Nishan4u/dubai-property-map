@@ -66,6 +66,7 @@ export default async function BlogPostPage({
       <ProjectThumb
         gradient={post.gradient}
         imageUrl={post.cover_image_url}
+        imageAlt={post.title}
         className="h-56 w-full sm:h-64"
       />
       <div className="mx-auto max-w-2xl px-6 py-10">

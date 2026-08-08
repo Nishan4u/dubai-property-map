@@ -26,6 +26,7 @@ export default async function BlogPage() {
               <ProjectThumb
                 gradient={post.gradient}
                 imageUrl={post.cover_image_url}
+                imageAlt={post.title}
                 className="h-32 w-full"
               />
               <div className="p-4">

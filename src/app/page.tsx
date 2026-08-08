@@ -21,8 +21,38 @@ import { isAdsEnabled } from "@/lib/adsEnabled";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
-  return getCmsMetadata("homepage_hero");
+  const cmsMetadata = await getCmsMetadata("homepage_hero");
+  return { alternates: { canonical: "/" }, ...cmsMetadata };
 }
+
+// Organization + WebSite structured data -- Organization/logo helps Google
+// associate the site with a real business entity (a prerequisite for
+// Knowledge Panel eligibility and for the developer/broker/community pages
+// below to read as "part of" a coherent site rather than orphaned URLs);
+// WebSite's SearchAction is what makes Google eligible to show the
+// sitelinks search box directly in the SERP for this domain. Both are
+// site-wide facts, so they belong on the homepage, not per-page.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Dubai Property Map",
+  url: "https://dubaipropertymap.ae",
+  logo: "https://dubaipropertymap.ae/logo/dubai-property-map-logo.png",
+  description:
+    "Explore Dubai's premium property market on an interactive map — off-plan launches, ready homes, developers, and communities.",
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Dubai Property Map",
+  url: "https://dubaipropertymap.ae",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://dubaipropertymap.ae/projects?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
+};
 
 export default async function Home() {
   // A logged-in Developer or Salesperson only ever sees their own
@@ -95,43 +125,53 @@ export default async function Home() {
     : upcomingProjects;
 
   return (
-    <HomeClient
-      communities={communities}
-      developers={developers}
-      projects={projects}
-      mapAccessStatus={mapAccessStatus}
-      subscriptionHref={subscriptionHref}
-      developerInactiveForSalesperson={developerInactiveForSalesperson}
-      banner={
-        banner && !isSubscribedPortalAccount
-          ? {
-              id: banner.id,
-              title: banner.title,
-              targetUrl: banner.target_url,
-              developerName: banner.developers?.name,
-              imageUrl: banner.image_url,
-            }
-          : null
-      }
-      sidebarBanner={
-        sidebarBanner && !isSubscribedPortalAccount
-          ? {
-              id: sidebarBanner.id,
-              title: sidebarBanner.title,
-              targetUrl: sidebarBanner.target_url,
-              developerName: sidebarBanner.developers?.name,
-              imageUrl: sidebarBanner.image_url,
-            }
-          : null
-      }
-      sponsoredPinIds={Array.from(sponsoredPinIds)}
-      navLinks={navLinks
-        .filter((l) => !viewerDeveloperId || l.url !== "/developers")
-        .map((l) => ({ label: l.label, url: l.url }))}
-      viewerDeveloperId={viewerDeveloperId}
-      sliderClickBehavior={sliderClickBehavior}
-      upcomingProjects={scopedUpcomingProjects}
-      adsEnabled={adsEnabled && !isSubscribedPortalAccount}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <HomeClient
+        communities={communities}
+        developers={developers}
+        projects={projects}
+        mapAccessStatus={mapAccessStatus}
+        subscriptionHref={subscriptionHref}
+        developerInactiveForSalesperson={developerInactiveForSalesperson}
+        banner={
+          banner && !isSubscribedPortalAccount
+            ? {
+                id: banner.id,
+                title: banner.title,
+                targetUrl: banner.target_url,
+                developerName: banner.developers?.name,
+                imageUrl: banner.image_url,
+              }
+            : null
+        }
+        sidebarBanner={
+          sidebarBanner && !isSubscribedPortalAccount
+            ? {
+                id: sidebarBanner.id,
+                title: sidebarBanner.title,
+                targetUrl: sidebarBanner.target_url,
+                developerName: sidebarBanner.developers?.name,
+                imageUrl: sidebarBanner.image_url,
+              }
+            : null
+        }
+        sponsoredPinIds={Array.from(sponsoredPinIds)}
+        navLinks={navLinks
+          .filter((l) => !viewerDeveloperId || l.url !== "/developers")
+          .map((l) => ({ label: l.label, url: l.url }))}
+        viewerDeveloperId={viewerDeveloperId}
+        sliderClickBehavior={sliderClickBehavior}
+        upcomingProjects={scopedUpcomingProjects}
+        adsEnabled={adsEnabled && !isSubscribedPortalAccount}
+      />
+    </>
   );
 }

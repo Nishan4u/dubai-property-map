@@ -1217,6 +1217,7 @@ export function DubaiMap({
             <ProjectThumb
               gradient={activeProject.gradient}
               imageUrl={activeProject.coverImageUrl}
+              imageAlt={activeProject.name}
               logoUrl={activeProject.logoUrl ?? activeProject.developerLogoUrl}
               className="h-28 w-full"
             />

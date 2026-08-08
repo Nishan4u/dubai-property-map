@@ -27,26 +27,24 @@ export function ProjectPublicSummary({
   status: Exclude<MapAccessStatus, "ok">;
   subscriptionHref: string;
 }) {
+  // Same fix as the full project page's own JSON-LD: "RealEstateListing"
+  // isn't a real schema.org type, so it never actually helped search --
+  // "Product" is what Google's structured data tooling recognizes. This
+  // version specifically matters for SEO since it's what guests and
+  // crawlers (not logged in / not subscribed) actually see on this URL.
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "RealEstateListing",
+    "@type": "Product",
     name: preview.name,
     description: preview.description || undefined,
+    image: preview.cover_image_url || undefined,
     url: `https://dubaipropertymap.ae/projects/${preview.slug}`,
-    ...(preview.community_name
-      ? {
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: preview.community_name,
-            addressRegion: "Dubai",
-            addressCountry: "AE",
-          },
-        }
-      : {}),
     offers: {
       "@type": "Offer",
       price: preview.price_from_aed,
       priceCurrency: "AED",
+      availability: "https://schema.org/InStock",
+      url: `https://dubaipropertymap.ae/projects/${preview.slug}`,
     },
   };
 
@@ -59,6 +57,11 @@ export function ProjectPublicSummary({
       <ProjectThumb
         gradient="from-amber-500/40 via-slate-800 to-slate-950"
         imageUrl={preview.cover_image_url}
+        imageAlt={
+          preview.community_name
+            ? `${preview.name} in ${preview.community_name}, Dubai`
+            : `${preview.name}, Dubai`
+        }
         className="h-64 w-full sm:h-72"
       />
 

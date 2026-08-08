@@ -4,13 +4,21 @@ import { Building2 } from "lucide-react";
 export function ProjectThumb({
   gradient,
   imageUrl,
+  imageAlt = "",
   logoUrl,
+  logoAlt = "",
   logoSize = "md",
   className,
 }: {
   gradient: string;
   imageUrl?: string | null;
+  /** Describes the actual photo (e.g. "Chelsea Residences by DAMAC Properties
+   * in Dubai Marina") -- every caller showing a real project/community/
+   * developer photo should pass this so Google Images can index it;
+   * defaults to "" only for the rare purely-decorative use. */
+  imageAlt?: string;
   logoUrl?: string | null;
+  logoAlt?: string;
   logoSize?: "sm" | "md" | "lg";
   className?: string;
 }) {
@@ -29,7 +37,7 @@ export function ProjectThumb({
       )}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+      <img src={logoUrl} alt={logoAlt} className="h-full w-full object-contain" />
     </div>
   ) : null;
 
@@ -38,7 +46,7 @@ export function ProjectThumb({
       <div className={clsx("relative", className)}>
         <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={imageUrl} alt={imageAlt} className="h-full w-full object-cover" />
         </div>
         {logoBadge}
       </div>

@@ -173,6 +173,7 @@ export function CompareClient({ projects }: { projects: Project[] }) {
                       <ProjectThumb
                         gradient={p.gradient}
                         imageUrl={p.coverImageUrl}
+                        imageAlt={p.name}
                         className="h-20 w-full rounded-lg"
                       />
                       <CompactSelect

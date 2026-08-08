@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { clsx } from "clsx";
 import type { Project, Developer, Community } from "@/types";
@@ -85,7 +86,17 @@ export function AllProjectsClient({
   } | null;
 }) {
   const { currency } = useLocale();
+  const searchParams = useSearchParams();
+  const qParam = searchParams.get("q");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Seeds the search box from ?q=... -- makes /projects?q=... a real,
+  // working search URL rather than just a filtered-in-the-browser state,
+  // which is what the homepage's WebSite/SearchAction structured data
+  // (Google's sitelinks search box) links to.
+  useEffect(() => {
+    if (qParam) setSearchQuery(qParam);
+  }, [qParam]);
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);
   const [sort, setSort] = useState<SortOption>("Featured");
   const [visible, setVisible] = useState(12);

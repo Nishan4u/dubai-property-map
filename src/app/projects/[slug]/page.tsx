@@ -180,23 +180,55 @@ export default async function ProjectDetailsPage({
         ])
       : [];
 
+  // "RealEstateListing" isn't a real schema.org type -- Google's structured
+  // data validator either ignores or flags it, so it was never producing
+  // any actual search benefit. "Product" is the type Google's own guidance
+  // recommends for a priced listing like this (real estate included), and
+  // is what's actually recognized/parsed by Search Console + rich results.
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "RealEstateListing",
+    "@type": "Product",
     name: project.name,
     description: project.description || undefined,
+    image: project.coverImageUrl || undefined,
+    brand: project.developerName ? { "@type": "Brand", name: project.developerName } : undefined,
     url: `https://dubaipropertymap.ae/projects/${project.slug}`,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: community?.name,
-      addressRegion: "Dubai",
-      addressCountry: "AE",
-    },
     offers: {
       "@type": "Offer",
       price: project.priceFromAed,
       priceCurrency: "AED",
+      availability: "https://schema.org/InStock",
+      url: `https://dubaipropertymap.ae/projects/${project.slug}`,
     },
+  };
+
+  // BreadcrumbList is one of the few real-estate-relevant rich results
+  // Google actually renders in the SERP (the "Home > All Projects >
+  // Community > Project" trail instead of the raw URL) -- genuinely worth
+  // adding, unlike the non-standard type above.
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://dubaipropertymap.ae/" },
+      { "@type": "ListItem", position: 2, name: "All Projects", item: "https://dubaipropertymap.ae/projects" },
+      ...(community
+        ? [
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: community.name,
+              item: `https://dubaipropertymap.ae/communities/${community.slug}`,
+            },
+          ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: community ? 4 : 3,
+        name: project.name,
+        item: `https://dubaipropertymap.ae/projects/${project.slug}`,
+      },
+    ],
   };
 
   return (
@@ -205,10 +237,16 @@ export default async function ProjectDetailsPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <ProjectThumb
         gradient={project.gradient}
         imageUrl={project.coverImageUrl}
+        imageAlt={`${project.name} by ${project.developerName} in ${project.communityName}, Dubai`}
         logoUrl={project.logoUrl}
+        logoAlt={`${project.developerName} logo`}
         logoSize="lg"
         className="h-64 w-full sm:h-72"
       />
