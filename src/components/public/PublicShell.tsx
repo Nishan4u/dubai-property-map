@@ -100,11 +100,19 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex justify-end sm:hidden">
-            <LanguageCurrencySwitcher />
+          {/* Search + switcher share one row on mobile instead of each
+             getting its own -- "sm:contents" on both wrappers makes them
+             vanish at sm: and up, so GlobalSearchBox rejoins the header's
+             flex-wrap exactly as before (its own full-width row) and the
+             switcher only ever shows via its other instance further down. */}
+          <div className="flex items-center gap-2 sm:contents">
+            <div className="min-w-0 flex-1 sm:contents">
+              <GlobalSearchBox items={searchItems} />
+            </div>
+            <div className="shrink-0 sm:hidden">
+              <LanguageCurrencySwitcher />
+            </div>
           </div>
-
-          <GlobalSearchBox items={searchItems} />
 
           {/* Favorites + auth are one non-splitting cluster -- at widths
              where the row wraps, flex-wrap can otherwise land them on the

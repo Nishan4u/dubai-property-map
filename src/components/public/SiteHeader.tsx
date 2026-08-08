@@ -77,72 +77,80 @@ export function SiteHeader({
         </div>
       </div>
 
-      <div className="flex justify-end sm:hidden">
-        <LanguageCurrencySwitcher />
-      </div>
-
-      <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
-        <div
-          className={clsx(
-            "flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2",
-            searchDisabled && "pointer-events-none select-none opacity-40 blur-[1px]"
-          )}
-        >
-          <Search className="h-4 w-4 shrink-0 text-ink-500" />
-          <input
-            value={searchDisabled ? "" : (searchQuery ?? "")}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            disabled={searchDisabled}
-            className="w-full bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
-            placeholder="Search projects, communities or developers..."
-          />
-          {!searchDisabled && searchQuery && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => onSearchChange?.("")}
-              className="shrink-0 text-ink-500 hover:text-ink-200"
+      {/* Search + switcher share one row on mobile instead of each getting
+         its own -- "sm:contents" on both wrappers makes them vanish at
+         sm: and up, so the search box rejoins the header's flex-wrap
+         exactly as before and the switcher only ever shows via its other
+         instance further down. */}
+      <div className="flex items-center gap-2 sm:contents">
+        <div className="min-w-0 flex-1 sm:contents">
+          <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[180px] sm:flex-1 md:min-w-[240px]">
+            <div
+              className={clsx(
+                "flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2",
+                searchDisabled && "pointer-events-none select-none opacity-40 blur-[1px]"
+              )}
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        {showResults && (
-          <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-96 overflow-y-auto rounded-lg border border-navy-700 bg-navy-900 shadow-2xl">
-            {searchResults!.length === 0 ? (
-              <p className="px-3 py-3 text-xs text-ink-500">
-                No projects match &quot;{searchQuery}&quot;.
-              </p>
-            ) : (
-              searchResults!.slice(0, 8).map((project) => (
+              <Search className="h-4 w-4 shrink-0 text-ink-500" />
+              <input
+                value={searchDisabled ? "" : (searchQuery ?? "")}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                disabled={searchDisabled}
+                className="w-full bg-transparent text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                placeholder="Search projects, communities or developers..."
+              />
+              {!searchDisabled && searchQuery && (
                 <button
-                  key={project.id}
-                  onClick={() => onSelectResult?.(project)}
-                  className="flex w-full items-center gap-3 border-b border-navy-800 px-3 py-2 text-left last:border-b-0 hover:bg-navy-800"
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onSearchChange?.("")}
+                  className="shrink-0 text-ink-500 hover:text-ink-200"
                 >
-                  <ProjectThumb
-                    gradient={project.gradient}
-                    imageUrl={project.coverImageUrl}
-                    logoUrl={project.logoUrl ?? project.developerLogoUrl}
-                    logoSize="sm"
-                    className="h-10 w-10 shrink-0 rounded-lg"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink-100">
-                      {project.name}
-                    </span>
-                    <span className="block truncate text-xs text-ink-500">
-                      {project.communityName}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold text-gold-400">
-                    {formatPrice(project.priceFromAed)}
-                  </span>
+                  <X className="h-3.5 w-3.5" />
                 </button>
-              ))
+              )}
+            </div>
+            {showResults && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-96 overflow-y-auto rounded-lg border border-navy-700 bg-navy-900 shadow-2xl">
+                {searchResults!.length === 0 ? (
+                  <p className="px-3 py-3 text-xs text-ink-500">
+                    No projects match &quot;{searchQuery}&quot;.
+                  </p>
+                ) : (
+                  searchResults!.slice(0, 8).map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => onSelectResult?.(project)}
+                      className="flex w-full items-center gap-3 border-b border-navy-800 px-3 py-2 text-left last:border-b-0 hover:bg-navy-800"
+                    >
+                      <ProjectThumb
+                        gradient={project.gradient}
+                        imageUrl={project.coverImageUrl}
+                        logoUrl={project.logoUrl ?? project.developerLogoUrl}
+                        logoSize="sm"
+                        className="h-10 w-10 shrink-0 rounded-lg"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-ink-100">
+                          {project.name}
+                        </span>
+                        <span className="block truncate text-xs text-ink-500">
+                          {project.communityName}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-xs font-semibold text-gold-400">
+                        {formatPrice(project.priceFromAed)}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
+        <div className="shrink-0 sm:hidden">
+          <LanguageCurrencySwitcher />
+        </div>
       </div>
 
       <div className="flex w-full items-center gap-2 sm:contents">
