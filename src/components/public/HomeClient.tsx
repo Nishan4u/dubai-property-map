@@ -155,8 +155,8 @@ export function HomeClient({
   // data-full-width-responsive unit) walks up the DOM from the ad and, to
   // make sure its own box isn't clipped, mutates ancestor elements -- in
   // practice this means it stamps `style="height: auto !important;"`
-  // directly onto this root div, overriding the h-screen it needs to stay
-  // pinned to the viewport. That inline !important always wins over any
+  // directly onto this root div, overriding the fixed height it needs to
+  // stay pinned to the viewport. That inline !important always wins over any
   // CSS rule we could add here, so the only real fix is to strip it back
   // out the moment AdSense (or anything else) sets it -- this div never
   // sets its own inline style anywhere in this component, so any `style`
@@ -501,14 +501,23 @@ export function HomeClient({
         // min-h-0 is required here: this div is itself a flex child of
         // <body> (layout.tsx's "flex flex-col"), so without it the browser's
         // flex "automatic minimum size" rule lets this div grow taller than
-        // its explicit h-screen (100vh) whenever its content's natural
-        // height exceeds the viewport -- which is exactly what started
-        // happening once the homepage AdSense banner + slider pushed total
-        // content height past 100vh, forcing the whole page (and the map
+        // its explicit height whenever its content's natural height
+        // exceeds the viewport -- which is exactly what started happening
+        // once the homepage AdSense banner + slider pushed total content
+        // height past the viewport, forcing the whole page (and the map
         // area below it) to overflow and require scrolling to reach the
         // map's own bottom controls (POI bar, Map/Satellite, fullscreen).
-        "flex min-h-0 flex-col bg-navy-950",
-        simulatedFullscreen ? "fixed inset-0 z-[100] h-[100dvh]" : "h-screen"
+        //
+        // h-dvh (not h-screen/100vh) on both branches: on a real phone or
+        // tablet, the browser's address bar collapses/expands as you
+        // scroll, and 100vh is fixed to the LARGEST possible viewport (bar
+        // hidden) -- so right after a refresh, with the bar still visible,
+        // 100vh is taller than what's actually on screen and the page
+        // needs a scroll to reach the bottom controls. 100dvh tracks the
+        // real, current visible height instead, exactly like the existing
+        // simulatedFullscreen branch already did.
+        "flex min-h-0 flex-col bg-navy-950 h-dvh",
+        simulatedFullscreen && "fixed inset-0 z-[100]"
       )}
     >
       <SiteHeader

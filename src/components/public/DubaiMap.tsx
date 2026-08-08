@@ -34,6 +34,10 @@ import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+// The map's initial view on load -- also what "Reset view" (the compass
+// button) should return to. Named once and reused in both places so they
+// can never drift apart again.
+const DUBAI_DEFAULT_VIEW = { center: [55.24, 25.15] as [number, number], zoom: 10.5, pitch: 55, bearing: -17 };
 const POI_SOURCE_ID = "poi-source";
 const LINE_SOURCE_ID = "poi-lines-source";
 const HEAT_SOURCE_ID = "heat-source";
@@ -202,10 +206,10 @@ export function DubaiMap({
       const map = new mapboxgl.default.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/dark-v11",
-        center: [55.24, 25.15],
-        zoom: 10.5,
-        pitch: 55,
-        bearing: -17,
+        center: DUBAI_DEFAULT_VIEW.center,
+        zoom: DUBAI_DEFAULT_VIEW.zoom,
+        pitch: DUBAI_DEFAULT_VIEW.pitch,
+        bearing: DUBAI_DEFAULT_VIEW.bearing,
         antialias: true,
         attributionControl: false,
         // Explicit (matches Mapbox defaults) so rotation always works via a
@@ -912,7 +916,11 @@ export function DubaiMap({
 
   function handleResetView() {
     if (mapRef.current) {
-      mapRef.current.easeTo({ pitch: 55, bearing: -17, zoom: 10.5, duration: 600 });
+      // Previously only reset pitch/bearing/zoom, never `center` -- so
+      // after panning away while zoomed in, "Reset view" untilted and
+      // unrotated the map but left it wherever it had been panned to
+      // instead of actually bringing Dubai back into view.
+      mapRef.current.easeTo({ ...DUBAI_DEFAULT_VIEW, duration: 600 });
     } else {
       setZoom(1);
     }
