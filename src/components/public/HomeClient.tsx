@@ -151,6 +151,28 @@ export function HomeClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tagParam]);
 
+  // Google's AdSense script (loaded for the homepage banner's
+  // data-full-width-responsive unit) walks up the DOM from the ad and, to
+  // make sure its own box isn't clipped, mutates ancestor elements -- in
+  // practice this means it stamps `style="height: auto !important;"`
+  // directly onto this root div, overriding the h-screen it needs to stay
+  // pinned to the viewport. That inline !important always wins over any
+  // CSS rule we could add here, so the only real fix is to strip it back
+  // out the moment AdSense (or anything else) sets it -- this div never
+  // sets its own inline style anywhere in this component, so any `style`
+  // attribute found on it is always an unwanted third-party side effect.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const stripInjectedStyle = () => {
+      if (el.getAttribute("style")) el.removeAttribute("style");
+    };
+    stripInjectedStyle();
+    const observer = new MutationObserver(stripInjectedStyle);
+    observer.observe(el, { attributes: true, attributeFilter: ["style"] });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const onChange = () => {
       if (document.fullscreenElement === rootRef.current) {
@@ -476,7 +498,16 @@ export function HomeClient({
     <div
       ref={rootRef}
       className={clsx(
-        "flex flex-col bg-navy-950",
+        // min-h-0 is required here: this div is itself a flex child of
+        // <body> (layout.tsx's "flex flex-col"), so without it the browser's
+        // flex "automatic minimum size" rule lets this div grow taller than
+        // its explicit h-screen (100vh) whenever its content's natural
+        // height exceeds the viewport -- which is exactly what started
+        // happening once the homepage AdSense banner + slider pushed total
+        // content height past 100vh, forcing the whole page (and the map
+        // area below it) to overflow and require scrolling to reach the
+        // map's own bottom controls (POI bar, Map/Satellite, fullscreen).
+        "flex min-h-0 flex-col bg-navy-950",
         simulatedFullscreen ? "fixed inset-0 z-[100] h-[100dvh]" : "h-screen"
       )}
     >

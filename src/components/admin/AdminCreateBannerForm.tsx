@@ -15,6 +15,8 @@ const PLACEMENT_OPTIONS = [
   { value: "community_banner", label: "Community Banner (needs a community)" },
   { value: "project_page_banner", label: "Project Page Banner (needs a project)" },
   { value: "developer_page_banner", label: "Developer Page Banner" },
+  { value: "projects_infeed_banner", label: "Projects Listing In-Feed" },
+  { value: "blog_inarticle_banner", label: "Blog Post In-Article" },
 ];
 
 interface Option {

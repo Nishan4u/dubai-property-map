@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { clsx } from "clsx";
 import type { Project, Developer, Community } from "@/types";
@@ -61,6 +62,7 @@ export function AllProjectsClient({
   subscriptionHref,
   viewerDeveloperId,
   adsEnabled = true,
+  inFeedBanner = null,
 }: {
   projects: Project[];
   developers: Developer[];
@@ -71,6 +73,16 @@ export function AllProjectsClient({
   /** Admin's AdSense on/off switch (/admin/settings) -- resolved
    * server-side by the parent page via isAdsEnabled(). */
   adsEnabled?: boolean;
+  /** Admin-uploaded custom banner image for the same in-feed slot -- runs
+   * independently of adsEnabled, same as the homepage banner strip
+   * running alongside (not instead of) the homepage AdSense unit. */
+  inFeedBanner?: {
+    id: string;
+    title: string;
+    targetUrl: string | null;
+    developerName?: string;
+    imageUrl?: string | null;
+  } | null;
 }) {
   const { currency } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
@@ -262,9 +274,34 @@ export function AllProjectsClient({
                   {sortedProjects.slice(0, visible).map((project, i) => (
                     <Fragment key={project.id}>
                       <ProjectCard project={project} />
-                      {adsEnabled && (i + 1) % IN_FEED_EVERY === 0 && (
-                        <div className="col-span-full">
-                          <AdUnit slot={AD_SLOTS.projectsListingInFeed} format="horizontal" />
+                      {(i + 1) % IN_FEED_EVERY === 0 && (
+                        <div className="col-span-full space-y-3">
+                          {inFeedBanner && (
+                            <Link
+                              href={inFeedBanner.targetUrl ? `/api/ads/click/${inFeedBanner.id}` : "#"}
+                              className="block overflow-hidden rounded-xl border border-gold-500/30 bg-gold-500/10 hover:border-gold-500/50"
+                            >
+                              {inFeedBanner.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={inFeedBanner.imageUrl}
+                                  alt={inFeedBanner.title}
+                                  className="h-24 w-full object-cover sm:h-28"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-3 p-4">
+                                  <div>
+                                    <p className="text-xs font-semibold text-gold-400">Sponsored</p>
+                                    <p className="mt-1 text-sm font-medium text-ink-100">{inFeedBanner.title}</p>
+                                    {inFeedBanner.developerName && (
+                                      <p className="mt-0.5 text-xs text-ink-500">by {inFeedBanner.developerName}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </Link>
+                          )}
+                          {adsEnabled && <AdUnit slot={AD_SLOTS.projectsListingInFeed} format="horizontal" />}
                         </div>
                       )}
                     </Fragment>

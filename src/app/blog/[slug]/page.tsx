@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { isAdsEnabled } from "@/lib/adsEnabled";
-import { getBlogPostBySlug } from "@/lib/supabase/queries";
+import { getActiveBlogInArticleBanner, getBlogPostBySlug } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,11 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [post, adsEnabled] = await Promise.all([getBlogPostBySlug(slug), isAdsEnabled()]);
+  const [post, adsEnabled, inArticleBanner] = await Promise.all([
+    getBlogPostBySlug(slug),
+    isAdsEnabled(),
+    getActiveBlogInArticleBanner(),
+  ]);
   if (!post || !post.published) notFound();
 
   // Every existing blog post was seeded with literal "\n" (backslash + n)
@@ -73,6 +78,29 @@ export default async function BlogPostPage({
         </div>
         {secondHalf && (
           <>
+            {inArticleBanner && (
+              <Link
+                href={inArticleBanner.target_url ? `/api/ads/click/${inArticleBanner.id}` : "#"}
+                className="my-6 block overflow-hidden rounded-xl border border-gold-500/30 bg-gold-500/10 hover:border-gold-500/50"
+              >
+                {inArticleBanner.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={inArticleBanner.image_url}
+                    alt={inArticleBanner.title}
+                    className="h-24 w-full object-cover sm:h-28"
+                  />
+                ) : (
+                  <div className="p-4">
+                    <p className="text-xs font-semibold text-gold-400">Sponsored</p>
+                    <p className="mt-1 text-sm font-medium text-ink-100">{inArticleBanner.title}</p>
+                    {inArticleBanner.developers?.name && (
+                      <p className="mt-0.5 text-xs text-ink-500">by {inArticleBanner.developers.name}</p>
+                    )}
+                  </div>
+                )}
+              </Link>
+            )}
             {adsEnabled && (
               <AdUnit slot={AD_SLOTS.blogPostInArticle} format="fluid" layout="in-article" className="my-6" />
             )}

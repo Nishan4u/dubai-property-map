@@ -1,6 +1,7 @@
 import { PublicShell } from "@/components/public/PublicShell";
 import { AllProjectsClient } from "@/components/public/AllProjectsClient";
 import {
+  getActiveProjectsInFeedBanner,
   getCommunities,
   getDevelopers,
   getMapAccessStatus,
@@ -30,13 +31,14 @@ export default async function AllProjectsPage() {
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const { blocked: developerInactiveForSalesperson } = await getSalespersonDeveloperAccess();
 
-  const [communityRows, developerRows, projectRows, adsEnabled] = await Promise.all([
+  const [communityRows, developerRows, projectRows, adsEnabled, inFeedBanner] = await Promise.all([
     getCommunities(),
     getDevelopers(),
     mapAccessStatus === "ok" && !developerInactiveForSalesperson
       ? getPublishedProjects(viewerDeveloperId ?? undefined)
       : Promise.resolve([]),
     isAdsEnabled(),
+    getActiveProjectsInFeedBanner(),
   ]);
 
   return (
@@ -49,6 +51,17 @@ export default async function AllProjectsPage() {
         subscriptionHref={subscriptionHref}
         viewerDeveloperId={viewerDeveloperId}
         adsEnabled={adsEnabled}
+        inFeedBanner={
+          inFeedBanner
+            ? {
+                id: inFeedBanner.id,
+                title: inFeedBanner.title,
+                targetUrl: inFeedBanner.target_url,
+                developerName: inFeedBanner.developers?.name,
+                imageUrl: inFeedBanner.image_url,
+              }
+            : null
+        }
       />
     </PublicShell>
   );

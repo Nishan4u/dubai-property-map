@@ -1646,6 +1646,37 @@ export async function getActiveDeveloperBanner(developerId: string) {
   return data;
 }
 
+// Custom-image equivalent of AD_SLOTS.projectsListingInFeed -- a single
+// global placement (not scoped to a project), shown alongside the AdSense
+// in-feed unit rather than replacing it, same as how the homepage banner
+// and the homepage AdSense unit already run side by side.
+export async function getActiveProjectsInFeedBanner() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ad_placements")
+    .select("*, developers(name)")
+    .eq("placement_type", "projects_infeed_banner")
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  return data;
+}
+
+// Custom-image equivalent of AD_SLOTS.blogPostInArticle.
+export async function getActiveBlogInArticleBanner() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ad_placements")
+    .select("*, developers(name)")
+    .eq("placement_type", "blog_inarticle_banner")
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  return data;
+}
+
 export async function getSubscriptionPlans() {
   const supabase = await createClient();
   const { data, error } = await supabase

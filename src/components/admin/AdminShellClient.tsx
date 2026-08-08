@@ -36,6 +36,7 @@ import {
   KeySquare,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
+import { AdminQuickSearch } from "@/components/admin/AdminQuickSearch";
 
 const navItems = [
   { label: "Dashboard", href: "", icon: BarChart3 },
@@ -93,6 +94,14 @@ export function AdminShellClient({
 }) {
   const allowed = new Set(visibleModuleKeys);
   const filteredNavItems = navItems.filter((item) => allowed.has(item.href.replace(/^\//, "") || "dashboard"));
+  // Same allowed-modules filter as the sidebar itself, so a restricted
+  // admin (custom_role_id set) never sees a search result for a function
+  // hidden from their nav.
+  const quickSearchItems = filteredNavItems.map((item) => ({
+    label: item.label,
+    href: `/admin${item.href}`,
+    icon: item.icon,
+  }));
 
   return (
     <DashboardShell
@@ -102,6 +111,7 @@ export function AdminShellClient({
       navItems={filteredNavItems}
       userLabel={userLabel}
       userRole={userRole}
+      headerExtra={<AdminQuickSearch items={quickSearchItems} />}
     >
       {children}
     </DashboardShell>

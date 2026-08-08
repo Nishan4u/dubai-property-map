@@ -25,6 +25,7 @@ export function DashboardShell({
   navItems,
   userLabel,
   userRole,
+  headerExtra,
   children,
 }: {
   brandLabel: string;
@@ -33,6 +34,11 @@ export function DashboardShell({
   navItems: NavItem[];
   userLabel: string;
   userRole: string;
+  /** Optional extra control rendered in the header, before the "Back to
+   * Public Website" link -- e.g. the admin portal's quick-search trigger.
+   * Every other portal simply doesn't pass this, so their header is
+   * byte-identical to before. */
+  headerExtra?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -122,6 +128,7 @@ export function DashboardShell({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {headerExtra}
             <Link
               href="/"
               className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-sm font-medium text-gold-400 hover:bg-gold-500/20"
