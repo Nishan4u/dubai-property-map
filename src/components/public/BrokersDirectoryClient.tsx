@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import { clsx } from "clsx";
 import { BrokerCard } from "@/components/public/BrokerCard";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import type { BrokerDirectoryRow } from "@/lib/supabase/queries";
@@ -30,6 +31,19 @@ export function BrokersDirectoryClient({ brokers, communities }: { brokers: Brok
   const [language, setLanguage] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("featured");
+  // Collapsed by default below lg (matches AllProjectsClient.tsx's
+  // FilterSidebar toggle) -- on mobile the Community/Property Type/
+  // Language/Verified/listing-type block is a wall of controls before any
+  // broker card is visible. Always shown at lg and up (unchanged desktop
+  // behavior).
+  const [showFilters, setShowFilters] = useState(false);
+
+  const activeFilterCount =
+    (communityId ? 1 : 0) +
+    (propertyType ? 1 : 0) +
+    (language ? 1 : 0) +
+    (verifiedOnly ? 1 : 0) +
+    listingTypeFilters.size;
 
   function toggleListingType(t: "sale" | "rent" | "lease") {
     setListingTypeFilters((prev) => {
@@ -92,35 +106,53 @@ export function BrokersDirectoryClient({ brokers, communities }: { brokers: Brok
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <CompactSelect
-          label="Community"
-          placeholder="Any Community"
-          value={communityId}
-          onChange={setCommunityId}
-          options={communities.map((c) => ({ label: c.name, value: c.id }))}
-        />
-        <CompactSelect
-          label="Property Type"
-          placeholder="Any Type"
-          value={propertyType}
-          onChange={setPropertyType}
-          options={propertyTypeOptions.map((v) => ({ label: v, value: v }))}
-        />
-        <CompactSelect label="Language" placeholder="Any Language" value={language} onChange={setLanguage} options={languageOptions.map((l) => ({ label: l, value: l }))} />
-        <label className="flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2.5 text-xs text-ink-300">
-          <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="accent-gold-500" />
-          Verified Brokers Only
-        </label>
-      </div>
+      <button
+        onClick={() => setShowFilters((v) => !v)}
+        className="mt-3 flex w-full items-center justify-between rounded-lg border border-navy-700 bg-navy-850 px-4 py-2.5 text-sm font-medium text-ink-200 lg:hidden"
+      >
+        <span className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-gold-400" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-semibold text-navy-950">
+              {activeFilterCount}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={clsx("h-4 w-4 shrink-0 transition-transform", showFilters && "rotate-180")} />
+      </button>
 
-      <div className="mt-3 flex gap-4 text-xs text-ink-300">
-        {(["sale", "rent", "lease"] as const).map((t) => (
-          <label key={t} className="flex items-center gap-1.5 capitalize">
-            <input type="checkbox" checked={listingTypeFilters.has(t)} onChange={() => toggleListingType(t)} className="accent-gold-500" />
-            {t}
+      <div className={clsx(showFilters ? "block" : "hidden", "lg:block")}>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <CompactSelect
+            label="Community"
+            placeholder="Any Community"
+            value={communityId}
+            onChange={setCommunityId}
+            options={communities.map((c) => ({ label: c.name, value: c.id }))}
+          />
+          <CompactSelect
+            label="Property Type"
+            placeholder="Any Type"
+            value={propertyType}
+            onChange={setPropertyType}
+            options={propertyTypeOptions.map((v) => ({ label: v, value: v }))}
+          />
+          <CompactSelect label="Language" placeholder="Any Language" value={language} onChange={setLanguage} options={languageOptions.map((l) => ({ label: l, value: l }))} />
+          <label className="flex items-center gap-2 rounded-lg border border-navy-700 bg-navy-850 px-3 py-2.5 text-xs text-ink-300">
+            <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="accent-gold-500" />
+            Verified Brokers Only
           </label>
-        ))}
+        </div>
+
+        <div className="mt-3 flex gap-4 text-xs text-ink-300">
+          {(["sale", "rent", "lease"] as const).map((t) => (
+            <label key={t} className="flex items-center gap-1.5 capitalize">
+              <input type="checkbox" checked={listingTypeFilters.has(t)} onChange={() => toggleListingType(t)} className="accent-gold-500" />
+              {t}
+            </label>
+          ))}
+        </div>
       </div>
 
       <p className="mt-4 text-xs text-ink-500">
