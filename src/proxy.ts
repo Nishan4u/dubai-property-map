@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/lib/supabase/proxy";
 import { DEVICE_TOKEN_COOKIE, hashToken } from "@/lib/broker/session";
+import { extractAgencyStorefrontSubdomain } from "@/lib/agencySubdomain";
 
 interface RedirectEntry {
   to_path: string;
@@ -29,42 +30,16 @@ async function getRedirects() {
   return redirectsCache;
 }
 
-// Agency White-Label Storefront: dubaipropertymap.ae is hardcoded
-// throughout the codebase already (see the JSON-LD in src/app/page.tsx
-// and src/app/projects/[slug]/page.tsx) -- following that same existing
-// convention rather than introducing a new env var this late.
-const ROOT_DOMAIN = "dubaipropertymap.ae";
-
-// Mirrors the reserved-word check constraint in
-// supabase/patch_135_agency_storefront.sql exactly -- these hostnames
-// can never be claimed as an agency subdomain, so a request to one of
-// them always falls through to normal routing (whatever it's used for
-// today or in the future) instead of being hijacked into the storefront
-// "not found" page. Every OTHER subdomain of dubaipropertymap.ae gets
+// Agency White-Label Storefront -- subdomain detection lives in
+// src/lib/agencySubdomain.ts (shared with client components that also
+// need it; see that file's header comment for why). Every OTHER
+// subdomain of dubaipropertymap.ae besides the reserved words gets
 // rewritten to the storefront route regardless of whether it was ever
 // actually claimed -- the destination page does its own service-role
 // lookup and renders a clean not-found state, exactly like a stale
 // /present/[token] or /l/[slug] link does today. This intentionally
 // avoids an extra Supabase round-trip on every single request just to
 // answer a question the destination page re-derives anyway.
-const RESERVED_SUBDOMAINS = new Set([
-  "www", "api", "admin", "app", "mail", "staging", "dev", "ftp", "cdn",
-  "static", "blog", "help", "support", "status", "docs", "dashboard",
-  "portal", "my", "secure",
-]);
-
-// Returns the agency-candidate subdomain for this request's Host header,
-// or null when it's the apex/www host, a reserved word, localhost (dev),
-// or a deeper-than-one-level hostname this feature doesn't support.
-function getTenantSubdomain(request: NextRequest): string | null {
-  const host = request.headers.get("host");
-  if (!host) return null;
-  const hostname = host.split(":")[0].toLowerCase();
-  if (!hostname.endsWith(`.${ROOT_DOMAIN}`)) return null;
-  const sub = hostname.slice(0, hostname.length - ROOT_DOMAIN.length - 1);
-  if (!sub || sub.includes(".") || RESERVED_SUBDOMAINS.has(sub)) return null;
-  return sub;
-}
 
 interface AdminIpCache {
   enabled: boolean;
@@ -229,7 +204,7 @@ export async function proxy(request: NextRequest) {
   // ads, subscription gates, admin IP allowlist), none of which apply to
   // a tenant subdomain. A pure no-op for the normal dubaipropertymap.ae/
   // www host and for local dev (localhost never matches ROOT_DOMAIN).
-  const tenantSubdomain = getTenantSubdomain(request);
+  const tenantSubdomain = extractAgencyStorefrontSubdomain(request.headers.get("host"));
   // API routes must never be rewritten -- the storefront page's own
   // client-side fetch("/api/agency-storefront/...") runs on this same
   // tenant host and would otherwise get caught by this same rewrite,

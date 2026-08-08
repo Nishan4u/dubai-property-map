@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Download, X } from "lucide-react";
+import { extractAgencyStorefrontSubdomain } from "@/lib/agencySubdomain";
 
 const STORAGE_KEY = "dpm_install_prompt_dismissed";
 
@@ -24,10 +25,16 @@ export function InstallAppPrompt() {
     // Never on the Developer Embeddable Map Widget -- that route renders
     // inside an <iframe> on someone else's website, where a
     // "install this app" prompt would be a broken, out-of-place intrusion.
-    // Never on a shared, branded agent presentation or an agency's
-    // white-label storefront either -- those pages are meant to read as
-    // the agent's/agency's own material, not ours.
-    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present") || pathname?.startsWith("/agency-storefront")) return;
+    // Never on a shared, branded agent presentation either -- that page is
+    // meant to read as the agent's own material, not ours.
+    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present")) return;
+
+    // Agency White-Label Storefront pages are reached via a middleware
+    // rewrite (src/proxy.ts), invisible to the browser -- pathname here
+    // still reflects the original request path, never the rewritten
+    // destination, so this needs the hostname instead. See
+    // src/lib/agencySubdomain.ts.
+    if (extractAgencyStorefrontSubdomain(window.location.hostname)) return;
 
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;

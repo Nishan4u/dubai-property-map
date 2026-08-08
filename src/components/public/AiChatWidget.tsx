@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { Mic, MessageCircle, Send, Volume2, VolumeX, X } from "lucide-react";
 import { PROJECTS_TRAILER_MARKER } from "@/lib/ai/shared";
 import { useSpeechRecognition, useSpeechSynthesis } from "@/lib/ai/useVoice";
+import { extractAgencyStorefrontSubdomain } from "@/lib/agencySubdomain";
 import type { AssistantProjectResult } from "@/lib/supabase/queries";
 
 interface ChatMessage {
@@ -35,9 +36,6 @@ const HIDDEN_PATH_PREFIXES = [
   // to create, and it's also outside the buyer-facing catalogue this
   // widget searches.
   "/present",
-  // Same reasoning for an agency's white-label storefront -- served on
-  // the agency's own subdomain, meant to read as their page, not ours.
-  "/agency-storefront",
 ];
 
 function formatPrice(aed: number): string {
@@ -109,7 +107,13 @@ export function AiChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  // Agency White-Label Storefront pages are reached via a middleware
+  // rewrite (src/proxy.ts), which is invisible to the browser -- pathname
+  // here still reflects the original request path (e.g. "/"), never the
+  // rewritten "/agency-storefront/[sub]" destination, so this needs the
+  // hostname instead of a path prefix. See src/lib/agencySubdomain.ts.
   if (HIDDEN_PATH_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
+  if (typeof window !== "undefined" && extractAgencyStorefrontSubdomain(window.location.hostname)) return null;
 
   function sendMessage(e: React.FormEvent) {
     e.preventDefault();

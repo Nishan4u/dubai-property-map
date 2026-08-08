@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { extractAgencyStorefrontSubdomain } from "@/lib/agencySubdomain";
 
 const STORAGE_KEY = "dpm_push_prompt_dismissed";
 
@@ -27,10 +28,16 @@ export function PushNotificationPrompt() {
   const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
-    // Never on the Developer Embeddable Map Widget, a shared branded
-    // agent presentation, or an agency's white-label storefront -- see
-    // InstallAppPrompt's identical guard for why.
-    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present") || pathname?.startsWith("/agency-storefront")) return;
+    // Never on the Developer Embeddable Map Widget, or a shared branded
+    // agent presentation -- see InstallAppPrompt's identical guard for why.
+    if (pathname?.startsWith("/embed") || pathname?.startsWith("/present")) return;
+
+    // Agency White-Label Storefront pages are reached via a middleware
+    // rewrite (src/proxy.ts), invisible to the browser -- pathname here
+    // still reflects the original request path, never the rewritten
+    // destination, so this needs the hostname instead. See
+    // src/lib/agencySubdomain.ts.
+    if (extractAgencyStorefrontSubdomain(window.location.hostname)) return;
 
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;
