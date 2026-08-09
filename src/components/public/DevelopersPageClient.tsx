@@ -56,6 +56,10 @@ export function DevelopersPageClient({
           <Link
             key={dev.id}
             href={`/developers/${dev.slug}`}
+            // Same reasoning as ProjectCard -- rendered in grids of a
+            // dozen+ above the fold, so prefetch={false} avoids a full
+            // server-rendered fetch per card per page load.
+            prefetch={false}
             className={`relative rounded-xl border p-5 transition-colors hover:border-gold-500/40 ${
               dev.featured ? "border-gold-500/50 bg-gold-500/[0.03]" : "border-navy-700 bg-navy-850"
             }`}

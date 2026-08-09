@@ -28,6 +28,13 @@ export function ProjectCard({
   return (
     <Link
       href={`/projects/${project.slug}`}
+      // This card renders in filtered result lists (homepage sidebar,
+      // /projects, community/developer pages) that can show a dozen-plus
+      // at once, all above the fold -- Next's default viewport-triggered
+      // prefetching was firing a full server-rendered /projects/[slug]
+      // fetch for every visible card on every page load, most of them
+      // never clicked. Confirmed live via the network panel.
+      prefetch={false}
       onClick={(e) => {
         if (!onSelect) return;
         e.preventDefault();

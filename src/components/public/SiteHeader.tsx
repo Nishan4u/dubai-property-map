@@ -196,6 +196,7 @@ export function SiteHeader({
         <LanguageCurrencySwitcher />
         <Link
           href="/favorites"
+          prefetch={false}
           className="flex shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100"
         >
           <Heart className="h-4 w-4" />
@@ -203,11 +204,20 @@ export function SiteHeader({
         <AuthStatus />
       </div>
     </header>
+    {/* prefetch={false} on every link in this bar -- always visible
+       above the fold on every load, so Next's default viewport-triggered
+       prefetching was firing a full server-rendered page fetch for all
+       ~7 of these on every single homepage visit (confirmed live via the
+       network panel: /developers, /brokers, /communities, /calculators,
+       /blog, /advertise all fetched in the background within the first
+       second, most of them never clicked). Real navigation still works
+       exactly the same, just without the eager background fetch. */}
     <nav className="hidden items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-3 py-2 text-xs font-medium text-ink-400 sm:flex sm:px-6">
       {navLinks.map((link) => (
         <Link
           key={link.url}
           href={link.url}
+          prefetch={false}
           className="shrink-0 hover:text-ink-100"
         >
           {link.label}

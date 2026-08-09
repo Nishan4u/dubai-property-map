@@ -8,6 +8,10 @@ export function BrokerCard({ broker }: { broker: BrokerDirectoryRow }) {
   return (
     <Link
       href={`/brokers/${broker.slug}`}
+      // Same reasoning as ProjectCard -- rendered in grids of a dozen+
+      // above the fold, so prefetch={false} avoids a full server-
+      // rendered fetch per card per page load.
+      prefetch={false}
       className={`flex flex-col items-center rounded-xl border p-5 text-center transition-colors hover:border-gold-500/40 ${
         broker.featured ? "border-gold-500/50 bg-gold-500/[0.03]" : "border-navy-700 bg-navy-850"
       }`}

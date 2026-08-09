@@ -124,6 +124,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             <LanguageCurrencySwitcher />
             <Link
               href="/favorites"
+              prefetch={false}
               className="flex shrink-0 items-center justify-center rounded-lg border border-navy-700 p-2 text-ink-300 hover:text-ink-100"
             >
               <Heart className="h-4 w-4" />
@@ -131,9 +132,18 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
             <AuthStatus />
           </div>
         </header>
+        {/* prefetch={false} throughout this shell -- it's mounted on
+           every non-homepage public page, and every link here is always
+           visible above the fold, so Next's default viewport-triggered
+           prefetching was firing a full server-rendered page fetch for
+           every nav item, footer link, and (via PartnerDevelopersSlider
+           below) every visible developer icon on every single page
+           load -- confirmed live via the network panel. Real navigation
+           still works exactly the same, just without the eager
+           background fetch. */}
         <nav className="hidden items-center gap-5 overflow-x-auto border-t border-navy-800/80 px-6 py-2 text-xs font-medium text-ink-400 sm:flex">
           {visibleHeaderLinks.map((link) => (
-            <Link key={link.id} href={link.url} className="shrink-0 hover:text-ink-100">
+            <Link key={link.id} href={link.url} prefetch={false} className="shrink-0 hover:text-ink-100">
               {link.label}
             </Link>
           ))}
@@ -146,7 +156,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
           {footerLinks
             .filter((link) => !viewerDeveloperId || link.url !== "/developers")
             .map((link) => (
-              <Link key={link.id} href={link.url} className="hover:text-ink-300">
+              <Link key={link.id} href={link.url} prefetch={false} className="hover:text-ink-300">
                 {link.label}
               </Link>
             ))}

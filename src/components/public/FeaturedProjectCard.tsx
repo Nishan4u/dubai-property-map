@@ -179,6 +179,12 @@ export function FeaturedProjectCard({
 
         <Link
           href={`/projects/${project.slug}`}
+          // Each featured card renders 2-3 of these, and several cards
+          // are typically visible at once -- prefetch={false} avoids
+          // firing a full server-rendered /projects/[slug] fetch per
+          // card per page load (confirmed as a real, measured cost live
+          // via the network panel).
+          prefetch={false}
           onClick={() => trackProjectEvent(project.id, "click")}
           className="mt-2 block w-full rounded-lg bg-gold-500 py-1.5 text-center text-xs font-semibold text-navy-950 hover:bg-gold-400"
         >
@@ -187,6 +193,7 @@ export function FeaturedProjectCard({
         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
           <Link
             href={`/projects/${project.slug}?enquire=viewing`}
+            prefetch={false}
             className="rounded-lg border border-navy-600 py-1.5 text-center text-[10px] font-medium text-ink-300 hover:text-ink-100"
           >
             Book Viewing
@@ -207,6 +214,7 @@ export function FeaturedProjectCard({
           ) : (
             <Link
               href={`/projects/${project.slug}?enquire=general`}
+              prefetch={false}
               className="rounded-lg border border-emerald-600/40 py-1.5 text-center text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/10"
             >
               WhatsApp

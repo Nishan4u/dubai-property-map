@@ -73,6 +73,16 @@ export function PartnerDevelopersSlider({
             <Link
               key={`${dev.id}-${i}`}
               href={clickBehavior === "guest" ? "/login" : `/developers/${dev.slug}`}
+              // Every item here is duplicated for the seamless CSS scroll
+              // loop (see the "everyone else" comment below), so a
+              // developer list of N renders 2N links, all visible/near-
+              // visible in this horizontally-scrolling strip -- Next's
+              // default viewport-triggered prefetching was firing a full
+              // server-rendered /developers/[slug] fetch for nearly all
+              // of them on every page load (this slider is mounted
+              // site-wide via PublicShell). Confirmed live via the
+              // network panel.
+              prefetch={false}
               title={clickBehavior === "guest" ? "Log in to view this developer" : dev.name}
               className="flex shrink-0 items-center gap-2 opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0"
             >
