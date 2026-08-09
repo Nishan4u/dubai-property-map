@@ -730,21 +730,39 @@ export function DubaiMap({
     }
   }, [activeLayers, useLiveMap]);
 
-  // Heat map weights, kept in their own effect (keyed on the project set
-  // rather than activeLayers) since the underlying data only changes when
-  // the filtered project list changes -- switching which heat layer is
-  // visible above never needs to recompute or re-send this data. Price is
-  // normalized against the current project set's own min/max so the fill
-  // is always relative to what's actually on the map; the investment score
-  // is already a real, transparent 0-100 value (rating/reviews/high-roi
-  // tag) computed by getInvestmentScore -- never a fabricated ROI/yield
-  // figure. Also keyed on styleLoaded: unlike the POI effect above (which
-  // always gets a free retrigger once the user clicks a toggle, by which
-  // point style.load has long since finished), this effect has no such
-  // user-driven retrigger, so without it this can run before the source
-  // exists and silently no-op forever.
+  // Heat map weights. Kept in their own effect (rather than folded into
+  // the POI/metro/highway effect above) since the underlying data only
+  // changes when the filtered project list changes -- switching which
+  // heat layer is visible never needs to recompute or re-send this data,
+  // that's handled separately via the cheap setLayoutProperty visibility
+  // toggle above. Price is normalized against the current project set's
+  // own min/max so the fill is always relative to what's actually on the
+  // map; the investment score is already a real, transparent 0-100 value
+  // (rating/reviews/high-roi tag) computed by getInvestmentScore -- never
+  // a fabricated ROI/yield figure.
+  //
+  // Also gated on activeLayers now (it wasn't before): both heat layers
+  // default to visibility:"none" and stay that way unless the user opens
+  // MapAmenityBar and switches one on, so computing this over the full
+  // project set unconditionally on every mount -- for two layers that
+  // are, on a default page load, never actually shown -- was pure waste,
+  // confirmed via a live PageSpeed Insights audit as one of two real
+  // remaining sources of unconditional mount-time work. activeLayers in
+  // the dependency array means this still gets a fresh run the moment
+  // either heat layer is first switched on (mirrors the POI/metro/
+  // highway effect's own gating pattern immediately above), and still
+  // recomputes correctly if the project set changes while a heat layer
+  // is already active -- no new caching/staleness logic, deliberately
+  // kept as simple as the effect it already was.
   useEffect(() => {
-    if (!useLiveMap || !styleLoaded || !mapRef.current) return;
+    if (
+      !useLiveMap ||
+      !styleLoaded ||
+      !mapRef.current ||
+      !(activeLayers.includes("price-heat") || activeLayers.includes("score-heat"))
+    ) {
+      return;
+    }
     const map = mapRef.current;
     const source = map.getSource(HEAT_SOURCE_ID) as
       | import("mapbox-gl").GeoJSONSource
@@ -769,7 +787,7 @@ export function DubaiMap({
     }));
 
     source.setData({ type: "FeatureCollection", features });
-  }, [projects, useLiveMap, styleLoaded]);
+  }, [projects, useLiveMap, styleLoaded, activeLayers]);
 
   // Radius Search / Draw Search Area overlay data -- a committed region
   // (radius circle or finished polygon) renders as a closed ring; an
@@ -863,69 +881,91 @@ export function DubaiMap({
     upcomingMarkersRef.current.forEach((m) => m.remove());
     upcomingMarkersRef.current = [];
 
-    import("mapbox-gl").then((mapboxgl) => {
-      upcomingProjects.forEach((u) => {
-        const el = document.createElement("div");
-        // Lower than the community pins' z-index (5) -- when a "Coming
-        // Soon" pin lands at nearly the same spot as a community pin, the
-        // community pin (which opens the real project popup) should still
-        // win the tap instead of this one silently swallowing it.
-        el.style.cssText = "cursor:pointer;z-index:1;";
-        el.innerHTML = `
-          <div style="position:relative;width:22px;height:22px;">
-            <div style="position:absolute;inset:0;border-radius:9999px;background:#38bdf8;animation:dpm-upcoming-pulse 1.8s ease-out infinite;"></div>
-            <div style="position:absolute;inset:5px;border-radius:9999px;background:#38bdf8;border:2px solid #0a0f1c;"></div>
-          </div>`;
+    // Deferred to idle time -- this loop builds a full marker + eagerly-
+    // constructed Popup DOM subtree per upcoming project, all
+    // synchronously, right after mount (getUpcomingProjectsPublic() has
+    // no LIMIT, so this scales with however many "coming soon" rows
+    // exist). None of it needs to exist in the very first frame -- these
+    // pins can appear a beat later, same as map tiles already do -- so
+    // running it during browser idle time instead keeps it off the
+    // initial render's critical path. Confirmed via a live PageSpeed
+    // Insights audit as the other of two real remaining sources of
+    // unconditional mount-time work. requestIdleCallback isn't in
+    // Safari; setTimeout is an adequate fallback (it still yields this
+    // to a later task, just without idle-specific scheduling). The
+    // pending callback must be cancelled on cleanup -- otherwise a fast
+    // unmount/re-run (e.g. upcomingProjects changing again quickly)
+    // could still add markers to a stale map after cleanup already ran.
+    const schedule =
+      typeof requestIdleCallback === "function" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 1);
+    const cancelSchedule = typeof cancelIdleCallback === "function" ? cancelIdleCallback : clearTimeout;
 
-        // Built via safe DOM APIs (not setHTML/innerHTML string interpolation)
-        // since developer_name is a developer-editable field -- interpolating
-        // it into an HTML string would be a stored XSS vector.
-        const content = document.createElement("div");
-        content.style.cssText = "display:flex;align-items:center;gap:8px;";
-        if (u.logo_url) {
-          const img = document.createElement("img");
-          img.src = u.logo_url;
-          img.alt = "";
-          img.style.cssText = "height:28px;width:28px;object-fit:contain;border-radius:6px;background:#ffffff;padding:2px;flex-shrink:0;";
-          content.appendChild(img);
-        }
-        const textWrap = document.createElement("div");
-        const nameEl = document.createElement("div");
-        nameEl.style.cssText = "font-size:12px;font-weight:700;color:#0a0f1c;";
-        nameEl.textContent = u.developer_name;
-        const labelEl = document.createElement("div");
-        labelEl.style.cssText = "font-size:10px;font-weight:600;color:#0369a1;";
-        labelEl.textContent = "Coming Soon";
-        textWrap.appendChild(nameEl);
-        textWrap.appendChild(labelEl);
-        content.appendChild(textWrap);
+    const handle = schedule(() => {
+      import("mapbox-gl").then((mapboxgl) => {
+        upcomingProjects.forEach((u) => {
+          const el = document.createElement("div");
+          // Lower than the community pins' z-index (5) -- when a "Coming
+          // Soon" pin lands at nearly the same spot as a community pin, the
+          // community pin (which opens the real project popup) should still
+          // win the tap instead of this one silently swallowing it.
+          el.style.cssText = "cursor:pointer;z-index:1;";
+          el.innerHTML = `
+            <div style="position:relative;width:22px;height:22px;">
+              <div style="position:absolute;inset:0;border-radius:9999px;background:#38bdf8;animation:dpm-upcoming-pulse 1.8s ease-out infinite;"></div>
+              <div style="position:absolute;inset:5px;border-radius:9999px;background:#38bdf8;border:2px solid #0a0f1c;"></div>
+            </div>`;
 
-        const wrapper = document.createElement("div");
-        wrapper.appendChild(content);
+          // Built via safe DOM APIs (not setHTML/innerHTML string interpolation)
+          // since developer_name is a developer-editable field -- interpolating
+          // it into an HTML string would be a stored XSS vector.
+          const content = document.createElement("div");
+          content.style.cssText = "display:flex;align-items:center;gap:8px;";
+          if (u.logo_url) {
+            const img = document.createElement("img");
+            img.src = u.logo_url;
+            img.alt = "";
+            img.style.cssText = "height:28px;width:28px;object-fit:contain;border-radius:6px;background:#ffffff;padding:2px;flex-shrink:0;";
+            content.appendChild(img);
+          }
+          const textWrap = document.createElement("div");
+          const nameEl = document.createElement("div");
+          nameEl.style.cssText = "font-size:12px;font-weight:700;color:#0a0f1c;";
+          nameEl.textContent = u.developer_name;
+          const labelEl = document.createElement("div");
+          labelEl.style.cssText = "font-size:10px;font-weight:600;color:#0369a1;";
+          labelEl.textContent = "Coming Soon";
+          textWrap.appendChild(nameEl);
+          textWrap.appendChild(labelEl);
+          content.appendChild(textWrap);
 
-        if (onExpressInterestRef.current) {
-          const interestBtn = document.createElement("button");
-          interestBtn.type = "button";
-          interestBtn.textContent = "I'm Interested";
-          interestBtn.style.cssText =
-            "margin-top:8px;width:100%;padding:5px 0;border-radius:6px;background:#eab308;color:#0a0f1c;font-size:11px;font-weight:700;cursor:pointer;border:none;";
-          interestBtn.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            onExpressInterestRef.current?.(u);
-          });
-          wrapper.appendChild(interestBtn);
-        }
+          const wrapper = document.createElement("div");
+          wrapper.appendChild(content);
 
-        const popup = new mapboxgl.default.Popup({ closeButton: false, offset: 16 }).setDOMContent(wrapper);
-        const marker = new mapboxgl.default.Marker({ element: el })
-          .setLngLat([u.lng, u.lat])
-          .setPopup(popup)
-          .addTo(map);
-        upcomingMarkersRef.current.push(marker);
+          if (onExpressInterestRef.current) {
+            const interestBtn = document.createElement("button");
+            interestBtn.type = "button";
+            interestBtn.textContent = "I'm Interested";
+            interestBtn.style.cssText =
+              "margin-top:8px;width:100%;padding:5px 0;border-radius:6px;background:#eab308;color:#0a0f1c;font-size:11px;font-weight:700;cursor:pointer;border:none;";
+            interestBtn.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              onExpressInterestRef.current?.(u);
+            });
+            wrapper.appendChild(interestBtn);
+          }
+
+          const popup = new mapboxgl.default.Popup({ closeButton: false, offset: 16 }).setDOMContent(wrapper);
+          const marker = new mapboxgl.default.Marker({ element: el })
+            .setLngLat([u.lng, u.lat])
+            .setPopup(popup)
+            .addTo(map);
+          upcomingMarkersRef.current.push(marker);
+        });
       });
     });
 
     return () => {
+      cancelSchedule(handle as number);
       upcomingMarkersRef.current.forEach((m) => m.remove());
       upcomingMarkersRef.current = [];
     };
