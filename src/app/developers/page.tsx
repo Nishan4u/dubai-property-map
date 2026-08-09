@@ -6,6 +6,19 @@ import { getDevelopers, getMapAccessStatus, getPublishedProjects, getViewerProje
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Dubai Property Developers Directory | Dubai Property Map",
+  description:
+    "Explore every developer active in Dubai's off-plan market — DAMAC, Emaar, and more — with their live projects, pricing, and track record in one directory.",
+  alternates: { canonical: "/developers" },
+  openGraph: {
+    title: "Dubai Property Developers Directory | Dubai Property Map",
+    description: "Every developer active in Dubai's off-plan market, with their live projects.",
+    type: "website",
+    url: "/developers",
+  },
+};
+
 export default async function DevelopersPage() {
   // Developer/Salesperson accounts only ever manage their own developer —
   // the public directory of every developer isn't for them. Enforced here

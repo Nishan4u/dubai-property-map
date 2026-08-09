@@ -32,7 +32,15 @@ export const metadata: Metadata = {
   // fall back to Next.js's default localhost base -- a real gap for
   // link-unfurling/crawlers, not just a build-time warning).
   metadataBase: new URL(SITE_URL),
-  title: { default: SITE_TITLE, template: "%s | Dubai Property Map" },
+  // Plain string, not a { default, template } object -- every page in
+  // this codebase that sets its own title already writes the full
+  // "X | Dubai Property Map" suffix itself (confirmed via a repo-wide
+  // grep), so a template here was silently double-appending the suffix
+  // on every single page with metadata, site-wide, pre-dating this fix
+  // (confirmed live on /projects and /about, neither touched this
+  // session, both showing "X | Dubai Property Map | Dubai Property Map").
+  // Only used verbatim, with no template, for pages with no title at all.
+  title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   icons: {

@@ -28,7 +28,15 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `/blog/${post.slug}` },
-    openGraph: { title, description, type: "article", url: `/blog/${post.slug}` },
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: `/blog/${post.slug}`,
+      // Falls back to the site-wide default OG image (opengraph-image.tsx)
+      // when a post has no cover image of its own -- never unset.
+      images: post.cover_image_url ? [post.cover_image_url] : undefined,
+    },
   };
 }
 
@@ -61,8 +69,29 @@ export default async function BlogPostPage({
   const firstHalf = paragraphs.slice(0, midpoint).join("\n\n");
   const secondHalf = paragraphs.slice(midpoint).join("\n\n");
 
+  // BlogPosting is a real, Google-recognized rich-result type for article
+  // content -- can surface author/date in search results, same reasoning
+  // as the Product/BreadcrumbList JSON-LD already on project pages.
+  const blogPostingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt || undefined,
+    image: post.cover_image_url || undefined,
+    datePublished: post.created_at,
+    dateModified: post.updated_at,
+    author: { "@type": "Organization", name: post.author },
+    publisher: {
+      "@type": "Organization",
+      name: "Dubai Property Map",
+      logo: { "@type": "ImageObject", url: "https://dubaipropertymap.ae/logo/dubai-property-map-logo.png" },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": `https://dubaipropertymap.ae/blog/${post.slug}` },
+  };
+
   return (
     <PublicShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }} />
       <ProjectThumb
         gradient={post.gradient}
         imageUrl={post.cover_image_url}

@@ -5,6 +5,19 @@ import { getPublishedBlogPosts } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Dubai Real Estate Blog — Market News & Buyer Guides | Dubai Property Map",
+  description:
+    "Guides and market updates on Dubai off-plan property: payment plans, developer due diligence, Golden Visa eligibility, and where demand is concentrated right now.",
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "Dubai Real Estate Blog | Dubai Property Map",
+    description: "Guides and market updates for buying property in Dubai.",
+    type: "website",
+    url: "/blog",
+  },
+};
+
 export default async function BlogPage() {
   const posts = await getPublishedBlogPosts();
 

@@ -6,6 +6,12 @@ import { mapProject } from "@/lib/supabase/mappers";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Compare Dubai Off-Plan Projects Side by Side | Dubai Property Map",
+  description: "Compare Dubai off-plan projects side by side — price, bedrooms, developer, and community — to shortlist the right one.",
+  alternates: { canonical: "/compare" },
+};
+
 export default async function ComparePage() {
   // Found during the Revision 2 §14 QA pass: this page had no access check
   // at all, unlike every other project-listing surface (Home, Communities,

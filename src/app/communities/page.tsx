@@ -5,6 +5,19 @@ import { getCommunities, getMapAccessStatus, getPublishedProjects } from "@/lib/
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Dubai Communities & Areas to Buy Property | Dubai Property Map",
+  description:
+    "Browse every Dubai community with active off-plan and ready listings — compare prices, project counts, and locations across the city's neighbourhoods on an interactive map.",
+  alternates: { canonical: "/communities" },
+  openGraph: {
+    title: "Dubai Communities & Areas | Dubai Property Map",
+    description: "Compare Dubai neighbourhoods by property prices, project counts, and location.",
+    type: "website",
+    url: "/communities",
+  },
+};
+
 export default async function CommunitiesPage() {
   const { status: mapAccessStatus, subscriptionHref } = await getMapAccessStatus();
   const [communities, projects] = await Promise.all([
