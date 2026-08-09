@@ -15,6 +15,7 @@ interface BlogPost {
   slug: string;
   title: string;
   excerpt: string | null;
+  body: string;
   published: boolean;
   cover_image_url: string | null;
 }
@@ -30,6 +31,11 @@ function slugify(input: string) {
 export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
+  // Non-null while editing an existing post rather than creating a new
+  // one -- same form, same fields, just an update instead of an insert
+  // on submit, and the slug (the public URL, already shared/indexed)
+  // stays fixed rather than being editable.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [body, setBody] = useState("");
@@ -38,6 +44,32 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
   const [uploadPercent, setUploadPercent] = useState(0);
   const [uploadError, setUploadError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function resetForm() {
+    setEditingId(null);
+    setTitle("");
+    setExcerpt("");
+    setBody("");
+    setCoverImageUrl("");
+    setUploadingFile(null);
+    setUploadError("");
+  }
+
+  function startEdit(post: BlogPost) {
+    setEditingId(post.id);
+    setTitle(post.title);
+    setExcerpt(post.excerpt ?? "");
+    setBody(post.body);
+    setCoverImageUrl(post.cover_image_url ?? "");
+    setShowForm(true);
+  }
+
+  function toggleForm() {
+    if (showForm) {
+      resetForm();
+    }
+    setShowForm((s) => !s);
+  }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -62,22 +94,28 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
     setUploadingFile(null);
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     const supabase = createClient();
-    await supabase.from("blog_posts").insert({
-      slug: `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`,
-      title,
-      excerpt,
-      body,
-      cover_image_url: coverImageUrl || null,
-      published: false,
-    });
-    setTitle("");
-    setExcerpt("");
-    setBody("");
-    setCoverImageUrl("");
+    if (editingId) {
+      // Slug intentionally excluded -- it's the post's public URL,
+      // already shared/indexed, and shouldn't shift on a content edit.
+      await supabase
+        .from("blog_posts")
+        .update({ title, excerpt, body, cover_image_url: coverImageUrl || null })
+        .eq("id", editingId);
+    } else {
+      await supabase.from("blog_posts").insert({
+        slug: `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`,
+        title,
+        excerpt,
+        body,
+        cover_image_url: coverImageUrl || null,
+        published: false,
+      });
+    }
+    resetForm();
     setShowForm(false);
     setLoading(false);
     router.refresh();
@@ -100,18 +138,19 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ink-100">Blog Posts</h2>
         <button
-          onClick={() => setShowForm((s) => !s)}
+          onClick={toggleForm}
           className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400"
         >
-          New Post
+          {showForm ? "Cancel" : "New Post"}
         </button>
       </div>
 
       {showForm && (
         <form
-          onSubmit={handleCreate}
+          onSubmit={handleSubmit}
           className="space-y-3 rounded-xl border border-navy-700 bg-navy-850 p-4"
         >
+          {editingId && <p className="text-xs font-medium text-gold-400">Editing existing post — slug and publish status are unchanged.</p>}
           <input
             required
             value={title}
@@ -168,7 +207,7 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
             disabled={loading}
             className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
           >
-            {loading ? "Saving…" : "Save as Draft"}
+            {loading ? "Saving…" : editingId ? "Save Changes" : "Save as Draft"}
           </button>
         </form>
       )}
@@ -200,6 +239,12 @@ export function BlogPostManager({ posts }: { posts: BlogPost[] }) {
             header: "",
             render: (p) => (
               <div className="flex gap-3">
+                <button
+                  onClick={() => startEdit(p)}
+                  className="text-xs font-medium text-ink-300 hover:text-ink-100"
+                >
+                  Edit
+                </button>
                 <button
                   onClick={() => togglePublished(p.id, p.published)}
                   className="text-xs font-medium text-gold-400 hover:text-gold-300"

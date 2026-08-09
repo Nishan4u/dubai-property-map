@@ -55,6 +55,11 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
   },
+  // Google Search Console domain-ownership verification -- lets it be
+  // added/rotated without editing HTML directly.
+  verification: {
+    google: "vfL-M34WA33FzMbGooIlYSJzrWE_8-CH2CK3SQXkeW4",
+  },
   // Site-wide OG/Twitter defaults -- individual pages (projects, developers,
   // communities, blog) already override title/description/images via their
   // own generateMetadata; this is only the fallback for pages that don't

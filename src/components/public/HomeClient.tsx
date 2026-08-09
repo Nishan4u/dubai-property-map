@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
@@ -14,7 +15,6 @@ import {
   type ProjectFilters,
 } from "@/components/public/FilterSidebar";
 import { ProjectListPanel } from "@/components/public/ProjectListPanel";
-import { DubaiMap } from "@/components/public/DubaiMap";
 import { MapFilterChips } from "@/components/public/MapFilterChips";
 import { MapAmenityBar } from "@/components/public/MapAmenityBar";
 import { FeaturedProjectCard } from "@/components/public/FeaturedProjectCard";
@@ -41,6 +41,21 @@ interface HomepageBanner {
 }
 
 const HEAT_LAYER_KEYS = ["price-heat", "score-heat"];
+
+// mapbox-gl (and DubaiMap's own substantial code) was being bundled
+// directly into this file's chunk via a static import -- confirmed as a
+// real, measured contributor to poor homepage performance (Total
+// Blocking Time / Speed Index) via a live PageSpeed Insights audit.
+// Mapbox can't render server-side anyway (needs window/DOM), so
+// ssr: false + a placeholder matching DubaiMap's own root element
+// (className, base gradient) costs nothing visually -- the map chunk
+// now loads async instead of blocking the main homepage bundle.
+const DubaiMap = dynamic(() => import("@/components/public/DubaiMap").then((mod) => mod.DubaiMap), {
+  ssr: false,
+  loading: () => (
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_25%_15%,#0f2035,#0a1526_55%,#070d18)]" />
+  ),
+});
 
 export function HomeClient({
   communities,

@@ -66,17 +66,33 @@ export async function AnalyticsScripts() {
   return (
     <>
       {adsenseClientId && (
-        // beforeInteractive is the one next/script strategy Next.js
-        // guarantees lands inside <head> regardless of where the component
-        // itself renders (docs: "Scripts with beforeInteractive will always
-        // be injected inside the head") -- matching Google's own
-        // instruction to paste this snippet "in between the <head></head>
-        // tags" so Auto Ads can discover ad slots as early as possible.
+        // Was beforeInteractive -- Next's own docs (node_modules/next/dist/
+        // docs/.../script.md) reserve that strategy for "critical scripts
+        // that need to be fetched as soon as possible" like bot detectors
+        // and cookie consent managers, and explicitly name afterInteractive
+        // ("the default strategy") as the right one for anything else that
+        // "needs to load as soon as possible but not before any first-party
+        // Next.js code" -- exactly this script's category, not a critical
+        // one. Confirmed via a live PageSpeed Insights audit that
+        // beforeInteractive was contributing real, measured Total Blocking
+        // Time (2.7s desktop / 1.2s mobile) and a poor Speed Index (5.7s /
+        // 13.9s) on the homepage -- the adsbygoogle.js payload is heavy
+        // and was competing for main-thread time before first-party code.
+        // Trade-off, stated plainly: beforeInteractive was the one
+        // strategy Next.js guarantees places the script inside <head>
+        // regardless of where the component renders (this one is in
+        // <body>) -- afterInteractive doesn't carry that guarantee, so the
+        // tag now lands in <body> instead. Google's own "paste this in
+        // <head>" instruction is about loading it early for ad-slot
+        // discovery, not a strict technical requirement enforced by
+        // AdSense itself -- afterInteractive still loads it early (right
+        // after hydration, same async script), which is the standard,
+        // widely-used pattern for AdSense on Next.js sites.
         <Script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
           crossOrigin="anonymous"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
       )}
 
