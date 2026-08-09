@@ -3,13 +3,23 @@ import { CompareClient } from "@/components/public/CompareClient";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { getMapAccessStatus, getPublishedProjects } from "@/lib/supabase/queries";
 import { mapProject } from "@/lib/supabase/mappers";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
+const title = "Compare Dubai Off-Plan Projects Side by Side | Dubai Property Map";
+const description =
+  "Compare Dubai off-plan projects side by side — price, bedrooms, developer, and community — to shortlist the right one.";
+
 export const metadata = {
-  title: "Compare Dubai Off-Plan Projects Side by Side | Dubai Property Map",
-  description: "Compare Dubai off-plan projects side by side — price, bedrooms, developer, and community — to shortlist the right one.",
+  title,
+  description,
   alternates: { canonical: "/compare" },
+  // Previously unset entirely (no openGraph key), so a shared /compare
+  // link's preview fell back to the root layout's generic homepage
+  // title/description instead of this page's own -- correct
+  // siteName/locale/image, wrong title/description.
+  openGraph: buildOpenGraph({ title, description, url: "/compare" }),
 };
 
 export default async function ComparePage() {

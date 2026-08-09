@@ -39,6 +39,7 @@ import { getLocationEmbedUrl, getVideoEmbedUrl } from "@/lib/mediaEmbed";
 import { getProjectStatusLabel } from "@/lib/projectStatus";
 import { documentCategories } from "@/lib/documentCategories";
 import { getMapboxStaticImageUrl } from "@/lib/mapboxStaticImage";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -64,19 +65,17 @@ export async function generateMetadata({
   // photo first (what most platforms show), the Mapbox static map card as a
   // fallback/secondary image when there's no cover photo but coordinates exist.
   const mapImage = project.lat != null && project.lng != null ? getMapboxStaticImageUrl(project.lat, project.lng) : null;
-  const images = [project.cover_image_url, mapImage].filter((url): url is string => Boolean(url));
 
   return {
     title,
     description,
     alternates: { canonical: `/projects/${project.slug}` },
-    openGraph: {
+    openGraph: buildOpenGraph({
       title,
       description,
-      type: "website",
       url: `/projects/${project.slug}`,
-      ...(images.length ? { images } : {}),
-    },
+      images: [project.cover_image_url, mapImage],
+    }),
   };
 }
 

@@ -29,6 +29,7 @@ import {
   getProjectsForCommunity,
 } from "@/lib/supabase/queries";
 import { mapProject } from "@/lib/supabase/mappers";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `/communities/${community.slug}` },
-    openGraph: { title, description, type: "website", url: `/communities/${community.slug}` },
+    openGraph: buildOpenGraph({ title, description, url: `/communities/${community.slug}` }),
   };
 }
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { getLandingPageBySlug } from "@/lib/supabase/queries";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const page = await getLandingPageBySlug(slug);
   if (!page) return {};
 
+  const description = page.body.slice(0, 160);
   return {
     title: `${page.title} | Dubai Property Map`,
-    description: page.body.slice(0, 160),
-    openGraph: { title: page.title, description: page.body.slice(0, 160), type: "website" },
+    description,
+    alternates: { canonical: `/l/${slug}` },
+    openGraph: buildOpenGraph({
+      title: page.title,
+      description,
+      url: `/l/${slug}`,
+      images: [page.hero_image_url],
+    }),
   };
 }
 

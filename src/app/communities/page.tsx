@@ -2,6 +2,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { CommunitiesPageClient } from "@/components/public/CommunitiesPageClient";
 import { ProjectAccessGate } from "@/components/public/ProjectAccessGate";
 import { getCommunities, getMapAccessStatus, getPublishedProjects } from "@/lib/supabase/queries";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,11 @@ export const metadata = {
   description:
     "Browse every Dubai community with active off-plan and ready listings — compare prices, project counts, and locations across the city's neighbourhoods on an interactive map.",
   alternates: { canonical: "/communities" },
-  openGraph: {
+  openGraph: buildOpenGraph({
     title: "Dubai Communities & Areas | Dubai Property Map",
     description: "Compare Dubai neighbourhoods by property prices, project counts, and location.",
-    type: "website",
     url: "/communities",
-  },
+  }),
 };
 
 export default async function CommunitiesPage() {

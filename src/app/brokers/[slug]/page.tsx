@@ -7,6 +7,7 @@ import {
   getBrokerPublicProfile,
   incrementBrokerProfileViews,
 } from "@/lib/supabase/queries";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +23,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title,
     description,
     alternates: { canonical: `/brokers/${broker.slug}` },
-    openGraph: {
+    openGraph: buildOpenGraph({
       title,
       description,
       type: "profile",
       url: `/brokers/${broker.slug}`,
-      ...(broker.photo_url ? { images: [broker.photo_url] } : {}),
-    },
+      images: [broker.photo_url],
+    }),
   };
 }
 

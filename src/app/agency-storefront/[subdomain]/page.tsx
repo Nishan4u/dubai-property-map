@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AgencyStorefrontClient } from "@/components/public/AgencyStorefrontClient";
+import { buildOpenGraph } from "@/lib/seo";
 
 // Mirrors src/app/present/[token]/page.tsx's exact shape -- a thin
 // server wrapper, all real data fetching happens client-side against
@@ -20,11 +21,12 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
 
   const title = `${agency.name} — Featured Properties in Dubai`;
   const description = `Browse ${agency.name}'s featured Dubai off-plan and ready properties, with direct contact details.`;
+  const url = `https://${subdomain}.dubaipropertymap.ae`;
   return {
     title,
     description,
-    alternates: { canonical: `https://${subdomain}.dubaipropertymap.ae` },
-    openGraph: { title, description, type: "website" },
+    alternates: { canonical: url },
+    openGraph: buildOpenGraph({ title, description, url }),
   };
 }
 

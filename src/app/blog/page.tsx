@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { getPublishedBlogPosts } from "@/lib/supabase/queries";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,11 @@ export const metadata = {
   description:
     "Guides and market updates on Dubai off-plan property: payment plans, developer due diligence, Golden Visa eligibility, and where demand is concentrated right now.",
   alternates: { canonical: "/blog" },
-  openGraph: {
+  openGraph: buildOpenGraph({
     title: "Dubai Real Estate Blog | Dubai Property Map",
     description: "Guides and market updates for buying property in Dubai.",
-    type: "website",
     url: "/blog",
-  },
+  }),
 };
 
 export default async function BlogPage() {

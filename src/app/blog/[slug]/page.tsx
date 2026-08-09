@@ -6,6 +6,7 @@ import { AdUnit } from "@/components/ads/AdUnit";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { isAdsEnabled } from "@/lib/adsEnabled";
 import { getActiveBlogInArticleBanner, getBlogPostBySlug } from "@/lib/supabase/queries";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,13 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `/blog/${post.slug}` },
-    openGraph: {
+    openGraph: buildOpenGraph({
       title,
       description,
       type: "article",
       url: `/blog/${post.slug}`,
-      // Falls back to the site-wide default OG image (opengraph-image.tsx)
-      // when a post has no cover image of its own -- never unset.
-      images: post.cover_image_url ? [post.cover_image_url] : undefined,
-    },
+      images: [post.cover_image_url],
+    }),
   };
 }
 

@@ -18,6 +18,7 @@ import {
 } from "@/lib/supabase/queries";
 import { mapProject, currentYear } from "@/lib/supabase/mappers";
 import { getLocale } from "@/lib/i18n/locale";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -39,13 +40,12 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `/developers/${developer.slug}` },
-    openGraph: {
+    openGraph: buildOpenGraph({
       title,
       description,
-      type: "website",
       url: `/developers/${developer.slug}`,
-      ...(developer.logo_url ? { images: [developer.logo_url] } : {}),
-    },
+      images: [developer.logo_url],
+    }),
   };
 }
 
