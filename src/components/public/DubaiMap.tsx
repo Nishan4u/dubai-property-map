@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
+import mapboxglDefault from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
   ChevronLeft,
@@ -34,6 +35,27 @@ import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { ShareButton } from "@/components/public/ShareButton";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+// mapbox-gl is statically imported above -- this component is already
+// behind a next/dynamic(..., { ssr: false }) boundary in HomeClient.tsx,
+// so mapbox-gl now ships bundled with (or fetched alongside) this
+// component's own chunk instead of via a SEPARATE runtime-triggered
+// import("mapbox-gl") that could only start fetching after this chunk had
+// already been downloaded, parsed, and executed. That second sequential
+// network hop was confirmed live (via performance.getEntriesByType) as
+// the actual reason the map visibly took ~3s to even start loading tiles
+// on a cold load -- the 497KB mapbox-gl chunk didn't begin downloading
+// until this component's own chunk had already finished.
+//
+// The 4 call sites below all originally did `import("mapbox-gl").then((mapboxgl) => ...)`
+// -- kept as `Promise.resolve(MAPBOX_GL_MODULE).then((mapboxgl) => ...)`
+// instead of restructuring each (large) callback body, so every existing
+// `mapboxgl.default.X` reference inside them keeps working completely
+// unchanged (a real dynamic import() always resolves to a
+// `{ default, ...named exports }` namespace object, which this mirrors).
+// Still a microtask -- not a network fetch -- so control flow, timing
+// relative to each effect's own cleanup function, and every `cancelled`
+// guard are all identical to before.
+const MAPBOX_GL_MODULE = { default: mapboxglDefault };
 // The map's initial view on load -- also what "Reset view" (the compass
 // button) should return to. Named once and reused in both places so they
 // can never drift apart again.
@@ -212,7 +234,7 @@ export function DubaiMap({
     // could in principle point somewhere else by the time cleanup runs.
     const markerEls = markerElsRef.current;
 
-    import("mapbox-gl").then((mapboxgl) => {
+    Promise.resolve(MAPBOX_GL_MODULE).then((mapboxgl) => {
       if (cancelled || !mapContainer.current) return;
       mapboxgl.default.accessToken = MAPBOX_TOKEN;
       const map = new mapboxgl.default.Map({
@@ -627,7 +649,7 @@ export function DubaiMap({
     if (visibleCommunities.length === 0) return;
     hasAutoFitRef.current = true;
     const map = mapRef.current;
-    import("mapbox-gl").then((mapboxgl) => {
+    Promise.resolve(MAPBOX_GL_MODULE).then((mapboxgl) => {
       const bounds = new mapboxgl.default.LngLatBounds();
       visibleCommunities.forEach((c) => bounds.extend([c.lng, c.lat]));
       map.fitBounds(bounds, {
@@ -845,7 +867,7 @@ export function DubaiMap({
 
     if (!selectedCommunity) return;
 
-    import("mapbox-gl").then((mapboxgl) => {
+    Promise.resolve(MAPBOX_GL_MODULE).then((mapboxgl) => {
       communityProjects.forEach((p, i) => {
         if (p.lat === null || p.lat === undefined || p.lng === null || p.lng === undefined) {
           return;
@@ -910,7 +932,7 @@ export function DubaiMap({
     const cancelSchedule = typeof cancelIdleCallback === "function" ? cancelIdleCallback : clearTimeout;
 
     const handle = schedule(() => {
-      import("mapbox-gl").then((mapboxgl) => {
+      Promise.resolve(MAPBOX_GL_MODULE).then((mapboxgl) => {
         upcomingProjects.forEach((u) => {
           const el = document.createElement("div");
           // Lower than the community pins' z-index (5) -- when a "Coming
