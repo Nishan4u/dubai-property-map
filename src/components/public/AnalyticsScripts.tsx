@@ -66,33 +66,29 @@ export async function AnalyticsScripts() {
   return (
     <>
       {adsenseClientId && (
-        // Was beforeInteractive -- Next's own docs (node_modules/next/dist/
-        // docs/.../script.md) reserve that strategy for "critical scripts
-        // that need to be fetched as soon as possible" like bot detectors
-        // and cookie consent managers, and explicitly name afterInteractive
-        // ("the default strategy") as the right one for anything else that
-        // "needs to load as soon as possible but not before any first-party
-        // Next.js code" -- exactly this script's category, not a critical
-        // one. Confirmed via a live PageSpeed Insights audit that
-        // beforeInteractive was contributing real, measured Total Blocking
-        // Time (2.7s desktop / 1.2s mobile) and a poor Speed Index (5.7s /
-        // 13.9s) on the homepage -- the adsbygoogle.js payload is heavy
-        // and was competing for main-thread time before first-party code.
-        // Trade-off, stated plainly: beforeInteractive was the one
-        // strategy Next.js guarantees places the script inside <head>
-        // regardless of where the component renders (this one is in
-        // <body>) -- afterInteractive doesn't carry that guarantee, so the
-        // tag now lands in <body> instead. Google's own "paste this in
-        // <head>" instruction is about loading it early for ad-slot
-        // discovery, not a strict technical requirement enforced by
-        // AdSense itself -- afterInteractive still loads it early (right
-        // after hydration, same async script), which is the standard,
-        // widely-used pattern for AdSense on Next.js sites.
+        // Was beforeInteractive, then afterInteractive -- see git history
+        // for the first change's reasoning (still valid: Next's own docs
+        // reserve beforeInteractive for "critical scripts" like bot
+        // detectors, not ad networks). afterInteractive alone measurably
+        // fixed desktop (Performance 48->80, TBT 2.7s->60ms) via a live
+        // PageSpeed audit, but the SAME audit's mobile run got WORSE
+        // (TBT 1.17s->3.95s) -- the working theory is that afterInteractive
+        // now fires AdSense at roughly the same moment DubaiMap's own
+        // async chunk (mapbox-gl + POI/metro/highway layer setup, a
+        // genuinely heavy synchronous mount) starts its own work, and
+        // mobile's CPU throttling punishes that overlap far harder than
+        // desktop does. lazyOnload defers AdSense to browser idle time --
+        // after the map's startup work is done -- so the two heavy tasks
+        // no longer compete for the same slice of main-thread time. Stated
+        // honestly: a single before/after PageSpeed run has real variance
+        // on mobile TBT specifically, so this is a well-reasoned next step
+        // based on the evidence so far, not a confirmed root-cause fix --
+        // re-measure after this ships.
         <Script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       )}
 
