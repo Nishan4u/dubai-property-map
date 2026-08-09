@@ -21,27 +21,14 @@ import { isAdsEnabled } from "@/lib/adsEnabled";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
-  const cmsMetadata = await getCmsMetadata("homepage_hero");
-  return {
-    alternates: { canonical: "/" },
-    ...cmsMetadata,
-    // getCmsMetadata's own openGraph object (when an admin has customized
-    // this page's SEO content) only sets title/description/type -- and
-    // since Next.js replaces the whole openGraph object per metadata
-    // level rather than deep-merging it, spreading cmsMetadata above was
-    // silently dropping the root layout's siteName/url/locale from the
-    // rendered <meta property="og:..."> tags whenever a homepage_hero CMS
-    // row exists (confirmed live: og:site_name/og:url/og:locale were
-    // missing, og:title/description/image were fine). Re-declared here so
-    // they always render regardless of whether cmsMetadata.openGraph is
-    // present.
-    openGraph: {
-      siteName: "Dubai Property Map",
-      url: "https://dubaipropertymap.ae",
-      locale: "en_AE",
-      ...cmsMetadata.openGraph,
-    },
-  };
+  // getCmsMetadata now returns a complete alternates.canonical + openGraph
+  // object itself (siteName/url/locale/images included, not just title/
+  // description) -- see its own comment for why that has to happen there
+  // rather than being left to inherit. "/" passed explicitly since this
+  // page's slug ("homepage_hero") doesn't match its own path the way
+  // every other CmsPage caller's slug does.
+  const cmsMetadata = await getCmsMetadata("homepage_hero", "/");
+  return { alternates: { canonical: "/" }, ...cmsMetadata };
 }
 
 // Organization + WebSite structured data -- Organization/logo helps Google

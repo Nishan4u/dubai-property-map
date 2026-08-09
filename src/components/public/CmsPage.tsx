@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getCmsMetadata(slug: string) {
+// path defaults to "/${slug}", true for every current caller (about,
+// advertise, careers, contact, faq, privacy, terms) except the homepage
+// itself (slug "homepage_hero", path "/"), which passes its own.
+export async function getCmsMetadata(slug: string, path: string = `/${slug}`) {
   const supabase = await createClient();
   const { data: content } = await supabase
     .from("site_content")
@@ -10,6 +13,8 @@ export async function getCmsMetadata(slug: string) {
     .eq("slug", slug)
     .maybeSingle();
 
+  // No CMS row -- CmsPage() itself notFound()s for this slug, so there's
+  // no real page here to claim a canonical URL or OG image for.
   if (!content) return {};
 
   const title = `${content.title} | Dubai Property Map`;
@@ -18,7 +23,25 @@ export async function getCmsMetadata(slug: string) {
   return {
     title,
     description,
-    openGraph: { title, description, type: "website" },
+    // alternates.canonical and the full openGraph object (siteName/url/
+    // locale/images) are set explicitly here, not left to inherit from
+    // the root layout / opengraph-image file convention -- Next.js
+    // replaces a route's whole openGraph object rather than deep-merging
+    // it once the route supplies its own (even a partial one), so any
+    // page returning only { title, description, type } here would
+    // silently lose the site-wide siteName/url/locale/image. Confirmed
+    // live: /about had no canonical tag and no og:image at all before
+    // this fix, despite the site-wide default share image existing.
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      type: "website" as const,
+      siteName: "Dubai Property Map",
+      url: `https://dubaipropertymap.ae${path}`,
+      locale: "en_AE",
+      images: ["https://dubaipropertymap.ae/opengraph-image"],
+    },
   };
 }
 
