@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { clsx } from "clsx";
 import { List, CalendarDays } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { createClient } from "@/lib/supabase/client";
 import { notifyUser } from "@/lib/notify";
@@ -25,12 +24,6 @@ const statusMessage: Record<DbBookingStatus, (projectName: string, date: string)
   confirmed: (name, date) => `Your viewing for ${name} on ${date} has been confirmed.`,
   completed: (name) => `Your viewing for ${name} has been marked completed.`,
   cancelled: (name) => `Your viewing for ${name} has been cancelled.`,
-};
-
-const statusTone: Record<DbBookingStatus, "green" | "red" | "blue"> = {
-  confirmed: "blue",
-  completed: "green",
-  cancelled: "red",
 };
 
 const statusOptions: DbBookingStatus[] = ["confirmed", "completed", "cancelled"];

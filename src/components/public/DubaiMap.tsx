@@ -129,22 +129,24 @@ export function DubaiMap({
   const propertyMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
   const upcomingMarkersRef = useRef<import("mapbox-gl").Marker[]>([]);
   const selectedCommunityIdRef = useRef(selectedCommunityId);
-  selectedCommunityIdRef.current = selectedCommunityId;
-  // Read inside the map's own click listener (registered once on mount),
-  // so this always sees the latest mode/callback without re-registering
-  // the listener -- same pattern as selectedCommunityIdRef above.
+  // Read inside the map's own click/drag listeners (each registered once,
+  // in their mount effects), so they always see the latest prop/callback
+  // value without needing to be torn down and re-registered on every
+  // parent re-render. Assigning ref.current during render is a side
+  // effect on something outside React's render output, so all five
+  // mirrors are synced in one effect (no dependency array, so it re-runs
+  // after every render) instead of directly in the component body.
   const searchToolModeRef = useRef(searchToolMode);
-  searchToolModeRef.current = searchToolMode;
-  // Same "ref mirrors the latest prop, read inside a listener registered
-  // once" pattern as searchToolModeRef -- the Coming Soon markers effect
-  // only re-runs when upcomingProjects/useLiveMap change, not on every
-  // onExpressInterest identity change from a parent re-render.
   const onExpressInterestRef = useRef(onExpressInterest);
-  onExpressInterestRef.current = onExpressInterest;
   const onSearchMapClickRef = useRef(onSearchMapClick);
-  onSearchMapClickRef.current = onSearchMapClick;
   const onViewChangeRef = useRef(onViewChange);
-  onViewChangeRef.current = onViewChange;
+  useEffect(() => {
+    selectedCommunityIdRef.current = selectedCommunityId;
+    searchToolModeRef.current = searchToolMode;
+    onExpressInterestRef.current = onExpressInterest;
+    onSearchMapClickRef.current = onSearchMapClick;
+    onViewChangeRef.current = onViewChange;
+  });
   const [popupIndex, setPopupIndex] = useState(0);
 
   const countByCommunity = useMemo(() => {
@@ -173,12 +175,17 @@ export function DubaiMap({
 
   useEffect(() => {
     if (!focusProjectId) {
+      // popupIndex is also independently set by marker-click handlers
+      // (see the community-pin click effect below), so it can't be fully
+      // derived at render time -- this syncs it back to the community's
+      // default (first) pin whenever the caller's focusProjectId/selected
+      // community changes instead.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPopupIndex(0);
       return;
     }
     const idx = communityProjects.findIndex((p) => p.id === focusProjectId);
     setPopupIndex(idx >= 0 ? idx : 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCommunityId, focusProjectId, communityProjects]);
 
   // Fly the camera to a project's exact coordinates when it's selected from
@@ -199,6 +206,11 @@ export function DubaiMap({
   useEffect(() => {
     if (!MAPBOX_TOKEN || !mapContainer.current) return;
     let cancelled = false;
+    // Captured once up front (this ref's Map identity never changes across
+    // renders -- created once via useRef(new Map())) so the cleanup below
+    // reads/clears this exact snapshot rather than ref.current, which
+    // could in principle point somewhere else by the time cleanup runs.
+    const markerEls = markerElsRef.current;
 
     import("mapbox-gl").then((mapboxgl) => {
       if (cancelled || !mapContainer.current) return;
@@ -231,7 +243,6 @@ export function DubaiMap({
       setUseLiveMap(true);
 
       map.on("error", (e) => {
-        // eslint-disable-next-line no-console
         console.error("[DubaiMap] mapbox error:", e.error);
       });
 
@@ -574,10 +585,9 @@ export function DubaiMap({
         new mapboxgl.default.Marker({ element: el })
           .setLngLat([c.lng, c.lat])
           .addTo(map);
-        markerElsRef.current.set(c.id, el);
+        markerEls.set(c.id, el);
       });
     }).catch((err) => {
-      // eslint-disable-next-line no-console
       console.error("[DubaiMap] failed to load mapbox-gl:", err);
     });
 
@@ -585,7 +595,7 @@ export function DubaiMap({
       cancelled = true;
       resizeObserverRef.current?.disconnect();
       mapRef.current?.remove();
-      markerElsRef.current.clear();
+      markerEls.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -601,7 +611,6 @@ export function DubaiMap({
       pitch: restoreView.pitch,
       bearing: restoreView.bearing,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoreView, useLiveMap]);
 
   // Auto-fit the initial camera to every community that actually has a

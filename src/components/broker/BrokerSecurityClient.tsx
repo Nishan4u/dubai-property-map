@@ -53,8 +53,8 @@ export function BrokerSecurityClient({ session }: { session: SessionInfo | null 
         </div>
       </div>
       <p className="mt-3 text-xs text-ink-500">
-        Dubai Property Map allows one active device per broker account. Use "Logout Device" if you're
-        switching devices, or the recovery flow on the login page if you've lost access to this one.
+        Dubai Property Map allows one active device per broker account. Use &quot;Logout Device&quot; if you&apos;re
+        switching devices, or the recovery flow on the login page if you&apos;ve lost access to this one.
       </p>
       <button
         onClick={handleLogoutDevice}

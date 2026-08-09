@@ -71,7 +71,9 @@ export function SalespersonSubscriptionClient({
   const [networkLoadingPlan, setNetworkLoadingPlan] = useState<string | null>(null);
 
   useEffect(() => {
+    // document.cookie doesn't exist during SSR -- must read it after mount.
     const cookieCode = getReferralCookie();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cookieCode) setReferralCode(cookieCode);
   }, []);
 

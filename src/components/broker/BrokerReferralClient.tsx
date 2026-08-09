@@ -96,6 +96,11 @@ export function BrokerReferralClient({
   }
 
   useEffect(() => {
+    // window.location.origin doesn't exist during SSR -- computing this
+    // during render (even via a lazy useState initializer) would mismatch
+    // between the server-rendered HTML and the client's first render, so
+    // it has to be set after mount instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (referralCode) setShareUrl(`${window.location.origin}/register?ref=${referralCode}`);
   }, [referralCode]);
 

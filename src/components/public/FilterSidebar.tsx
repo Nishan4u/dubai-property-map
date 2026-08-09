@@ -105,6 +105,11 @@ export function FilterSidebar({
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [saveLabel, setSaveLabel] = useState("");
 
+  // draft is also independently edited by the user via set() below (typing
+  // into filter fields before "Apply"), so it can't be fully derived from
+  // the filters prop at render time -- this resyncs it only when the
+  // externally-applied filters actually change (e.g. cleared elsewhere).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setDraft(filters), [filters]);
 
   function set<K extends keyof ProjectFilters>(key: K, value: ProjectFilters[K]) {

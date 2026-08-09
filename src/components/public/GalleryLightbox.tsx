@@ -19,12 +19,16 @@ const SLIDESHOW_INTERVAL_MS = 3500;
 export function GalleryLightbox({ sections }: { sections: GallerySection[] }) {
   const flat = useMemo(() => sections.flatMap((s) => s.images), [sections]);
   const offsets = useMemo(() => {
-    let running = 0;
-    return sections.map((s) => {
-      const offset = running;
-      running += s.images.length;
-      return offset;
-    });
+    // Built via reduce (each step returns a new running total, nothing
+    // reassigned) rather than a mutated `let` counter -- the same
+    // cumulative-offset result without a variable that gets reassigned
+    // across iterations.
+    const result: number[] = [];
+    sections.reduce((total, s) => {
+      result.push(total);
+      return total + s.images.length;
+    }, 0);
+    return result;
   }, [sections]);
 
   const [index, setIndex] = useState<number | null>(null);

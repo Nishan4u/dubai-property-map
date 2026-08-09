@@ -35,10 +35,8 @@ const permissionFields = [
 ];
 
 export function TeamTable({
-  developerId,
   members,
 }: {
-  developerId: string;
   members: TeamMember[];
 }) {
   const router = useRouter();

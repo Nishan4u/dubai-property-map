@@ -86,6 +86,10 @@ export function ProjectFileManager({
   }, [path]);
 
   useEffect(() => {
+    // loadFiles is async but calls setLoading(true) synchronously before
+    // its first await -- a standard "kick off a fetch on mount/dependency
+    // change" effect (React's own documented "fetching data" use case).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFiles();
   }, [loadFiles]);
 

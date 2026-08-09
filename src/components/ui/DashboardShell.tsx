@@ -45,8 +45,11 @@ export function DashboardShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Close the mobile drawer automatically on navigation, so it doesn't
-  // stay open over the next page.
+  // stay open over the next page. mobileNavOpen is also independently
+  // toggled by the user (opening the drawer), so it can't be derived from
+  // pathname alone -- this only needs to reset it when pathname changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileNavOpen(false);
   }, [pathname]);
 

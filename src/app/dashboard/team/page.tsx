@@ -15,5 +15,5 @@ export default async function TeamPage() {
     .eq("developer_id", developerId)
     .order("created_at", { ascending: false });
 
-  return <TeamTable developerId={developerId} members={members ?? []} />;
+  return <TeamTable members={members ?? []} />;
 }

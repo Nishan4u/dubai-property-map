@@ -76,7 +76,9 @@ export function ShareButton({
   }, [open]);
 
   useEffect(() => {
+    // window.location doesn't exist during SSR -- must be read after mount.
     const directUrl = path ? new URL(path, window.location.origin).toString() : window.location.href;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShareUrl(directUrl);
 
     // Only logged-in staff get a trackable link — everyone else (including

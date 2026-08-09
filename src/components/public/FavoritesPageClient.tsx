@@ -19,6 +19,11 @@ export function FavoritesPageClient() {
   useEffect(() => {
     if (!loaded) return;
     if (favoriteIds.size === 0) {
+      // favoriteIds comes from FavoritesProvider's own async-resolved
+      // context, not something knowable at this component's initial
+      // render -- syncing local list state to an external source going
+      // empty is exactly Effects' documented "fetching data" use case.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProjects([]);
       setFetching(false);
       return;

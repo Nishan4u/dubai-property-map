@@ -95,6 +95,12 @@ export function AllProjectsClient({
   // which is what the homepage's WebSite/SearchAction structured data
   // (Google's sitelinks search box) links to.
   useEffect(() => {
+    // Not just a lazy useState initializer -- this component can stay
+    // mounted across a client-side navigation to a new ?q=... (e.g.
+    // clicking another "search" link while already on /projects), so it
+    // needs to keep syncing to qParam after mount too, not just seed it
+    // once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (qParam) setSearchQuery(qParam);
   }, [qParam]);
   const [filters, setFilters] = useState<ProjectFilters>(emptyFilters);

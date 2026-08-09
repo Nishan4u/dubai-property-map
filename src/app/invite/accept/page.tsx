@@ -14,18 +14,21 @@ const kindLabel: Record<string, string> = {
 function AcceptInner() {
   const router = useRouter();
   const token = useSearchParams().get("token") ?? "";
-  const [status, setStatus] = useState<"loading" | "ready" | "invalid" | "submitting" | "done" | "error">("loading");
-  const [errorMsg, setErrorMsg] = useState("");
+  // token is already known synchronously (from the URL, not an async
+  // source), so the "no token" case is decided as the initial state
+  // itself rather than via an effect that fires setState on mount --
+  // avoids the extra render pass the previous "loading" -> effect ->
+  // "invalid" sequence caused for something knowable up front.
+  const [status, setStatus] = useState<"loading" | "ready" | "invalid" | "submitting" | "done" | "error">(
+    token ? "loading" : "invalid"
+  );
+  const [errorMsg, setErrorMsg] = useState(token ? "" : "Missing invitation link.");
   const [invite, setInvite] = useState<{ kind: string; email: string; developerName: string | null } | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("invalid");
-      setErrorMsg("Missing invitation link.");
-      return;
-    }
+    if (!token) return;
     fetch(`/api/invitations/by-token/${token}`)
       .then(async (r) => {
         const data = await r.json();
@@ -96,7 +99,7 @@ function AcceptInner() {
           <>
             <h1 className="text-xl font-bold text-ink-100">Accept your invitation</h1>
             <p className="mt-1 text-sm text-ink-400">
-              You've been invited{invite.developerName ? ` by ${invite.developerName}` : ""} as a{" "}
+              You&apos;ve been invited{invite.developerName ? ` by ${invite.developerName}` : ""} as a{" "}
               {kindLabel[invite.kind] ?? "member"}. Set a password for{" "}
               <span className="font-medium text-ink-200">{invite.email}</span> to activate your account.
             </p>

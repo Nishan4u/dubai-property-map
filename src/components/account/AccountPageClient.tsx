@@ -50,6 +50,12 @@ export function AccountPageClient() {
   useEffect(() => {
     if (!loaded) return;
     if (favoriteIds.size === 0) {
+      // favoriteIds comes from FavoritesProvider's own async-resolved
+      // context (not something knowable at this component's initial
+      // render), so there's no way to compute this reset during render --
+      // syncing local list state to an external source going empty is
+      // exactly Effects' documented "fetching data" use case.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFavProjects([]);
       setFavLoading(false);
       return;
@@ -68,6 +74,8 @@ export function AccountPageClient() {
   useEffect(() => {
     if (!loaded) return;
     if (favoriteCommunityIds.size === 0) {
+      // Same reasoning as the favorite-projects effect above.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFavCommunities([]);
       setFavCommunitiesLoading(false);
       return;

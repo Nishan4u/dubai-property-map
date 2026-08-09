@@ -36,7 +36,16 @@ export function CoordinatesPicker({
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
   const markerRef = useRef<import("mapbox-gl").Marker | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  // Mirrors the latest onChange into a ref so the map's event handlers
+  // (registered once, in the mount effect below) always call the current
+  // callback without needing to be torn down and re-registered on every
+  // parent re-render. Assigning ref.current during render is a side
+  // effect on something outside React's render output, so it happens in
+  // its own effect (with no dependency array, so it re-syncs after every
+  // render) instead of directly in the component body.
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
   const [linkInput, setLinkInput] = useState("");
   const [linkStatus, setLinkStatus] = useState<"idle" | "loading" | "error">("idle");
   const [linkError, setLinkError] = useState("");

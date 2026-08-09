@@ -15,10 +15,6 @@ export function SavedSearchesTab({ userId }: { userId: string }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    load();
-  }, [userId]);
-
   function load() {
     const supabase = createClient();
     supabase
@@ -31,6 +27,11 @@ export function SavedSearchesTab({ userId }: { userId: string }) {
         setLoading(false);
       });
   }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   async function handleDelete(id: string) {
     const supabase = createClient();
