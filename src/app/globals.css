@@ -76,6 +76,18 @@ body {
   display: none !important;
 }
 
+/* An open popup must always paint (and receive clicks) above every marker
+   pin -- Mapbox gives neither element type a default z-index, so without
+   this, a marker with its own explicit z-index (e.g. the community pin's
+   z-index:5, set so it still wins taps over a "Coming Soon" pin sharing
+   the same spot) would render on top of an already-open popup instead of
+   behind it, visually clipping its content -- reported live on the
+   "Coming Soon" popup, whose "I'm Interested" button sat partly under a
+   nearby community pin's count badge. */
+.mapboxgl-popup {
+  z-index: 10;
+}
+
 /* Scoped to popups created with { className: "dpm-popup-dark" } -- not a
    blanket .mapboxgl-popup-content override, since other popups on the map
    (community pin, "Coming Soon") already build their own content assuming
