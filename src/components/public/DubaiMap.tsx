@@ -341,7 +341,17 @@ export function DubaiMap({
               // (the buildings a "3D skyline" layer is actually meant to show)
               // are unaffected -- Downtown/Marina/Business Bay etc. keep looking
               // the same either way, since those buildings were already >12m.
-              filter: ["all", ["==", "extrude", "true"], [">", ["get", "height"], 12]],
+              //
+              // `["get", "extrude"]` (not the bare legacy `"extrude"` key) is
+              // deliberate -- mixing a legacy-style `["==", "extrude", "true"]`
+              // sub-filter with the expression-style height check below inside
+              // the same "all" made Mapbox's format auto-detector fall back to
+              // parsing the WHOLE filter as legacy syntax, which doesn't
+              // understand `["get", "height"]` in a value position and threw
+              // "filter[2][1]: string expected, array found" at style-load.
+              // Writing both sub-filters as explicit expressions keeps the
+              // whole thing unambiguous.
+              filter: ["all", ["==", ["get", "extrude"], "true"], [">", ["get", "height"], 12]],
               type: "fill-extrusion",
               minzoom: 13,
               paint: {
