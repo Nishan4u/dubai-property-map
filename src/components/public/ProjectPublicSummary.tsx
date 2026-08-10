@@ -32,6 +32,16 @@ export function ProjectPublicSummary({
   // "Product" is what Google's structured data tooling recognizes. This
   // version specifically matters for SEO since it's what guests and
   // crawlers (not logged in / not subscribed) actually see on this URL.
+  //
+  // hasMerchantReturnPolicy: same reasoning as the full page's JSON-LD --
+  // real estate genuinely has no "return" concept, so this states that
+  // explicitly rather than leaving the field missing (which is what
+  // Search Console's Merchant listings report was flagging).
+  // aggregateRating is NOT added here (unlike the full page): `preview`
+  // is `projects_public_meta`, a deliberately narrow public-safe subset
+  // that doesn't carry rating/review counts -- adding it would mean either
+  // fabricating a number or widening this view, neither of which belongs
+  // in this pass.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -45,6 +55,10 @@ export function ProjectPublicSummary({
       priceCurrency: "AED",
       availability: "https://schema.org/InStock",
       url: `https://dubaipropertymap.ae/projects/${preview.slug}`,
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+      },
     },
   };
 

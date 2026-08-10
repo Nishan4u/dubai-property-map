@@ -184,6 +184,23 @@ export default async function ProjectDetailsPage({
   // any actual search benefit. "Product" is the type Google's own guidance
   // recommends for a priced listing like this (real estate included), and
   // is what's actually recognized/parsed by Search Console + rich results.
+  //
+  // Search Console's "Merchant listings" report flags a Product/Offer pair
+  // like this against actual e-commerce/Merchant Center field expectations
+  // (aggregateRating, review, hasMerchantReturnPolicy, shippingDetails) --
+  // real gaps, addressed here as far as they honestly can be:
+  // - aggregateRating: added when this project has real review data (never
+  //   fabricated for projects with 0 reviews -- those legitimately have
+  //   nothing to report yet).
+  // - hasMerchantReturnPolicy: real estate has no "return" concept in the
+  //   retail sense, so this declares that explicitly via schema.org's own
+  //   MerchantReturnNotPermitted category, rather than leaving the field
+  //   silently missing.
+  // - review and shippingDetails are deliberately NOT added: there's no
+  //   real written-review content anywhere in this platform to cite (adding
+  //   one would mean fabricating a review), and "shipping" has no honest
+  //   analog for a property purchase. Both stay as known, accepted gaps --
+  //   Google labels both checks "non-critical" for exactly this reason.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -192,12 +209,24 @@ export default async function ProjectDetailsPage({
     image: project.coverImageUrl || undefined,
     brand: project.developerName ? { "@type": "Brand", name: project.developerName } : undefined,
     url: `https://dubaipropertymap.ae/projects/${project.slug}`,
+    aggregateRating:
+      project.reviews > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: project.rating,
+            reviewCount: project.reviews,
+          }
+        : undefined,
     offers: {
       "@type": "Offer",
       price: project.priceFromAed,
       priceCurrency: "AED",
       availability: "https://schema.org/InStock",
       url: `https://dubaipropertymap.ae/projects/${project.slug}`,
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+      },
     },
   };
 
