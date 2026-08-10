@@ -329,7 +329,19 @@ export function DubaiMap({
               id: "3d-buildings",
               source: "composite",
               "source-layer": "building",
-              filter: ["==", "extrude", "true"],
+              // `> 12` (roughly a 3-4 storey cutoff) in addition to Mapbox's own
+              // `extrude` flag -- confirmed live that Mapbox's building footprint
+              // data for dense low-rise villa communities (e.g. Dubai Islands)
+              // includes thousands of individually-extruded 3-6m villa/townhouse
+              // footprints packed edge to edge. Extruding every single one of
+              // those at 0.85 opacity visually merges into one solid, near-opaque
+              // block that hides the entire base map underneath it -- looks
+              // exactly like the map "isn't rendering" whenever a flyTo lands
+              // zoom>=13 over one of these communities. Real towers/mid-rises
+              // (the buildings a "3D skyline" layer is actually meant to show)
+              // are unaffected -- Downtown/Marina/Business Bay etc. keep looking
+              // the same either way, since those buildings were already >12m.
+              filter: ["all", ["==", "extrude", "true"], [">", ["get", "height"], 12]],
               type: "fill-extrusion",
               minzoom: 13,
               paint: {
