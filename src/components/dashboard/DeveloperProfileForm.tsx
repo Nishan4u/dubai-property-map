@@ -18,6 +18,9 @@ export function DeveloperProfileForm({
   const [email, setEmail] = useState(developer.email ?? "");
   const [phone, setPhone] = useState(developer.phone ?? "");
   const [website, setWebsite] = useState(developer.website ?? "");
+  const [reraRegistrationNumber, setReraRegistrationNumber] = useState(
+    developer.rera_registration_number ?? ""
+  );
   const [description, setDescription] = useState(developer.description ?? "");
   const [logoUrl, setLogoUrl] = useState(developer.logo_url ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -39,7 +42,14 @@ export function DeveloperProfileForm({
     const supabase = createClient();
     const { error } = await supabase
       .from("developers")
-      .update({ name, email, phone, website, description })
+      .update({
+        name,
+        email,
+        phone,
+        website,
+        description,
+        rera_registration_number: reraRegistrationNumber.trim() || null,
+      })
       .eq("id", developer.id);
     setStatus(error ? "error" : "saved");
     if (!error) setTimeout(() => setStatus("idle"), 2000);
@@ -162,6 +172,12 @@ export function DeveloperProfileForm({
           <Field label="Contact Email" value={email} onChange={setEmail} type="email" />
           <Field label="Phone" value={phone} onChange={setPhone} />
           <Field label="Website" value={website} onChange={setWebsite} placeholder="https://…" />
+          <Field
+            label="RERA Registration Number"
+            value={reraRegistrationNumber}
+            onChange={setReraRegistrationNumber}
+            placeholder="Optional -- organization-level RERA registration"
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-ink-400">About</label>

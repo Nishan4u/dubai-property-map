@@ -37,6 +37,9 @@ export interface Developer {
   website?: string | null;
   logoUrl?: string | null;
   featured: boolean;
+  // Organization-level RERA registration -- distinct from a broker's own
+  // brn/orn. Manual-entry only.
+  reraRegistrationNumber?: string | null;
 }
 
 export interface Community {
@@ -103,6 +106,11 @@ export interface Project {
    * building is. Null/undefined for off-plan projects or when not set. */
   buildingAgeYears?: number | null;
   updatedAt?: string;
+  // UAE regulatory/permit fields (patch_139) -- manual-entry only, never
+  // auto-populated/validated against a real DLD/RERA/Madmoun API.
+  dldPermitNumber?: string | null;
+  trakheesiNumber?: string | null;
+  madmounQrUrl?: string | null;
   // Derived from the project_unit_types child table when the list query
   // joins it (spec section 12: Unit Type / Size sqft search filters).
   // Absent (not empty-array) when the query didn't join it.

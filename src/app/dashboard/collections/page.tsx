@@ -1,6 +1,12 @@
 import { FolderOpen } from "lucide-react";
 import { DeveloperCollectionsClient } from "@/components/dashboard/DeveloperCollectionsClient";
-import { getCollectionsForDeveloper, getCrmClientsForDeveloper, getPublishedProjects, requireDeveloperProfile } from "@/lib/supabase/queries";
+import {
+  getCollectionsForDeveloper,
+  getCrmClientsForDeveloper,
+  getLastViewedAtForCollections,
+  getPublishedProjects,
+  requireDeveloperProfile,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +19,7 @@ export default async function DeveloperCollectionsPage() {
     getCrmClientsForDeveloper(developerId),
     getPublishedProjects(developerId),
   ]);
+  const lastViewedAt = await getLastViewedAtForCollections(collections.map((c) => c.id));
 
   return (
     <div className="space-y-4 p-6">
@@ -27,6 +34,7 @@ export default async function DeveloperCollectionsPage() {
         collections={collections}
         clients={clients}
         projects={projectRows.map((p) => ({ id: p.id, name: p.name }))}
+        lastViewedAt={lastViewedAt}
       />
     </div>
   );

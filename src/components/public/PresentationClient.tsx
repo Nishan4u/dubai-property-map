@@ -4,7 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FolderOpen, Mail, MessageCircle, Phone, Printer } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
+import { NearbyDistances } from "@/components/public/NearbyDistances";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import type { NearestPoi } from "@/lib/investmentScore";
+
+interface PresentationUnitType {
+  unitName: string;
+  unitType: string;
+  // null means the agent chose to hide price on this collection -- shown
+  // as "Contact agent" rather than a fake/blank value, same as
+  // priceFromAed below.
+  startingPriceAed: number | null;
+  sizeSqft: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  availability: string;
+}
 
 interface PresentationProject {
   name: string;
@@ -18,6 +33,12 @@ interface PresentationProject {
   bedroomsTo: number;
   communityName: string | null;
   developerName: string | null;
+  // All three below are additive, real-data-or-empty (never fabricated) --
+  // a collection with none of this data renders exactly as it did before
+  // these existed, since each section below is conditional on .length > 0.
+  paymentPlanDetails: { label: string; percent: number }[];
+  nearbyPoi: NearestPoi[];
+  unitTypes: PresentationUnitType[];
 }
 
 interface Agent {
@@ -28,11 +49,39 @@ interface Agent {
   email: string | null;
 }
 
+// Presentation Studio 2.0 modes -- a pure client-side rendering
+// directive (which of the sections below render, and in what order/
+// emphasis), never four separate page templates, and never a second
+// path around the hide_* stripping the API already does server-side.
+// "quick_pitch" renders none of the new sections at all -- the fastest
+// thing to skim on WhatsApp, and byte-for-byte what every collection
+// rendered before Presentation Studio 2.0 existed.
+type PresentationMode = "default" | "investor" | "end_user" | "quick_pitch";
+type SectionKey = "unitTypes" | "paymentPlan" | "location";
+
+const SECTION_ORDER: Record<PresentationMode, SectionKey[]> = {
+  default: ["unitTypes", "paymentPlan", "location"],
+  investor: ["unitTypes", "paymentPlan", "location"],
+  end_user: ["location", "unitTypes", "paymentPlan"],
+  quick_pitch: [],
+};
+
+// Which section(s) get full visual weight per mode -- everything else
+// still renders (real data is never hidden by a mode), just muted/
+// de-emphasized rather than removed.
+const EMPHASIZED_SECTIONS: Record<PresentationMode, SectionKey[]> = {
+  default: ["unitTypes", "paymentPlan", "location"],
+  investor: ["unitTypes", "paymentPlan"],
+  end_user: ["location"],
+  quick_pitch: [],
+};
+
 export function PresentationClient({ token }: { token: string }) {
   const { formatPrice } = useLocale();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
+  const [mode, setMode] = useState<PresentationMode>("default");
   const [agent, setAgent] = useState<Agent | null>(null);
   const [projects, setProjects] = useState<PresentationProject[]>([]);
 
@@ -46,6 +95,7 @@ export function PresentationClient({ token }: { token: string }) {
           return;
         }
         setTitle(data.title);
+        setMode((data.mode as PresentationMode) ?? "default");
         setAgent(data.agent ?? null);
         setProjects(data.projects);
         setLoading(false);
@@ -167,11 +217,95 @@ export function PresentationClient({ token }: { token: string }) {
                   {p.bedroomsFrom === 0 ? "Studio" : `${p.bedroomsFrom}`}
                   {p.bedroomsTo > p.bedroomsFrom ? `-${p.bedroomsTo} Bed` : p.bedroomsFrom > 0 ? " Bed" : ""}
                 </p>
+
+                {SECTION_ORDER[mode].map((sectionKey) => (
+                  <PresentationSection
+                    key={sectionKey}
+                    sectionKey={sectionKey}
+                    project={p}
+                    emphasized={EMPHASIZED_SECTIONS[mode].includes(sectionKey)}
+                    formatPrice={formatPrice}
+                  />
+                ))}
               </div>
             </Link>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// One card section per SectionKey. `emphasized` is purely a styling
+// signal (full-strength vs. muted/smaller heading) -- it never hides
+// real data; a de-emphasized section still shows everything a viewer
+// would see in "default" mode, just visually quieter. Each branch keeps
+// its own `.length > 0` guard so a project missing this specific data
+// renders nothing for it, exactly like before modes existed.
+function PresentationSection({
+  sectionKey,
+  project,
+  emphasized,
+  formatPrice,
+}: {
+  sectionKey: SectionKey;
+  project: PresentationProject;
+  emphasized: boolean;
+  formatPrice: (amountAed: number) => string;
+}) {
+  const headingClass = emphasized
+    ? "mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500"
+    : "mb-1.5 text-[10px] font-medium uppercase tracking-wide text-ink-600";
+  const wrapperClass = `mt-3 border-t border-navy-800 pt-3 ${emphasized ? "" : "opacity-75"}`;
+
+  if (sectionKey === "unitTypes") {
+    if (project.unitTypes.length === 0) return null;
+    return (
+      <div className={wrapperClass}>
+        <p className={headingClass}>Unit Types</p>
+        <div className="space-y-1">
+          {project.unitTypes.map((u, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="text-ink-300">
+                {u.unitName}
+                {u.sizeSqft ? ` · ${u.sizeSqft.toLocaleString()} sqft` : ""}
+              </span>
+              <span className="font-medium text-ink-100">
+                {u.startingPriceAed != null ? formatPrice(u.startingPriceAed) : "Contact agent"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (sectionKey === "paymentPlan") {
+    if (project.paymentPlanDetails.length === 0) return null;
+    return (
+      <div className={wrapperClass}>
+        <p className={headingClass}>Payment Plan</p>
+        <div className="overflow-hidden rounded-lg border border-navy-700">
+          {project.paymentPlanDetails.map((stage, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between border-b border-navy-800 bg-navy-900 px-2.5 py-1.5 text-xs last:border-b-0"
+            >
+              <span className="text-ink-300">{stage.label}</span>
+              <span className="font-semibold text-gold-400">{stage.percent}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // sectionKey === "location"
+  if (project.nearbyPoi.length === 0) return null;
+  return (
+    <div className={wrapperClass}>
+      <p className={headingClass}>Location Intelligence</p>
+      <NearbyDistances items={project.nearbyPoi} />
     </div>
   );
 }

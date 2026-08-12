@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, FolderOpen, Share2, Trash2 } from "lucide-react";
+import { Check, Copy, Eye, FolderOpen, MessageCircle, Share2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { generateReferralQrCode } from "@/lib/referralQrCode";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import type { CrmClientRow } from "@/lib/supabase/queries";
 
 interface Collection {
@@ -15,11 +16,20 @@ interface Collection {
   created_at: string;
   crm_clients: { full_name: string } | { full_name: string }[] | null;
   crm_collection_items: { count: number }[] | { count: number } | null;
+  // Absent (not just 0) on an environment that hasn't run patch_140 yet --
+  // getCollections() falls back to a select without this column rather
+  // than breaking the whole page, so this must stay optional here too.
+  crm_collection_views?: { count: number }[] | { count: number } | null;
 }
 
 function itemCount(c: Collection): number {
   const items = Array.isArray(c.crm_collection_items) ? c.crm_collection_items[0] : c.crm_collection_items;
   return items?.count ?? 0;
+}
+
+function viewCount(c: Collection): number {
+  const views = Array.isArray(c.crm_collection_views) ? c.crm_collection_views[0] : c.crm_collection_views;
+  return views?.count ?? 0;
 }
 
 // Mirrors src/components/broker/BrokerCollectionsClient.tsx -- see it
@@ -31,11 +41,13 @@ export function SalespersonCollectionsClient({
   collections: initialCollections,
   clients,
   projects,
+  lastViewedAt = {},
 }: {
   salespersonId: string;
   collections: Collection[];
   clients: CrmClientRow[];
   projects: { id: string; name: string }[];
+  lastViewedAt?: Record<string, string>;
 }) {
   const [collections, setCollections] = useState(initialCollections);
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +60,9 @@ export function SalespersonCollectionsClient({
   const [hideDeveloperName, setHideDeveloperName] = useState(false);
   const [hidePrice, setHidePrice] = useState(false);
   const [hideLocation, setHideLocation] = useState(false);
+  // Presentation Studio 2.0 mode (patch_141) -- purely a client-side
+  // rendering directive on /present/[token], see PresentationClient.tsx.
+  const [mode, setMode] = useState("default");
   const [saving, setSaving] = useState(false);
   const [shareOpenId, setShareOpenId] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -70,17 +85,28 @@ export function SalespersonCollectionsClient({
       title: title.trim(),
     };
 
+    const hidePayload = { hide_developer_name: hideDeveloperName, hide_price: hidePrice, hide_location: hideLocation };
+
     let { data: collection, error } = await supabase
       .from("crm_collections")
-      .insert({ ...basePayload, hide_developer_name: hideDeveloperName, hide_price: hidePrice, hide_location: hideLocation })
+      .insert({ ...basePayload, ...hidePayload, mode })
       .select("*, crm_clients(full_name)")
       .single();
 
-    // hide_* columns are a newer addition (patch_134) that may not be
-    // migrated on every environment yet -- Postgres errors on the whole
-    // insert when it references an unknown column, which would otherwise
-    // break collection creation entirely until the migration runs. Retry
-    // without the new fields so the existing feature keeps working.
+    // hide_* (patch_134) and mode (patch_141) are both newer additions
+    // that may not be migrated on every environment yet -- Postgres
+    // errors on the whole insert when it references an unknown column,
+    // which would otherwise break collection creation entirely until the
+    // migration runs. Two retry tiers, dropping the newest column first,
+    // so an environment with hide_* but not yet `mode` still gets the
+    // already-shipped hide_* toggles instead of losing both at once.
+    if (error) {
+      ({ data: collection, error } = await supabase
+        .from("crm_collections")
+        .insert({ ...basePayload, ...hidePayload })
+        .select("*, crm_clients(full_name)")
+        .single());
+    }
     if (error) {
       ({ data: collection, error } = await supabase
         .from("crm_collections")
@@ -110,6 +136,7 @@ export function SalespersonCollectionsClient({
     setHideDeveloperName(false);
     setHidePrice(false);
     setHideLocation(false);
+    setMode("default");
     setSaving(false);
   }
 
@@ -229,6 +256,19 @@ export function SalespersonCollectionsClient({
               Hidden fields show as &quot;Contact agent&quot; on the shared link, so the buyer has to reach out to you.
             </p>
           </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">Presentation mode</label>
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
+            >
+              <option value="default">Default -- everything, natural order</option>
+              <option value="investor">Investor -- pricing &amp; payment plan first</option>
+              <option value="end_user">End User -- location &amp; lifestyle first</option>
+              <option value="quick_pitch">Quick Pitch -- projects only, no extra sections</option>
+            </select>
+          </div>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -263,7 +303,15 @@ export function SalespersonCollectionsClient({
                       <p className="text-ink-100">
                         {c.title} {client && <span className="text-ink-500">· {client.full_name}</span>}
                       </p>
-                      <p className="text-xs text-ink-500">{itemCount(c)} project{itemCount(c) === 1 ? "" : "s"}</p>
+                      <p className="text-xs text-ink-500">
+                        {itemCount(c)} project{itemCount(c) === 1 ? "" : "s"}
+                        {" · "}
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          Opened {viewCount(c)} time{viewCount(c) === 1 ? "" : "s"}
+                        </span>
+                        {lastViewedAt[c.id] && ` · Last viewed ${new Date(lastViewedAt[c.id]).toLocaleString()}`}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -286,13 +334,26 @@ export function SalespersonCollectionsClient({
                     )}
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <p className="truncate text-xs text-ink-400">/present/{c.share_token}</p>
-                      <button
-                        onClick={() => handleCopy(c.share_token)}
-                        className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1 text-xs font-medium text-ink-300 hover:text-ink-100"
-                      >
-                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                        {copied ? "Copied" : "Copy Link"}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleCopy(c.share_token)}
+                          className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1 text-xs font-medium text-ink-300 hover:text-ink-100"
+                        >
+                          {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied ? "Copied" : "Copy Link"}
+                        </button>
+                        <a
+                          href={getWhatsAppUrl(
+                            "",
+                            `${c.title}: ${window.location.origin}/present/${c.share_token}`
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1 text-xs font-medium text-ink-300 hover:text-ink-100"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> Share via WhatsApp
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}

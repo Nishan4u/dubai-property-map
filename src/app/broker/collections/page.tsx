@@ -1,6 +1,12 @@
 import { FolderOpen } from "lucide-react";
 import { BrokerCollectionsClient } from "@/components/broker/BrokerCollectionsClient";
-import { getCollectionsForBroker, getCrmClientsForBroker, getPublishedProjects, requireBrokerProfile } from "@/lib/supabase/queries";
+import {
+  getCollectionsForBroker,
+  getCrmClientsForBroker,
+  getLastViewedAtForCollections,
+  getPublishedProjects,
+  requireBrokerProfile,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +18,7 @@ export default async function BrokerCollectionsPage() {
     getCrmClientsForBroker(profile.broker_id),
     getPublishedProjects(),
   ]);
+  const lastViewedAt = await getLastViewedAtForCollections(collections.map((c) => c.id));
 
   return (
     <div className="space-y-4 p-6">
@@ -26,6 +33,7 @@ export default async function BrokerCollectionsPage() {
         collections={collections}
         clients={clients}
         projects={projectRows.map((p) => ({ id: p.id, name: p.name }))}
+        lastViewedAt={lastViewedAt}
       />
     </div>
   );

@@ -51,6 +51,9 @@ export function mapProject(row: ProjectWithRelations): Project {
     escrowStatus: row.escrow_status ?? null,
     furnishing: row.furnishing ?? null,
     buildingAgeYears: row.building_age_years ?? null,
+    dldPermitNumber: row.dld_permit_number ?? null,
+    trakheesiNumber: row.trakheesi_number ?? null,
+    madmounQrUrl: row.madmoun_qr_url ?? null,
     updatedAt: row.updated_at,
     createdAt: row.created_at,
     developerName: row.developers?.name,
@@ -101,6 +104,7 @@ export function mapDeveloper(
     website: row.website ?? null,
     logoUrl: row.logo_url ?? null,
     featured: row.featured,
+    reraRegistrationNumber: row.rera_registration_number ?? null,
   };
 }
 

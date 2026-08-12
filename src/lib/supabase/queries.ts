@@ -1021,13 +1021,27 @@ async function getCollections(
   ownerId: string
 ) {
   const supabase = await createClient();
+  // crm_collection_views (patch_140) is a newer addition that may not be
+  // migrated on every environment yet -- PostgREST hard-errors on an
+  // embedded select against a table that doesn't exist, which would
+  // otherwise break this already-shipped Collections query for everyone
+  // until the migration runs. Try the full select first; fall back to the
+  // base select (no view counts) on any error, same two-tier pattern the
+  // presentations route already uses for hide_*/mode.
   const { data, error } = await supabase
+    .from("crm_collections")
+    .select("*, crm_clients(full_name), crm_collection_items(count), crm_collection_views(count)")
+    .eq(ownerColumn, ownerId)
+    .order("created_at", { ascending: false });
+  if (!error) return data ?? [];
+
+  const { data: fallback, error: fallbackError } = await supabase
     .from("crm_collections")
     .select("*, crm_clients(full_name), crm_collection_items(count)")
     .eq(ownerColumn, ownerId)
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  if (fallbackError) throw fallbackError;
+  return fallback ?? [];
 }
 
 export async function getCollectionsForBroker(brokerId: string) {
@@ -1044,6 +1058,32 @@ export async function getCollectionsForDeveloper(developerId: string) {
 
 export async function getCollectionsForBrokerAgency(brokerageId: string) {
   return getCollections("brokerage_id", brokerageId);
+}
+
+// Presentation Studio 2.0 (patch_140) -- last-viewed timestamp per
+// collection, for the "Opened N times · last viewed {relative time}" line
+// on each Collections page. One bulk select + in-JS reduce to
+// first-per-collection (crm_collection_views is append-only and can have
+// many rows per collection), not a per-collection query -- same bulk-query
+// convention already used elsewhere in this file.
+export async function getLastViewedAtForCollections(
+  collectionIds: string[]
+): Promise<Record<string, string>> {
+  if (collectionIds.length === 0) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("crm_collection_views")
+    .select("collection_id, created_at")
+    .in("collection_id", collectionIds)
+    .order("created_at", { ascending: false });
+  // Table may not exist yet on an unmigrated environment (patch_140) --
+  // degrade to "no view data" rather than breaking the Collections page.
+  if (error || !data) return {};
+  const result: Record<string, string> = {};
+  for (const row of data) {
+    if (!result[row.collection_id]) result[row.collection_id] = row.created_at;
+  }
+  return result;
 }
 
 // Agency White-Label Storefront -- the agency's own persistent, public

@@ -257,6 +257,11 @@ export function ProjectForm({
         .map((i) => ({ label: i.label.trim(), percent: Number(i.percent) })),
       amenities,
       tags,
+      // UAE regulatory/permit fields -- plain manual text, never validated
+      // against a real DLD/RERA/Madmoun API (see patch_139).
+      dld_permit_number: String(formData.get("dld_permit_number") ?? "").trim() || null,
+      trakheesi_number: String(formData.get("trakheesi_number") ?? "").trim() || null,
+      madmoun_qr_url: String(formData.get("madmoun_qr_url") ?? "").trim() || null,
     };
 
     const supabase = createClient();
@@ -726,6 +731,33 @@ export function ProjectForm({
         <p className="mt-2 text-xs text-ink-500">
           These links appear on the map pin popup and the project details page. Leave
           blank to hide.
+        </p>
+      </SectionCard>
+
+      <SectionCard title="Regulatory / Permits">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            label="DLD Permit Number"
+            name="dld_permit_number"
+            defaultValue={project?.dldPermitNumber ?? ""}
+            placeholder="e.g. 65214785412"
+          />
+          <Field
+            label="Trakheesi Number"
+            name="trakheesi_number"
+            defaultValue={project?.trakheesiNumber ?? ""}
+            placeholder="e.g. 12345678901234"
+          />
+          <Field
+            label="Madmoun QR Code URL"
+            name="madmoun_qr_url"
+            defaultValue={project?.madmounQrUrl ?? ""}
+            placeholder="https://..."
+          />
+        </div>
+        <p className="mt-2 text-xs text-ink-500">
+          Optional. Shown on the public project page when filled in — plain
+          reference fields, not verified against DLD/RERA/Madmoun.
         </p>
       </SectionCard>
 

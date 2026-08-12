@@ -1,6 +1,12 @@
 import { FolderOpen } from "lucide-react";
 import { SalespersonCollectionsClient } from "@/components/salesperson/SalespersonCollectionsClient";
-import { getCollectionsForSalesperson, getCrmClientsForSalesperson, getPublishedProjects, requireSalespersonProfile } from "@/lib/supabase/queries";
+import {
+  getCollectionsForSalesperson,
+  getCrmClientsForSalesperson,
+  getLastViewedAtForCollections,
+  getPublishedProjects,
+  requireSalespersonProfile,
+} from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +18,7 @@ export default async function SalespersonCollectionsPage() {
     getCrmClientsForSalesperson(profile.salesperson_id),
     getPublishedProjects(),
   ]);
+  const lastViewedAt = await getLastViewedAtForCollections(collections.map((c) => c.id));
 
   return (
     <div className="space-y-4 p-6">
@@ -26,6 +33,7 @@ export default async function SalespersonCollectionsPage() {
         collections={collections}
         clients={clients}
         projects={projectRows.map((p) => ({ id: p.id, name: p.name }))}
+        lastViewedAt={lastViewedAt}
       />
     </div>
   );

@@ -2,15 +2,35 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Check, Copy, FolderOpen, Sparkles } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { CompactSelect } from "@/components/public/CompactSelect";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { createClient } from "@/lib/supabase/client";
+import { generateReferralQrCode } from "@/lib/referralQrCode";
 import type { Project } from "@/types";
 
 const MAX_SLOTS = 5;
 
-export function CompareClient({ projects }: { projects: Project[] }) {
+// Presentation Studio 2.0, item 6 -- turns the current comparison into a
+// real, shareable crm_collections row (the same table Collections/
+// Presentations already use). Only present when this component is
+// mounted from inside a portal (broker/salesperson/developer own
+// /compare page) with the viewer's own owner id -- absent by default, so
+// the fully public /compare page's behavior and bundle stay byte-for-byte
+// unchanged for every existing visitor.
+interface OwnerContext {
+  ownerType: "broker" | "salesperson" | "developer";
+  ownerId: string;
+}
+
+export function CompareClient({
+  projects,
+  ownerContext,
+}: {
+  projects: Project[];
+  ownerContext?: OwnerContext;
+}) {
   const { formatPrice } = useLocale();
   // Lets a project's Share menu link straight into a comparison that
   // already includes it (/compare?add=<slug>), instead of always landing
@@ -28,6 +48,82 @@ export function CompareClient({ projects }: { projects: Project[] }) {
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
+
+  const [showPresentationForm, setShowPresentationForm] = useState(false);
+  const [presentationTitle, setPresentationTitle] = useState("");
+  const [creatingPresentation, setCreatingPresentation] = useState(false);
+  const [presentationToken, setPresentationToken] = useState<string | null>(null);
+  const [presentationQrDataUrl, setPresentationQrDataUrl] = useState<string | null>(null);
+  const [presentationLinkCopied, setPresentationLinkCopied] = useState(false);
+
+  async function handleCreatePresentation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ownerContext || !presentationTitle.trim() || selected.length === 0) return;
+    setCreatingPresentation(true);
+    const supabase = createClient();
+
+    // Same insert shape as BrokerCollectionsClient.handleCreate (and its
+    // salesperson/developer/agency siblings) -- hide_* all false and
+    // mode "default" here since this quick path has no toggle UI of its
+    // own; the agent can still edit them later from their Collections
+    // page, this just gets a real, working link created fast.
+    const basePayload = {
+      owner_type: ownerContext.ownerType,
+      [`${ownerContext.ownerType}_id`]: ownerContext.ownerId,
+      client_id: null,
+      title: presentationTitle.trim(),
+    };
+    const hidePayload = { hide_developer_name: false, hide_price: false, hide_location: false };
+
+    let { data: collection, error } = await supabase
+      .from("crm_collections")
+      .insert({ ...basePayload, ...hidePayload, mode: "default" })
+      .select("id, share_token")
+      .single();
+
+    // Same two-tier fallback as the Collections clients -- hide_*
+    // (patch_134) and mode (patch_141) may not be migrated everywhere yet.
+    if (error) {
+      ({ data: collection, error } = await supabase
+        .from("crm_collections")
+        .insert({ ...basePayload, ...hidePayload })
+        .select("id, share_token")
+        .single());
+    }
+    if (error) {
+      ({ data: collection, error } = await supabase
+        .from("crm_collections")
+        .insert(basePayload)
+        .select("id, share_token")
+        .single());
+    }
+
+    if (error || !collection) {
+      setCreatingPresentation(false);
+      return;
+    }
+
+    await supabase.from("crm_collection_items").insert(
+      selected.map((p, i) => ({
+        collection_id: collection.id,
+        project_id: p.id,
+        sort_order: i,
+      }))
+    );
+
+    setPresentationToken(collection.share_token);
+    setPresentationLinkCopied(false);
+    setPresentationQrDataUrl(
+      await generateReferralQrCode(`${window.location.origin}/present/${collection.share_token}`)
+    );
+    setCreatingPresentation(false);
+  }
+
+  async function handleCopyPresentationLink() {
+    if (!presentationToken) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/present/${presentationToken}`);
+    setPresentationLinkCopied(true);
+  }
 
   async function getAiSummary() {
     setSummaryLoading(true);
@@ -126,6 +222,14 @@ export function CompareClient({ projects }: { projects: Project[] }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {ownerContext && selected.length >= 1 && (
+              <button
+                onClick={() => setShowPresentationForm((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm font-medium text-ink-100 hover:border-gold-500/60"
+              >
+                <FolderOpen className="h-4 w-4 text-gold-400" /> Create Presentation
+              </button>
+            )}
             {selected.length >= 2 && (
               <button
                 onClick={getAiSummary}
@@ -146,6 +250,62 @@ export function CompareClient({ projects }: { projects: Project[] }) {
             )}
           </div>
         </div>
+
+        {showPresentationForm && ownerContext && (
+          <div className="mt-4 rounded-xl border border-gold-500/30 bg-gold-500/[0.03] p-4">
+            {presentationToken ? (
+              <div className="flex flex-wrap items-center gap-4">
+                {presentationQrDataUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={presentationQrDataUrl}
+                    alt="Share QR code"
+                    className="h-20 w-20 rounded-lg border border-navy-600"
+                  />
+                )}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="text-sm font-semibold text-ink-100">Presentation created</p>
+                  <p className="truncate text-xs text-ink-400">/present/{presentationToken}</p>
+                  <button
+                    onClick={handleCopyPresentationLink}
+                    className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-2.5 py-1 text-xs font-medium text-ink-300 hover:text-ink-100"
+                  >
+                    {presentationLinkCopied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                    {presentationLinkCopied ? "Copied" : "Copy Link"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreatePresentation} className="flex flex-wrap items-end gap-3">
+                <div className="min-w-0 flex-1">
+                  <label className="mb-1 block text-xs font-medium text-ink-400">Title</label>
+                  <input
+                    required
+                    value={presentationTitle}
+                    onChange={(e) => setPresentationTitle(e.target.value)}
+                    placeholder={`e.g. Comparison for ${selected[0]?.name ?? "your client"}`}
+                    className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={creatingPresentation || !presentationTitle.trim()}
+                  className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
+                >
+                  {creatingPresentation ? "Creating…" : "Create"}
+                </button>
+              </form>
+            )}
+            <p className="mt-2 text-[11px] text-ink-500">
+              Turns the {selected.length} selected project{selected.length === 1 ? "" : "s"} into a shareable,
+              branded presentation link -- manage it later from your Collections page.
+            </p>
+          </div>
+        )}
 
         {(summary || summaryLoading || summaryError) && (
           <div className="mt-4 rounded-xl border border-navy-700 bg-navy-850 p-4">

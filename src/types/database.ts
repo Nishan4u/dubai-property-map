@@ -142,6 +142,10 @@ export interface DeveloperRow {
   last_reminder_sent_days: number | null;
   featured: boolean;
   created_at: string;
+  // Organization-level RERA registration -- distinct from brokers.brn/orn
+  // (patch_30), which belong to the individual broker, not the developer.
+  // Manual-entry only, never validated against a real RERA API.
+  rera_registration_number: string | null;
 }
 
 export interface DeveloperAwardRow {
@@ -272,6 +276,11 @@ export interface ProjectRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // UAE regulatory/permit fields (patch_139) -- manual-entry only, never
+  // auto-populated/validated against a real DLD/RERA/Madmoun API.
+  dld_permit_number: string | null;
+  trakheesi_number: string | null;
+  madmoun_qr_url: string | null;
 }
 
 export interface ConstructionMilestoneRow {

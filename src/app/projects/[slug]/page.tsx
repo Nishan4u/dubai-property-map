@@ -384,6 +384,29 @@ export default async function ProjectDetailsPage({
               </Section>
             )}
 
+            {(project.dldPermitNumber || project.trakheesiNumber || project.madmounQrUrl) && (
+              <Section title="Registration">
+                <div className="flex flex-wrap items-start gap-6">
+                  <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                    {project.dldPermitNumber && (
+                      <Fact label="DLD Permit No." value={project.dldPermitNumber} />
+                    )}
+                    {project.trakheesiNumber && (
+                      <Fact label="Trakheesi No." value={project.trakheesiNumber} />
+                    )}
+                  </div>
+                  {project.madmounQrUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={project.madmounQrUrl}
+                      alt="Madmoun QR code"
+                      className="h-24 w-24 shrink-0 rounded-lg border border-navy-700 bg-white p-1.5"
+                    />
+                  )}
+                </div>
+              </Section>
+            )}
+
             {unitTypes.length > 0 && (
               <Section title="Unit Types">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

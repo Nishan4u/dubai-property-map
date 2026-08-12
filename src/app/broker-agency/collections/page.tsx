@@ -3,6 +3,7 @@ import { AgencyCollectionsClient } from "@/components/broker-agency/AgencyCollec
 import {
   getCollectionsForBrokerAgency,
   getCrmClientsForBrokerAgency,
+  getLastViewedAtForCollections,
   getPublishedProjects,
   requireBrokerAgencyProfile,
 } from "@/lib/supabase/queries";
@@ -17,6 +18,7 @@ export default async function BrokerAgencyCollectionsPage() {
     getCrmClientsForBrokerAgency(profile.broker_agency_id),
     getPublishedProjects(),
   ]);
+  const lastViewedAt = await getLastViewedAtForCollections(collections.map((c) => c.id));
 
   return (
     <div className="space-y-4 p-6">
@@ -31,6 +33,7 @@ export default async function BrokerAgencyCollectionsPage() {
         collections={collections}
         clients={clients}
         projects={projectRows.map((p) => ({ id: p.id, name: p.name }))}
+        lastViewedAt={lastViewedAt}
       />
     </div>
   );

@@ -20,6 +20,9 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
   const [nameAr, setNameAr] = useState(developer.name_ar ?? "");
   const [descriptionAr, setDescriptionAr] = useState(developer.description_ar ?? "");
   const [approvedEmailDomain, setApprovedEmailDomain] = useState(developer.approved_email_domain ?? "");
+  const [reraRegistrationNumber, setReraRegistrationNumber] = useState(
+    developer.rera_registration_number ?? ""
+  );
   const [logoUrl, setLogoUrl] = useState(developer.logo_url ?? "");
   const [featured, setFeatured] = useState(developer.featured);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -81,6 +84,7 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
         name_ar: nameAr.trim() || null,
         description_ar: descriptionAr.trim() || null,
         approved_email_domain: approvedEmailDomain.trim() ? approvedEmailDomain.trim().replace(/^@/, "").toLowerCase() : null,
+        rera_registration_number: reraRegistrationNumber.trim() || null,
         featured,
       })
       .eq("id", developer.id);
@@ -154,6 +158,12 @@ export function EditDeveloperForm({ developer }: { developer: DeveloperRow }) {
       <Field label="Phone" value={phone} onChange={setPhone} />
       <Field label="Website" value={website} onChange={setWebsite} placeholder="https://…" />
       <Field label="Founded (year)" value={founded} onChange={setFounded} type="number" />
+      <Field
+        label="RERA Registration Number"
+        value={reraRegistrationNumber}
+        onChange={setReraRegistrationNumber}
+        placeholder="Optional -- organization-level RERA registration"
+      />
       <div>
         <label className="mb-1 block text-xs font-medium text-ink-400">Salesperson Email Domain</label>
         <input
