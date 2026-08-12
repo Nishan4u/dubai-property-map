@@ -1233,6 +1233,61 @@ section as modules get built out.
   one-time DNS/Nginx/wildcard-SSL setup is a real, separate hand-off
   (not app code) still pending as of this entry.
 
+- Presentation Studio 2.0 (repositioning pass on the existing Collections/
+  `/present/[token]` presentation mechanism, prompted by a strategic pitch
+  comparing this platform to a competitor's "Presentation Studio" —
+  audited against the real codebase first, which found most of the pitch
+  already existed under different names, so this pass scoped and built
+  only the genuine gaps): DLD Permit/Trakheesi/Madmoun-QR fields on
+  `projects`, RERA registration on `developers` (`patch_139`); presentation
+  view-count analytics (`crm_collection_views`, append-only/service-role-
+  write-only, patch_140) surfaced as "Opened N times · last viewed" on all
+  four Collections pages, plus a WhatsApp share button next to the
+  existing Copy Link/QR; presentations gained real Payment Plan, Location
+  Intelligence (`findNearestByCategory`, computed server-side so the ~103KB
+  POI dataset never ships to the public bundle), and Unit Types sections
+  (all three honoring the pre-existing `hide_price`/`hide_location`
+  toggles, a real consistency gap caught during design — those toggles
+  would otherwise have been silently defeated by the new data); four
+  presentation "modes" (`patch_141`) that reorder/emphasize those sections
+  without ever weakening the hide_* stripping; and a "Create Presentation"
+  button on the public `/compare` page, gated behind a new optional
+  `ownerContext` prop so the page's own public behavior/bundle stays
+  byte-identical when absent, with new portal-scoped `/compare` entry
+  points for broker/salesperson/developer.
+- Broker Vault nav consolidation: the broker portal sidebar
+  (`BrokerShellClient.tsx`) is grouped into "Vault" and "Account" sections
+  via a new optional `NavItem.section` field on the shared `DashboardShell`
+  — every other portal's `navItems` array leaves it unset, so their
+  sidebars render exactly as before (no headers, same flat list); this was
+  the cheap, honest version of the pitch's "Broker Vault" concept — same
+  pages/URLs/data, purely a nav reorganization, not a new hub page that
+  would duplicate what the nav already links to.
+- Private/Team/Presentation/Public visibility tiers on `broker_listings`
+  (`patch_142`, a real, separate gap flagged as deferred during
+  Presentation Studio 2.0): a new `visibility` column, defaulting to
+  `public` so every already-approved listing keeps behaving exactly as it
+  does today. `private` restricts to the owner + admin regardless of
+  moderation status; `team` is the first broker-reads-another-broker RLS
+  policy in this schema, scoped by shared `brokerage_id`, independent of
+  moderation status since it's an internal audience; `presentation` is
+  unlisted — reachable only via its own direct `/brokers/listings/[slug]`
+  URL, excluded from the public directory/grid by the app-code query layer
+  (RLS alone can't distinguish "browsing" from "direct fetch"). A new
+  `/broker/team-listings` page surfaces teammates' Team-tier inventory via
+  the existing `BrokerListingCard`, unmodified. Broker-agency oversight
+  (`patch_143`, built right after, per an explicit user decision on the
+  one open question — private stays invisible to the agency too, by
+  design, not just filtered client-side) lets a broker-agency see the
+  Team/Presentation/Public listings of every broker in its own agency, via
+  one new RLS policy scoped by `brokerage_id = profiles.broker_agency_id`;
+  a new `/broker-agency/listings` page plus an inline Listings section on
+  the existing per-broker detail page, both read-only since the agency
+  doesn't own these rows. Both patches verified live end-to-end post-
+  deploy, including confirming a Private listing genuinely disappears from
+  both agency oversight surfaces while still showing on the owning
+  broker's own listings page.
+
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
   Lockout, and IP Restrictions are now built (see "Substantially built"
