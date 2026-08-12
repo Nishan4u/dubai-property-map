@@ -63,6 +63,7 @@ export function BrokerListingForm({
       description: String(formData.get("description") ?? ""),
       amenities,
       availability_status: String(formData.get("availability_status") ?? "available"),
+      visibility: String(formData.get("visibility") ?? "private"),
       whatsapp: String(formData.get("whatsapp") ?? "").trim() || brokerWhatsapp,
     };
 
@@ -161,6 +162,23 @@ export function BrokerListingForm({
             options={[{ label: "Select a community", value: "" }, ...communities.map((c) => ({ label: c.name, value: c.id }))]}
           />
           <Field label="Location (optional)" name="location_text" defaultValue={listing?.location_text ?? ""} placeholder="e.g. Marina Promenade, Tower 3" />
+          <SelectField
+            label="Who Can See This"
+            name="visibility"
+            // A brand-new listing defaults to "private" (nudges the
+            // broker to explicitly promote it once ready). Editing an
+            // existing row falls back to "public" if visibility is
+            // somehow missing -- matching the column's own DB default,
+            // not silently showing "Private" for a listing that's
+            // actually public.
+            defaultValue={listing ? listing.visibility ?? "public" : "private"}
+            options={[
+              { label: "Private — only visible to you", value: "private" },
+              { label: "Team — visible to brokers in your agency", value: "team" },
+              { label: "Presentation — shareable via a direct link, not listed publicly", value: "presentation" },
+              { label: "Public — listed publicly once approved", value: "public" },
+            ]}
+          />
           <Field label="Bedrooms" name="bedrooms" type="number" defaultValue={listing?.bedrooms?.toString() ?? ""} />
           <Field label="Bathrooms" name="bathrooms" type="number" defaultValue={listing?.bathrooms?.toString() ?? ""} />
           <Field label="Size (Sq Ft)" name="size_sqft" type="number" defaultValue={listing?.size_sqft?.toString() ?? ""} />

@@ -481,6 +481,10 @@ export interface BrokerWithRelations extends BrokerRow {
 export type DbBrokerListingType = "sale" | "rent" | "lease";
 export type DbBrokerListingAvailability = "available" | "under_offer" | "sold" | "rented";
 export type DbBrokerListingModeration = "pending" | "approved" | "rejected" | "archived";
+// Who can see this listing (patch_142) -- 'public' is the default so
+// every listing that existed before this column shipped keeps behaving
+// exactly as it did before (fully public once approved).
+export type DbBrokerListingVisibility = "private" | "team" | "presentation" | "public";
 
 export interface BrokerListingRow {
   id: string;
@@ -502,6 +506,7 @@ export interface BrokerListingRow {
   availability_status: DbBrokerListingAvailability;
   moderation_status: DbBrokerListingModeration;
   rejection_reason: string | null;
+  visibility: DbBrokerListingVisibility;
   whatsapp: string | null;
   views: number;
   created_at: string;

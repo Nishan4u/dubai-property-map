@@ -1347,16 +1347,30 @@ export interface BrokerDirectoryRow {
 // crash the page" contract as every other optional feature this session.
 export async function getBrokersDirectory(): Promise<BrokerDirectoryRow[]> {
   const supabase = await createClient();
-  const [{ data: brokers, error }, { data: listings }, { data: links }] = await Promise.all([
+  // visibility (patch_142) is a genuinely new column -- fall back to the
+  // pre-patch_142 query (no visibility filter, same as every listing
+  // behaved before this column existed) if it errors on an unmigrated
+  // environment, same defensive-fallback convention as every other
+  // recently-added optional column in this codebase.
+  let listingsResult = await supabase
+    .from("broker_listings")
+    .select("broker_id, community_id, property_type, listing_type")
+    .eq("moderation_status", "approved")
+    .eq("visibility", "public");
+  if (listingsResult.error) {
+    listingsResult = await supabase
+      .from("broker_listings")
+      .select("broker_id, community_id, property_type, listing_type")
+      .eq("moderation_status", "approved");
+  }
+  const { data: listings } = listingsResult;
+
+  const [{ data: brokers, error }, { data: links }] = await Promise.all([
     supabase
       .from("brokers_public_profile")
       .select("*")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabase
-      .from("broker_listings")
-      .select("broker_id, community_id, property_type, listing_type")
-      .eq("moderation_status", "approved"),
     supabase.from("broker_project_links").select("broker_id"),
   ]);
   if (error) return [];
@@ -1415,15 +1429,30 @@ export async function incrementBrokerProfileViews(brokerId: string) {
 
 export async function getBrokerListingsPublic(brokerId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  // Only 'public'-tier listings show on the broker's own public grid --
+  // 'presentation'-tier listings are unlisted (reachable only via their
+  // own direct slug URL, see getBrokerListingBySlugPublic below, which
+  // deliberately does NOT filter on visibility). Falls back to the
+  // pre-patch_142 query (no visibility filter) on an unmigrated
+  // environment, same convention as getBrokersDirectory above.
+  let result = await supabase
     .from("broker_listings")
     .select("*, communities(name, slug)")
     .eq("broker_id", brokerId)
     .eq("moderation_status", "approved")
+    .eq("visibility", "public")
     .order("created_at", { ascending: false });
+  if (result.error) {
+    result = await supabase
+      .from("broker_listings")
+      .select("*, communities(name, slug)")
+      .eq("broker_id", brokerId)
+      .eq("moderation_status", "approved")
+      .order("created_at", { ascending: false });
+  }
 
-  if (error) return [];
-  return data ?? [];
+  if (result.error) return [];
+  return result.data ?? [];
 }
 
 export async function getBrokerListingBySlugPublic(slug: string) {
@@ -1499,6 +1528,27 @@ export async function getBrokerListingForOwner(brokerId: string, listingId: stri
 
   if (error) return null;
   return data;
+}
+
+// Team-tier listings from OTHER brokers in the caller's own brokerage
+// (patch_142) -- RLS ("broker_listings: team reads teammates") already
+// scopes this to the same brokerage_id; the .neq() here just excludes
+// the caller's own team-tier rows, which already show on their own "My
+// Listings" page, so this is purely "what my teammates have to offer."
+// Degrades to [] (not a throw) both pre-migration and for an
+// independent broker with no brokerage_id, matching this codebase's
+// established "not configured yet, never crash the page" contract.
+export async function getTeamListings(brokerId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("broker_listings")
+    .select("*, communities(name, slug), brokers(full_name, photo_url, slug, brokerages(name))")
+    .eq("visibility", "team")
+    .neq("broker_id", brokerId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
 }
 
 export async function getBrokerProjectLinksForOwner(brokerId: string) {

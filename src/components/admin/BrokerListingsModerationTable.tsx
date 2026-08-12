@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { BrokerListingModerationActions } from "@/components/admin/BrokerListingModerationActions";
-import type { DbBrokerListingModeration } from "@/types/database";
+import type { DbBrokerListingModeration, DbBrokerListingVisibility } from "@/types/database";
 
 const tone: Record<DbBrokerListingModeration, "green" | "gold" | "red" | "neutral"> = {
   pending: "gold",
@@ -13,12 +13,23 @@ const tone: Record<DbBrokerListingModeration, "green" | "gold" | "red" | "neutra
   archived: "neutral",
 };
 
+// visibility (patch_142) -- same tone convention as BrokerListingsTable.tsx
+// (the broker-facing equivalent of this table), so admins reviewing a
+// listing aren't confused by a deliberately non-public one.
+const visibilityTone: Record<DbBrokerListingVisibility, "green" | "gold" | "blue" | "neutral"> = {
+  private: "neutral",
+  team: "blue",
+  presentation: "gold",
+  public: "green",
+};
+
 interface Row {
   id: string;
   title: string;
   listing_type: string;
   price_aed: number;
   moderation_status: DbBrokerListingModeration;
+  visibility?: DbBrokerListingVisibility;
   created_at: string;
   brokers: { id: string; full_name: string } | null;
   communities: { name: string } | null;
@@ -44,6 +55,13 @@ export function BrokerListingsModerationTable({ listings }: { listings: Row[] })
         { header: "Type", render: (l) => <span className="capitalize">{l.listing_type}</span> },
         { header: "Price", render: (l) => `AED ${l.price_aed.toLocaleString()}` },
         { header: "Status", render: (l) => <Badge tone={tone[l.moderation_status]}>{l.moderation_status}</Badge> },
+        {
+          header: "Visibility",
+          render: (l) => {
+            const v = l.visibility ?? "public";
+            return <Badge tone={visibilityTone[v]}>{v}</Badge>;
+          },
+        },
         { header: "Submitted", render: (l) => new Date(l.created_at).toLocaleDateString() },
         { header: "Actions", render: (l) => <BrokerListingModerationActions listingId={l.id} /> },
       ]}
