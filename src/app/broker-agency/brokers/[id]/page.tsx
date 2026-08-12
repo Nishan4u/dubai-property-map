@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { AgencyListingsTable } from "@/components/broker-agency/AgencyListingsTable";
 import { createClient } from "@/lib/supabase/server";
+import { getBrokerListingsForAgency } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,11 @@ export default async function BrokerAgencyBrokerProfilePage({
     .select("started_at, ended_at, became_independent, brokerages(name)")
     .eq("broker_id", id)
     .order("started_at", { ascending: false });
+
+  // Team/Presentation/Public tier only -- Private stays invisible here
+  // too, same as the agency-wide /broker-agency/listings page (RLS-
+  // enforced, not just filtered in app code).
+  const listings = await getBrokerListingsForAgency(id);
 
   return (
     <div className="space-y-4 p-6">
@@ -103,6 +110,11 @@ export default async function BrokerAgencyBrokerProfilePage({
           })}
           {(history ?? []).length === 0 && <p className="px-4 py-3 text-xs text-ink-500">No history on file.</p>}
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-ink-200">Listings</h2>
+        <AgencyListingsTable listings={listings} />
       </div>
     </div>
   );

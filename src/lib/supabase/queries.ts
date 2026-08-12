@@ -1551,6 +1551,32 @@ export async function getTeamListings(brokerId: string) {
   return data ?? [];
 }
 
+// Team/Presentation/Public-tier listings across every broker in the
+// caller's own agency (patch_143) -- 'private' tier stays invisible
+// here by design (RLS: "broker_listings: agency reads own agency's"),
+// not just filtered out in app code -- there's no way for this query
+// to even learn a private listing exists. RLS does the brokerage-
+// scoping (same "RLS does the work, query just adds shape" contract as
+// getTeamListings above), so this never takes/filters by a brokerage
+// id itself -- only an optional broker_id, used to scope to one
+// specific broker (the agency's per-broker detail page) instead of
+// every broker in the agency (the agency-wide listings page, when
+// omitted). Degrades to [] on error, same contract as every sibling
+// broker_listings query.
+export async function getBrokerListingsForAgency(brokerId?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("broker_listings")
+    .select("*, communities(name, slug), brokers(id, full_name, photo_url, slug)")
+    .neq("visibility", "private")
+    .order("created_at", { ascending: false });
+  if (brokerId) query = query.eq("broker_id", brokerId);
+
+  const { data, error } = await query;
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getBrokerProjectLinksForOwner(brokerId: string) {
   const supabase = await createClient();
   const { data: links, error } = await supabase
