@@ -4,23 +4,29 @@ import { Bell, Briefcase, Building2, CalendarDays, ClipboardList, CreditCard, Fo
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { PortalAssistantWidget } from "@/components/portal/PortalAssistantWidget";
 
+// Grouped into 3 zones (Broker Vault nav consolidation) -- every href/
+// icon is unchanged from before, this only reorders + tags items with a
+// `section` so DashboardShell renders "Vault"/"Account" headers. Nothing
+// was added or removed.
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Property Map", href: "/", icon: Map, absolute: true },
-  { label: "My Requests", href: "/requests", icon: ClipboardList },
-  { label: "My Listings", href: "/listings", icon: Home },
-  { label: "Developer Projects", href: "/projects", icon: Rocket },
-  { label: "Clients", href: "/clients", icon: Users },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Collections", href: "/collections", icon: FolderOpen },
-  { label: "Compare", href: "/compare", icon: Scale },
-  { label: "My Agency", href: "/agency", icon: Building2 },
-  { label: "Subscription", href: "/subscription", icon: CreditCard },
-  { label: "Referral", href: "/referral", icon: Gift },
-  { label: "Notifications", href: "/notifications", icon: Bell },
-  { label: "Profile", href: "/profile", icon: User },
-  { label: "Security", href: "/security", icon: ShieldCheck },
-  { label: "Integrations", href: "/integrations", icon: Plug },
+
+  { label: "My Requests", href: "/requests", icon: ClipboardList, section: "Vault" },
+  { label: "My Listings", href: "/listings", icon: Home, section: "Vault" },
+  { label: "Developer Projects", href: "/projects", icon: Rocket, section: "Vault" },
+  { label: "Clients", href: "/clients", icon: Users, section: "Vault" },
+  { label: "Collections", href: "/collections", icon: FolderOpen, section: "Vault" },
+  { label: "Compare", href: "/compare", icon: Scale, section: "Vault" },
+
+  { label: "My Agency", href: "/agency", icon: Building2, section: "Account" },
+  { label: "Subscription", href: "/subscription", icon: CreditCard, section: "Account" },
+  { label: "Referral", href: "/referral", icon: Gift, section: "Account" },
+  { label: "Notifications", href: "/notifications", icon: Bell, section: "Account" },
+  { label: "Profile", href: "/profile", icon: User, section: "Account" },
+  { label: "Security", href: "/security", icon: ShieldCheck, section: "Account" },
+  { label: "Integrations", href: "/integrations", icon: Plug, section: "Account" },
 ];
 
 export function BrokerShellClient({

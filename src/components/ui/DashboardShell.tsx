@@ -16,6 +16,13 @@ export interface NavItem {
   // `basePath` — for nav items that intentionally point outside this
   // portal (e.g. a broker portal's "Property Map" linking to the public "/").
   absolute?: boolean;
+  // Optional group label -- items sharing the same (consecutive) `section`
+  // value get a small uppercase heading before the first one. Every
+  // existing portal's navItems leave this unset, so their sidebars render
+  // exactly as before this existed (no headers, one flat list) -- this is
+  // purely opt-in per portal, not a behavior change to anyone who doesn't
+  // set it.
+  section?: string;
 }
 
 export function DashboardShell({
@@ -83,27 +90,37 @@ export function DashboardShell({
           </button>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
+          {navItems.map((item, i) => {
             const href = item.absolute ? item.href : `${basePath}${item.href}`;
             const active = item.absolute
               ? pathname === href
               : item.href === ""
                 ? pathname === basePath
                 : pathname === href || pathname.startsWith(`${href}/`);
+            // A section header renders once, right before the first item of
+            // a new (consecutive) `section` value -- items with no section
+            // set (every portal that hasn't opted in) never trigger this.
+            const showSectionHeader = Boolean(item.section) && item.section !== navItems[i - 1]?.section;
             return (
-              <Link
-                key={href}
-                href={href}
-                className={clsx(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-gold-500 text-navy-950"
-                    : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+              <div key={href}>
+                {showSectionHeader && (
+                  <p className="mb-1 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wide text-ink-600">
+                    {item.section}
+                  </p>
                 )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
+                <Link
+                  href={href}
+                  className={clsx(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-gold-500 text-navy-950"
+                      : "text-ink-300 hover:bg-navy-800 hover:text-ink-100"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+              </div>
             );
           })}
         </nav>
