@@ -368,7 +368,12 @@ export interface ProjectEventRow {
 export interface ProjectWithRelations extends ProjectRow {
   developers: DeveloperRow;
   communities: CommunityRow;
-  project_unit_types?: { unit_type: string; size_sqft: number | null }[];
+  // Widened (Presentation Wizard batch) to the same shape getPublishedProjects()
+  // now actually selects -- was previously just { unit_type, size_sqft }.
+  project_unit_types?: Pick<
+    ProjectUnitTypeRow,
+    "id" | "unit_name" | "unit_type" | "starting_price_aed" | "size_sqft" | "bedrooms" | "bathrooms" | "availability"
+  >[];
 }
 
 export interface LeadRow {

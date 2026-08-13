@@ -56,7 +56,12 @@ interface Agent {
 // "quick_pitch" renders none of the new sections at all -- the fastest
 // thing to skim on WhatsApp, and byte-for-byte what every collection
 // rendered before Presentation Studio 2.0 existed.
-type PresentationMode = "default" | "investor" | "end_user" | "quick_pitch";
+// "luxury" (Presentation Wizard batch) leads with premium unit specs +
+// lifestyle/location, and de-emphasizes payment-plan financing detail --
+// a genuine differentiator from "end_user" (which leads with location
+// too, but doesn't intentionally mute the payment plan), not just a
+// reskin. A judgment call, easy to retune later.
+type PresentationMode = "default" | "investor" | "end_user" | "quick_pitch" | "luxury";
 type SectionKey = "unitTypes" | "paymentPlan" | "location";
 
 const SECTION_ORDER: Record<PresentationMode, SectionKey[]> = {
@@ -64,6 +69,7 @@ const SECTION_ORDER: Record<PresentationMode, SectionKey[]> = {
   investor: ["unitTypes", "paymentPlan", "location"],
   end_user: ["location", "unitTypes", "paymentPlan"],
   quick_pitch: [],
+  luxury: ["unitTypes", "location", "paymentPlan"],
 };
 
 // Which section(s) get full visual weight per mode -- everything else
@@ -74,6 +80,7 @@ const EMPHASIZED_SECTIONS: Record<PresentationMode, SectionKey[]> = {
   investor: ["unitTypes", "paymentPlan"],
   end_user: ["location"],
   quick_pitch: [],
+  luxury: ["unitTypes", "location"],
 };
 
 export function PresentationClient({ token }: { token: string }) {

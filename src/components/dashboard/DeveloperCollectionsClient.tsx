@@ -267,6 +267,7 @@ export function DeveloperCollectionsClient({
               <option value="investor">Investor -- pricing &amp; payment plan first</option>
               <option value="end_user">End User -- location &amp; lifestyle first</option>
               <option value="quick_pitch">Quick Pitch -- projects only, no extra sections</option>
+              <option value="luxury">Luxury -- premium specs &amp; lifestyle, understated pricing</option>
             </select>
           </div>
           <div className="flex gap-2">

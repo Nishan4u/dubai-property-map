@@ -8,6 +8,7 @@ import { findNearestByCategory, type NearestPoi } from "@/lib/investmentScore";
 const NEARBY_CATEGORY_KEYS = ["metro", "malls", "schools", "hospitals", "airports", "beaches"];
 
 interface JoinedUnitType {
+  id: string;
   unit_name: string;
   unit_type: string;
   starting_price_aed: number | null;
@@ -172,20 +173,40 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   // lat/lng, payment_plan_details, and project_unit_types are all
   // long-shipped columns/tables (not new in this batch), so they stay
-  // inside this one select -- no extra fallback tier needed the way a
-  // genuinely new column (e.g. `mode`, patch_141) would require.
-  const { data: items } = await admin
+  // inside this one select. selected_unit_type_ids (patch_144) IS
+  // genuinely new though, so it gets its own fallback tier -- same "each
+  // new column generation gets its own extra tier" convention as the
+  // collection's own mode/hide_* tiers above. Falls back to every item
+  // behaving as "show all unit types," identical to this route's only
+  // behavior before this column existed.
+  const ITEMS_SELECT =
+    "sort_order, projects(name, slug, cover_image_url, gradient, price_from_aed, bedrooms_from, bedrooms_to, lat, lng, payment_plan_details, communities(name), developers(name), project_unit_types(id, unit_name, unit_type, starting_price_aed, size_sqft, bedrooms, bathrooms, availability))";
+
+  let items: { sort_order: number; selected_unit_type_ids: string[] | null; projects: JoinedProject | JoinedProject[] | null }[] = [];
+  const { data: withUnitFilter, error: withUnitFilterError } = await admin
     .from("crm_collection_items")
-    .select(
-      "sort_order, projects(name, slug, cover_image_url, gradient, price_from_aed, bedrooms_from, bedrooms_to, lat, lng, payment_plan_details, communities(name), developers(name), project_unit_types(unit_name, unit_type, starting_price_aed, size_sqft, bedrooms, bathrooms, availability))"
-    )
+    .select(`selected_unit_type_ids, ${ITEMS_SELECT}`)
     .eq("collection_id", collection.id)
     .order("sort_order", { ascending: true });
 
-  const projects = (items ?? [])
-    .map((item) => (Array.isArray(item.projects) ? item.projects[0] : item.projects) as JoinedProject | null)
-    .filter((p): p is JoinedProject => p !== null)
-    .map((p) => {
+  if (!withUnitFilterError) {
+    items = withUnitFilter ?? [];
+  } else {
+    const { data: base } = await admin
+      .from("crm_collection_items")
+      .select(ITEMS_SELECT)
+      .eq("collection_id", collection.id)
+      .order("sort_order", { ascending: true });
+    items = (base ?? []).map((b) => ({ ...b, selected_unit_type_ids: null }));
+  }
+
+  const projects = items
+    .map((item) => {
+      const project = (Array.isArray(item.projects) ? item.projects[0] : item.projects) as JoinedProject | null;
+      return project ? { project, selectedUnitTypeIds: item.selected_unit_type_ids } : null;
+    })
+    .filter((x): x is { project: JoinedProject; selectedUnitTypeIds: string[] | null } => x !== null)
+    .map(({ project: p, selectedUnitTypeIds }) => {
       const community = Array.isArray(p.communities) ? p.communities[0] : p.communities;
       const developer = Array.isArray(p.developers) ? p.developers[0] : p.developers;
       // Location Intelligence (Presentation Studio 2.0, item 4) -- computed
@@ -199,6 +220,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         !collection.hide_location && p.lat != null && p.lng != null
           ? findNearestByCategory(p.lat, p.lng, NEARBY_CATEGORY_KEYS)
           : [];
+      // Guided Wizard's unit-type picker (patch_144) -- a non-empty
+      // selectedUnitTypeIds narrows the presentation to just those unit
+      // types; null/empty (every existing collection, and every one made
+      // via the plain "New Collection" form, which never sets this)
+      // shows all of them, identical to this route's original behavior.
+      const allUnitTypes = p.project_unit_types ?? [];
+      const shownUnitTypes =
+        selectedUnitTypeIds && selectedUnitTypeIds.length > 0
+          ? allUnitTypes.filter((u) => selectedUnitTypeIds.includes(u.id))
+          : allUnitTypes;
       return {
         name: p.name,
         slug: p.slug,
@@ -217,7 +248,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         nearbyPoi,
         // A second, undocumented path to a real price -- also nulled per
         // unit when hide_price is on, same as priceFromAed above.
-        unitTypes: (p.project_unit_types ?? []).map((u) => ({
+        unitTypes: shownUnitTypes.map((u) => ({
           unitName: u.unit_name,
           unitType: u.unit_type,
           startingPriceAed: collection.hide_price ? null : u.starting_price_aed,

@@ -1,4 +1,5 @@
-import { FolderOpen } from "lucide-react";
+import Link from "next/link";
+import { FolderOpen, Sparkles } from "lucide-react";
 import { BrokerCollectionsClient } from "@/components/broker/BrokerCollectionsClient";
 import {
   getCollectionsForBroker,
@@ -22,11 +23,22 @@ export default async function BrokerCollectionsPage() {
 
   return (
     <div className="space-y-4 p-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-ink-100">
-          <FolderOpen className="h-5 w-5 text-gold-400" /> Collections
-        </h1>
-        <p className="text-sm text-ink-400">Curate a shortlist of projects and share it with a client via a link.</p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-ink-100">
+            <FolderOpen className="h-5 w-5 text-gold-400" /> Collections
+          </h1>
+          <p className="text-sm text-ink-400">Curate a shortlist of projects and share it with a client via a link.</p>
+        </div>
+        {/* Guided Wizard is a new, parallel page -- the plain "New
+            Collection" form below (BrokerCollectionsClient) is completely
+            untouched, this is just an additional entry point. */}
+        <Link
+          href="/broker/collections/wizard"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-xs font-semibold text-gold-400 hover:bg-gold-500/20"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Guided Wizard
+        </Link>
       </div>
       <BrokerCollectionsClient
         brokerId={profile.broker_id}

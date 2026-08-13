@@ -84,9 +84,17 @@ export async function requireAdmin() {
 
 export async function getPublishedProjects(developerId?: string) {
   const supabase = await createClient();
+  // project_unit_types columns widened (Presentation Wizard batch) so
+  // callers that need per-unit-type price/bedrooms/availability (e.g.
+  // BrokerPresentationWizard's unit picker) don't need a second query --
+  // purely additive, every existing consumer of getPublishedProjects()
+  // is unaffected since none of them destructure a fixed column set that
+  // would break from extra fields being present.
   let query = supabase
     .from("projects")
-    .select("*, developers(*), communities(*), project_unit_types(unit_type, size_sqft)")
+    .select(
+      "*, developers(*), communities(*), project_unit_types(id, unit_name, unit_type, starting_price_aed, size_sqft, bedrooms, bathrooms, availability)"
+    )
     .in("status", ["published", "featured"]);
 
   if (developerId) {
@@ -1082,6 +1090,53 @@ export async function getLastViewedAtForCollections(
   const result: Record<string, string> = {};
   for (const row of data) {
     if (!result[row.collection_id]) result[row.collection_id] = row.created_at;
+  }
+  return result;
+}
+
+export interface ClientPropertyRequestSignal {
+  requestedProjectId: string;
+  budgetMinAed: number | null;
+  budgetMaxAed: number | null;
+  bedroomsNum: number | null;
+  propertyType: string | null;
+}
+
+// Guided Presentation Wizard (patch_144) -- the one real, structured
+// signal a crm_clients row can carry: property_requests is NOT a general
+// preference profile (project_id is not null, so every row is already
+// tied to one specific project a client showed real interest in), but
+// budget_min/budget_max/bedrooms/property_type give the wizard something
+// real to match complementary projects against. A client may have zero,
+// one, or many linked requests -- only the latest is used. One bulk
+// select + in-JS reduce to latest-per-client, same convention as
+// getLastViewedAtForCollections above. bedrooms is free text on this
+// table (e.g. "2" or "2+maid"), parsed defensively to a leading integer;
+// never throws on an unparseable value, just omits that filter
+// dimension for that one client.
+export async function getLatestPropertyRequestsForClients(
+  clientIds: string[]
+): Promise<Record<string, ClientPropertyRequestSignal>> {
+  if (clientIds.length === 0) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("property_requests")
+    .select("client_id, project_id, budget_min, budget_max, bedrooms, property_type, created_at")
+    .in("client_id", clientIds)
+    .order("created_at", { ascending: false });
+  if (error || !data) return {};
+
+  const result: Record<string, ClientPropertyRequestSignal> = {};
+  for (const row of data) {
+    if (!row.client_id || result[row.client_id]) continue; // keep only the latest (first seen, already ordered desc)
+    const parsedBedrooms = row.bedrooms ? parseInt(row.bedrooms, 10) : NaN;
+    result[row.client_id] = {
+      requestedProjectId: row.project_id,
+      budgetMinAed: row.budget_min,
+      budgetMaxAed: row.budget_max,
+      bedroomsNum: Number.isNaN(parsedBedrooms) ? null : parsedBedrooms,
+      propertyType: row.property_type,
+    };
   }
   return result;
 }
