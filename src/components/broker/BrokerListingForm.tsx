@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X } from "lucide-react";
+import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
@@ -12,6 +13,7 @@ const fallbackPropertyTypes = ["Apartments", "Villas", "Townhouses", "Penthouse"
 const fallbackAmenities = [
   "Pool", "Gym", "Kids Area", "Cinema", "Sky Lounge", "Beach", "Golf", "Smart Home", "Parking", "Pet Friendly",
 ];
+const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
 
 function slugify(input: string) {
   return input.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -36,6 +38,21 @@ export function BrokerListingForm({
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [floorPlanFiles, setFloorPlanFiles] = useState<File[]>([]);
   const [uploadPercent, setUploadPercent] = useState(0);
+  // Coordinates (new -- every listing has had lat/lng null until now,
+  // since nothing ever collected them). Optional: a listing without
+  // coordinates behaves exactly as it always has (no map placement, no
+  // location-intelligence data) -- this only adds the capture mechanism.
+  const [coords, setCoords] = useState({
+    lat: listing?.lat ?? DUBAI_CENTER.lat,
+    lng: listing?.lng ?? DUBAI_CENTER.lng,
+  });
+  // CoordinatesPicker wants { name, lat, lng } with non-null lat/lng --
+  // communities here is the raw CommunityRow[] (lat/lng nullable), so
+  // filter out any without real coordinates rather than assuming ProjectForm's
+  // already-mapped app-level Community[] shape.
+  const coordCommunities = communities
+    .filter((c): c is CommunityRow & { lat: number; lng: number } => c.lat != null && c.lng != null)
+    .map((c) => ({ name: c.name, lat: c.lat, lng: c.lng }));
 
   function toggleAmenity(a: string) {
     setAmenities((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
@@ -57,6 +74,8 @@ export function BrokerListingForm({
       price_aed: Number(formData.get("price_aed")) || 0,
       community_id: String(formData.get("community_id") ?? "") || null,
       location_text: String(formData.get("location_text") ?? "").trim() || null,
+      lat: coords.lat,
+      lng: coords.lng,
       bedrooms: formData.get("bedrooms") ? Number(formData.get("bedrooms")) : null,
       bathrooms: formData.get("bathrooms") ? Number(formData.get("bathrooms")) : null,
       size_sqft: formData.get("size_sqft") ? Number(formData.get("size_sqft")) : null,
@@ -192,6 +211,42 @@ export function BrokerListingForm({
             rows={4}
             className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
           />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-navy-700 bg-navy-850 p-6">
+        <h2 className="mb-1 text-sm font-semibold text-ink-100">Map Location (optional)</h2>
+        <p className="mb-3 text-xs text-ink-500">
+          Pin this listing&apos;s exact spot -- lets it show on the interactive map and enables real location
+          intelligence on shared presentations. Leave as-is to skip.
+        </p>
+        <CoordinatesPicker
+          lat={coords.lat}
+          lng={coords.lng}
+          onChange={(lat, lng) => setCoords({ lat, lng })}
+          communities={coordCommunities}
+        />
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">Latitude</label>
+            <input
+              type="number"
+              step="any"
+              value={coords.lat}
+              onChange={(e) => setCoords((prev) => ({ ...prev, lat: Number(e.target.value) || 0 }))}
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-400">Longitude</label>
+            <input
+              type="number"
+              step="any"
+              value={coords.lng}
+              onChange={(e) => setCoords((prev) => ({ ...prev, lng: Number(e.target.value) || 0 }))}
+              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 

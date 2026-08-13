@@ -54,6 +54,7 @@ export function DeveloperCollectionsClient({
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [pickerSearch, setPickerSearch] = useState("");
   // "Hide info to prompt engagement" toggles -- the buyer sees "Contact
   // agent" instead of the real value and has to reach out, matching the
   // same tactic real estate presentation tools (e.g. Reelly) offer.
@@ -71,6 +72,10 @@ export function DeveloperCollectionsClient({
   function toggleProject(id: string) {
     setSelectedProjectIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
   }
+
+  const filteredProjects = pickerSearch.trim()
+    ? projects.filter((p) => p.name.toLowerCase().includes(pickerSearch.trim().toLowerCase()))
+    : projects;
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -133,6 +138,7 @@ export function DeveloperCollectionsClient({
     setTitle("");
     setClientId("");
     setSelectedProjectIds([]);
+    setPickerSearch("");
     setHideDeveloperName(false);
     setHidePrice(false);
     setHideLocation(false);
@@ -205,8 +211,15 @@ export function DeveloperCollectionsClient({
             <label className="mb-1 block text-xs font-medium text-ink-400">
               Projects ({selectedProjectIds.length} selected)
             </label>
+            <input
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              placeholder="Search projects…"
+              className="mb-1.5 w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+            />
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-navy-600 bg-navy-800 p-2">
-              {projects.map((p) => (
+              {filteredProjects.length === 0 && <p className="p-2 text-xs text-ink-500">No matching projects.</p>}
+              {filteredProjects.map((p) => (
                 <label key={p.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-ink-200 hover:bg-navy-700">
                   <input
                     type="checkbox"

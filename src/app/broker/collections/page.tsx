@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FolderOpen, Sparkles } from "lucide-react";
 import { BrokerCollectionsClient } from "@/components/broker/BrokerCollectionsClient";
 import {
+  getBrokerListingsForOwner,
   getCollectionsForBroker,
   getCrmClientsForBroker,
   getLastViewedAtForCollections,
@@ -14,10 +15,11 @@ export const dynamic = "force-dynamic";
 export default async function BrokerCollectionsPage() {
   const profile = await requireBrokerProfile();
 
-  const [collections, clients, projectRows] = await Promise.all([
+  const [collections, clients, projectRows, listingRows] = await Promise.all([
     getCollectionsForBroker(profile.broker_id),
     getCrmClientsForBroker(profile.broker_id),
     getPublishedProjects(),
+    getBrokerListingsForOwner(profile.broker_id),
   ]);
   const lastViewedAt = await getLastViewedAtForCollections(collections.map((c) => c.id));
 
@@ -45,6 +47,7 @@ export default async function BrokerCollectionsPage() {
         collections={collections}
         clients={clients}
         projects={projectRows.map((p) => ({ id: p.id, name: p.name }))}
+        listings={listingRows.map((l) => ({ id: l.id, title: l.title }))}
         lastViewedAt={lastViewedAt}
       />
     </div>

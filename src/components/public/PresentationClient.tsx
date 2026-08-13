@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FolderOpen, Mail, MessageCircle, Phone, Printer } from "lucide-react";
+import { Bath, BedDouble, FolderOpen, Mail, MessageCircle, Phone, Printer, Ruler } from "lucide-react";
 import { ProjectThumb } from "@/components/ui/ProjectThumb";
 import { NearbyDistances } from "@/components/public/NearbyDistances";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -22,6 +22,15 @@ interface PresentationUnitType {
 }
 
 interface PresentationProject {
+  // "project" (a developer project) or "brokerListing" (patch_145 --
+  // one of the broker's own broker_listings) -- decides which detail
+  // page a card links to and which fields below are meaningful. A
+  // developer project has no bathrooms/sizeSqft/propertyType/
+  // listingType/brokerName at this top level (those live inside
+  // unitTypes); a broker listing has no developerName/unitTypes/
+  // paymentPlanDetails (it's a single unit, not a project with
+  // categories).
+  kind: "project" | "brokerListing";
   name: string;
   slug: string;
   coverImageUrl: string | null;
@@ -31,8 +40,14 @@ interface PresentationProject {
   priceFromAed: number | null;
   bedroomsFrom: number;
   bedroomsTo: number;
+  bathrooms: number | null;
+  sizeSqft: number | null;
+  propertyType: string | null;
+  listingType: string | null;
   communityName: string | null;
   developerName: string | null;
+  brokerName: string | null;
+  brokerPhotoUrl: string | null;
   // All three below are additive, real-data-or-empty (never fabricated) --
   // a collection with none of this data renders exactly as it did before
   // these existed, since each section below is conditional on .length > 0.
@@ -81,6 +96,17 @@ const EMPHASIZED_SECTIONS: Record<PresentationMode, SectionKey[]> = {
   end_user: ["location"],
   quick_pitch: [],
   luxury: ["unitTypes", "location"],
+};
+
+// A visible mode badge in the header, so the framing reads immediately
+// instead of only being a content-ordering effect a viewer might not
+// consciously notice. "default" has no badge -- the plain, un-modal case
+// this whole feature is additive on top of.
+const MODE_LABELS: Partial<Record<PresentationMode, string>> = {
+  investor: "Investor Presentation",
+  end_user: "Lifestyle Presentation",
+  quick_pitch: "Quick Pitch",
+  luxury: "Luxury Selection",
 };
 
 export function PresentationClient({ token }: { token: string }) {
@@ -140,9 +166,14 @@ export function PresentationClient({ token }: { token: string }) {
         }
       `}</style>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FolderOpen className="h-5 w-5 text-gold-400" />
           <h1 className="text-xl font-bold text-ink-100">{title}</h1>
+          {MODE_LABELS[mode] && (
+            <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gold-400">
+              {MODE_LABELS[mode]}
+            </span>
+          )}
         </div>
         <button
           onClick={() => window.print()}
@@ -204,39 +235,96 @@ export function PresentationClient({ token }: { token: string }) {
         <p className="text-sm text-ink-500">This collection has no projects yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <Link
-              key={p.slug}
-              href={`/projects/${p.slug}`}
-              className="overflow-hidden rounded-xl border border-navy-700 bg-navy-850 transition-colors hover:border-gold-500/40"
-            >
-              <ProjectThumb gradient={p.gradient} imageUrl={p.coverImageUrl} imageAlt={p.name} className="h-40 w-full" />
-              <div className="p-4">
-                <p className="text-sm font-semibold text-ink-100">{p.name}</p>
-                <p className="mt-0.5 truncate text-xs text-ink-400">
-                  {p.developerName ? `by ${p.developerName}` : "Developer on request"}
-                  {p.communityName ? ` · ${p.communityName}` : p.developerName ? " · Location on request" : ""}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-gold-400">
-                  {p.priceFromAed != null ? `From ${formatPrice(p.priceFromAed)}` : "Contact agent for price"}
-                </p>
-                <p className="mt-1 text-xs text-ink-500">
-                  {p.bedroomsFrom === 0 ? "Studio" : `${p.bedroomsFrom}`}
-                  {p.bedroomsTo > p.bedroomsFrom ? `-${p.bedroomsTo} Bed` : p.bedroomsFrom > 0 ? " Bed" : ""}
-                </p>
+          {projects.map((p) => {
+            // A broker's own listing (patch_145) links to its own public
+            // page, not a developer project's -- same collection, two
+            // real destinations, distinguished by `kind`.
+            const href = p.kind === "brokerListing" ? `/brokers/listings/${p.slug}` : `/projects/${p.slug}`;
+            const listingTypeLabel =
+              p.listingType === "sale" ? "For Sale" : p.listingType === "rent" ? "For Rent" : p.listingType === "lease" ? "For Lease" : null;
+            return (
+              <Link
+                key={`${p.kind}-${p.slug}`}
+                href={href}
+                className="overflow-hidden rounded-xl border border-navy-700 bg-navy-850 transition-colors hover:border-gold-500/40"
+              >
+                <div className="relative">
+                  <ProjectThumb gradient={p.gradient} imageUrl={p.coverImageUrl} imageAlt={p.name} className="h-40 w-full" />
+                  {p.kind === "brokerListing" && p.propertyType && (
+                    <span className="absolute left-2.5 top-2.5 rounded-full bg-navy-950/80 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-400 backdrop-blur-sm">
+                      {p.propertyType}
+                      {listingTypeLabel ? ` · ${listingTypeLabel}` : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-ink-100">{p.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-ink-400">
+                    {p.kind === "brokerListing"
+                      ? (p.communityName ?? "Location on request")
+                      : `${p.developerName ? `by ${p.developerName}` : "Developer on request"}${p.communityName ? ` · ${p.communityName}` : p.developerName ? " · Location on request" : ""}`}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-gold-400">
+                    {p.priceFromAed != null
+                      ? p.kind === "project"
+                        ? `From ${formatPrice(p.priceFromAed)}`
+                        : formatPrice(p.priceFromAed)
+                      : "Contact agent for price"}
+                  </p>
 
-                {SECTION_ORDER[mode].map((sectionKey) => (
-                  <PresentationSection
-                    key={sectionKey}
-                    sectionKey={sectionKey}
-                    project={p}
-                    emphasized={EMPHASIZED_SECTIONS[mode].includes(sectionKey)}
-                    formatPrice={formatPrice}
-                  />
-                ))}
-              </div>
-            </Link>
-          ))}
+                  {/* Icon-accented fact row -- bed range always (both
+                      kinds), bath/size only when the item actually has
+                      them (a broker's own listing has real scalar
+                      values; a developer project's bed/bath/size live
+                      per unit type below, not at this top level). */}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
+                    <span className="flex items-center gap-1">
+                      <BedDouble className="h-3.5 w-3.5" />
+                      {p.bedroomsFrom === 0 && p.bedroomsTo === 0
+                        ? "Studio"
+                        : p.bedroomsTo > p.bedroomsFrom
+                          ? `${p.bedroomsFrom}-${p.bedroomsTo}`
+                          : p.bedroomsFrom}
+                    </span>
+                    {p.bathrooms != null && (
+                      <span className="flex items-center gap-1">
+                        <Bath className="h-3.5 w-3.5" /> {p.bathrooms}
+                      </span>
+                    )}
+                    {p.sizeSqft != null && (
+                      <span className="flex items-center gap-1">
+                        <Ruler className="h-3.5 w-3.5" /> {p.sizeSqft.toLocaleString()} sqft
+                      </span>
+                    )}
+                  </div>
+
+                  {p.kind === "brokerListing" && p.brokerName && (
+                    <div className="mt-2 flex items-center gap-1.5 border-t border-navy-800 pt-2 text-xs text-ink-500">
+                      {p.brokerPhotoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.brokerPhotoUrl} alt={p.brokerName} className="h-4 w-4 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gold-500/20 text-[9px] font-semibold text-gold-400">
+                          {p.brokerName.charAt(0)}
+                        </span>
+                      )}
+                      Listed by {p.brokerName}
+                    </div>
+                  )}
+
+                  {SECTION_ORDER[mode].map((sectionKey) => (
+                    <PresentationSection
+                      key={sectionKey}
+                      sectionKey={sectionKey}
+                      project={p}
+                      emphasized={EMPHASIZED_SECTIONS[mode].includes(sectionKey)}
+                      formatPrice={formatPrice}
+                    />
+                  ))}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -260,10 +348,16 @@ function PresentationSection({
   emphasized: boolean;
   formatPrice: (amountAed: number) => string;
 }) {
+  // Emphasized sections get a real visual accent -- a thicker gold-
+  // tinted divider and a gold heading -- not just "not muted," so a
+  // mode's emphasis is something a viewer actually sees at a glance,
+  // not only a content-ordering effect.
   const headingClass = emphasized
-    ? "mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500"
+    ? "mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gold-400"
     : "mb-1.5 text-[10px] font-medium uppercase tracking-wide text-ink-600";
-  const wrapperClass = `mt-3 border-t border-navy-800 pt-3 ${emphasized ? "" : "opacity-75"}`;
+  const wrapperClass = emphasized
+    ? "mt-3 border-t-2 border-gold-500/40 pt-3"
+    : "mt-3 border-t border-navy-800 pt-3 opacity-75";
 
   if (sectionKey === "unitTypes") {
     if (project.unitTypes.length === 0) return null;

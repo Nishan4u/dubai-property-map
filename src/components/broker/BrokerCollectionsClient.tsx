@@ -41,12 +41,16 @@ export function BrokerCollectionsClient({
   collections: initialCollections,
   clients,
   projects,
+  listings,
   lastViewedAt = {},
 }: {
   brokerId: string;
   collections: Collection[];
   clients: CrmClientRow[];
   projects: { id: string; name: string }[];
+  /** The broker's own broker_listings (patch_145) -- lets them attach
+   * their own inventory to a Collection alongside developer projects. */
+  listings: { id: string; title: string }[];
   lastViewedAt?: Record<string, string>;
 }) {
   const [collections, setCollections] = useState(initialCollections);
@@ -54,6 +58,13 @@ export function BrokerCollectionsClient({
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  // Own-listings tab (patch_145) -- kept as a fully separate array/tab
+  // from selectedProjectIds rather than a unified "item" list, since the
+  // two pick from different source lists and insert into different
+  // columns on the same table.
+  const [selectedBrokerListingIds, setSelectedBrokerListingIds] = useState<string[]>([]);
+  const [pickerTab, setPickerTab] = useState<"projects" | "listings">("projects");
+  const [pickerSearch, setPickerSearch] = useState("");
   // "Hide info to prompt engagement" toggles -- the buyer sees "Contact
   // agent" instead of the real value and has to reach out, matching the
   // same tactic real estate presentation tools (e.g. Reelly) offer.
@@ -72,9 +83,20 @@ export function BrokerCollectionsClient({
     setSelectedProjectIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
   }
 
+  function toggleBrokerListing(id: string) {
+    setSelectedBrokerListingIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
+
+  const filteredProjects = pickerSearch.trim()
+    ? projects.filter((p) => p.name.toLowerCase().includes(pickerSearch.trim().toLowerCase()))
+    : projects;
+  const filteredListings = pickerSearch.trim()
+    ? listings.filter((l) => l.title.toLowerCase().includes(pickerSearch.trim().toLowerCase()))
+    : listings;
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || selectedProjectIds.length === 0) return;
+    if (!title.trim() || (selectedProjectIds.length === 0 && selectedBrokerListingIds.length === 0)) return;
     setSaving(true);
     const supabase = createClient();
 
@@ -120,19 +142,44 @@ export function BrokerCollectionsClient({
       return;
     }
 
-    await supabase.from("crm_collection_items").insert(
-      selectedProjectIds.map((projectId, i) => ({
+    // Own-listing items (patch_145) are a second, mutually-exclusive item
+    // type on the same table -- sort_order continues sequentially across
+    // both so a mixed collection keeps a stable, predictable order.
+    const items = [
+      ...selectedProjectIds.map((projectId, i) => ({
         collection_id: collection.id,
         project_id: projectId,
         sort_order: i,
-      }))
-    );
+      })),
+      ...selectedBrokerListingIds.map((brokerListingId, i) => ({
+        collection_id: collection.id,
+        broker_listing_id: brokerListingId,
+        sort_order: selectedProjectIds.length + i,
+      })),
+    ];
+    let { error: itemsError } = await supabase.from("crm_collection_items").insert(items);
+    if (itemsError) {
+      // broker_listing_id (patch_145) may not be migrated on every
+      // environment yet -- retry with the project-only rows so an
+      // unmigrated environment still gets what it already supported,
+      // instead of losing the whole collection over one new column.
+      const projectOnlyItems = selectedProjectIds.map((projectId, i) => ({
+        collection_id: collection.id,
+        project_id: projectId,
+        sort_order: i,
+      }));
+      ({ error: itemsError } = await supabase.from("crm_collection_items").insert(projectOnlyItems));
+    }
 
-    setCollections((prev) => [{ ...collection, crm_collection_items: [{ count: selectedProjectIds.length }] }, ...prev]);
+    const totalCount = selectedProjectIds.length + selectedBrokerListingIds.length;
+    setCollections((prev) => [{ ...collection, crm_collection_items: [{ count: totalCount }] }, ...prev]);
     setShowForm(false);
     setTitle("");
     setClientId("");
     setSelectedProjectIds([]);
+    setSelectedBrokerListingIds([]);
+    setPickerTab("projects");
+    setPickerSearch("");
     setHideDeveloperName(false);
     setHidePrice(false);
     setHideLocation(false);
@@ -202,22 +249,71 @@ export function BrokerCollectionsClient({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">
-              Projects ({selectedProjectIds.length} selected)
-            </label>
-            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-navy-600 bg-navy-800 p-2">
-              {projects.map((p) => (
-                <label key={p.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-ink-200 hover:bg-navy-700">
-                  <input
-                    type="checkbox"
-                    checked={selectedProjectIds.includes(p.id)}
-                    onChange={() => toggleProject(p.id)}
-                    className="accent-gold-500"
-                  />
-                  {p.name}
-                </label>
-              ))}
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-xs font-medium text-ink-400">
+                {selectedProjectIds.length + selectedBrokerListingIds.length} item
+                {selectedProjectIds.length + selectedBrokerListingIds.length === 1 ? "" : "s"} selected
+              </label>
+              {/* Own-listings tab (patch_145) -- picks from the broker's
+                  own broker_listings instead of developer projects. */}
+              <div className="flex rounded-lg border border-navy-600 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPickerTab("projects")}
+                  className={`rounded px-2 py-0.5 font-medium ${pickerTab === "projects" ? "bg-gold-500 text-navy-950" : "text-ink-400 hover:text-ink-100"}`}
+                >
+                  Developer Projects
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickerTab("listings")}
+                  className={`rounded px-2 py-0.5 font-medium ${pickerTab === "listings" ? "bg-gold-500 text-navy-950" : "text-ink-400 hover:text-ink-100"}`}
+                >
+                  My Listings
+                </button>
+              </div>
             </div>
+            <input
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              placeholder={pickerTab === "projects" ? "Search projects…" : "Search your listings…"}
+              className="mb-1.5 w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
+            />
+            {pickerTab === "projects" ? (
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-navy-600 bg-navy-800 p-2">
+                {filteredProjects.length === 0 && <p className="p-2 text-xs text-ink-500">No matching projects.</p>}
+                {filteredProjects.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-ink-200 hover:bg-navy-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedProjectIds.includes(p.id)}
+                      onChange={() => toggleProject(p.id)}
+                      className="accent-gold-500"
+                    />
+                    {p.name}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-navy-600 bg-navy-800 p-2">
+                {filteredListings.length === 0 && (
+                  <p className="p-2 text-xs text-ink-500">
+                    {listings.length === 0 ? "You don't have any listings yet." : "No matching listings."}
+                  </p>
+                )}
+                {filteredListings.map((l) => (
+                  <label key={l.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-ink-200 hover:bg-navy-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedBrokerListingIds.includes(l.id)}
+                      onChange={() => toggleBrokerListing(l.id)}
+                      className="accent-gold-500"
+                    />
+                    {l.title}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">
@@ -273,7 +369,7 @@ export function BrokerCollectionsClient({
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={saving || selectedProjectIds.length === 0}
+              disabled={saving || (selectedProjectIds.length === 0 && selectedBrokerListingIds.length === 0)}
               className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-navy-950 hover:bg-gold-400 disabled:opacity-60"
             >
               {saving ? "Creating…" : "Create Collection"}
@@ -305,7 +401,7 @@ export function BrokerCollectionsClient({
                         {c.title} {client && <span className="text-ink-500">· {client.full_name}</span>}
                       </p>
                       <p className="text-xs text-ink-500">
-                        {itemCount(c)} project{itemCount(c) === 1 ? "" : "s"}
+                        {itemCount(c)} item{itemCount(c) === 1 ? "" : "s"}
                         {" · "}
                         <span className="inline-flex items-center gap-1">
                           <Eye className="h-3 w-3" />
