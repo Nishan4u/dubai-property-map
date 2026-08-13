@@ -1,5 +1,7 @@
 "use client";
 
+import { CompactSelect } from "@/components/public/CompactSelect";
+
 export function NumberField({
   label,
   value,
@@ -100,20 +102,14 @@ export function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-ink-400">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <CompactSelect
+      label={label}
+      placeholder={label}
+      value={value}
+      onChange={onChange}
+      allowClear={false}
+      options={options.map((o) => ({ label: o.label, value: o.value }))}
+    />
   );
 }
 

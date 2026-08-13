@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { createClient } from "@/lib/supabase/client";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { DbLeadStatus } from "@/types/database";
 
 interface LeadRow {
@@ -101,18 +102,14 @@ export function LeadsTableClient({
           {
             header: "Agent",
             render: (l) => (
-              <select
+              <CompactSelect
+                label="Agent"
+                hideLabel
+                placeholder="Unassigned"
                 value={l.assigned_agent ?? ""}
-                onChange={(e) => updateAgent(l.id, e.target.value)}
-                className="rounded-lg border border-navy-600 bg-navy-800 px-2 py-1 text-xs text-ink-100 focus:outline-none"
-              >
-                <option value="">Unassigned</option>
-                {agents.map((a) => (
-                  <option key={a.name} value={a.name}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateAgent(l.id, v)}
+                options={agents.map((a) => ({ label: a.name, value: a.name }))}
+              />
             ),
           },
           { header: "Source", render: (l) => l.source },

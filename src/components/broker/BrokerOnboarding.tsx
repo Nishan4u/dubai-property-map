@@ -6,6 +6,7 @@ import { Briefcase, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface AgencyOption {
   id: string;
@@ -220,18 +221,13 @@ export function BrokerOnboarding() {
 
             {hasAgency === "yes" ? (
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-400">Select Broker Agency</label>
-                <select
-                  required
+                <CompactSelect
+                  label="Select Broker Agency"
+                  placeholder="Select your agency…"
                   value={brokerageId}
-                  onChange={(e) => setBrokerageId(e.target.value)}
-                  className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2.5 text-sm text-ink-100 focus:outline-none"
-                >
-                  <option value="">Select your agency…</option>
-                  {agencies.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+                  onChange={setBrokerageId}
+                  options={agencies.map((a) => ({ label: a.name, value: a.id }))}
+                />
               </div>
             ) : (
               <p className="rounded-lg border border-navy-700 bg-navy-800 p-3 text-xs text-ink-400">

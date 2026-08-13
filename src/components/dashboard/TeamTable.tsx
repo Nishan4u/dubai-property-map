@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { createClient } from "@/lib/supabase/client";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface TeamMember {
   id: string;
@@ -161,15 +162,17 @@ export function TeamTable({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Role</label>
-              <select
+              <CompactSelect
+                label="Role"
+                placeholder="Select a role…"
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option>Sales</option>
-                <option>Marketing</option>
-              </select>
+                onChange={setRole}
+                allowClear={false}
+                options={[
+                  { label: "Sales", value: "Sales" },
+                  { label: "Marketing", value: "Marketing" },
+                ]}
+              />
             </div>
             <button
               type="submit"

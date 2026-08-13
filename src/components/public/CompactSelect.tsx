@@ -13,13 +13,14 @@ export function CompactSelect({
   searchable = true,
   hideLabel = false,
   allowClear = true,
+  disabled = false,
   className,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
-  options: { label: string; value: string }[];
+  options: { label: string; value: string; group?: string }[];
   searchable?: boolean;
   /** Skip rendering the label above the trigger -- for inline controls
    * (e.g. a "Sort by" dropdown next to a search bar) where the surrounding
@@ -30,6 +31,9 @@ export function CompactSelect({
    * entry, which would otherwise be a dead option since there's nothing
    * meaningful to clear to. */
   allowClear?: boolean;
+  /** Disables the trigger -- for save-in-flight states or fields that
+   * cascade from another not-yet-chosen field. */
+  disabled?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -69,14 +73,15 @@ export function CompactSelect({
       <button
         type="button"
         title={hideLabel ? label : undefined}
+        disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-left text-xs text-ink-300 focus:outline-none"
+        className="flex w-full items-center justify-between rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-left text-xs text-ink-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className={clsx("truncate", !value && "text-ink-500")}>{selectedLabel}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-500" />
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-hidden rounded-lg border border-navy-600 bg-navy-900 shadow-2xl">
           {searchable && options.length > 6 && (
             <div className="flex items-center gap-1.5 border-b border-navy-700 px-2.5 py-2">
@@ -103,18 +108,24 @@ export function CompactSelect({
                 {placeholder}
               </button>
             )}
-            {filtered.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => handleSelect(o.value)}
-                className={clsx(
-                  "block w-full truncate px-3 py-1.5 text-left text-xs hover:bg-navy-800",
-                  value === o.value ? "text-gold-400" : "text-ink-300"
+            {filtered.map((o, i) => (
+              <div key={o.value}>
+                {o.group && o.group !== filtered[i - 1]?.group && (
+                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
+                    {o.group}
+                  </p>
                 )}
-              >
-                {o.label}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelect(o.value)}
+                  className={clsx(
+                    "block w-full truncate px-3 py-1.5 text-left text-xs hover:bg-navy-800",
+                    value === o.value ? "text-gold-400" : "text-ink-300"
+                  )}
+                >
+                  {o.label}
+                </button>
+              </div>
             ))}
             {filtered.length === 0 && (
               <p className="px-3 py-2 text-xs text-ink-500">No matches.</p>

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 const PLACEMENT_OPTIONS = [
   { value: "homepage_banner", label: "Homepage Banner" },
@@ -162,71 +163,51 @@ export function AdminCreateBannerForm({
           </p>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Placement Type</label>
-            <select
+            <CompactSelect
+              label="Placement Type"
+              placeholder="Placement Type"
               value={placementType}
-              onChange={(e) => setPlacementType(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              {PLACEMENT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              onChange={setPlacementType}
+              allowClear={false}
+              options={PLACEMENT_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+            />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Attributed Developer</label>
-            <select
+            <CompactSelect
+              label="Attributed Developer"
+              placeholder="Attributed Developer"
               value={developerId}
-              onChange={(e) => {
-                setDeveloperId(e.target.value);
+              onChange={(v) => {
+                setDeveloperId(v);
                 setProjectId("");
               }}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              {developers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              allowClear={false}
+              options={developers.map((d) => ({ label: d.name, value: d.id }))}
+            />
           </div>
 
           {needsProject && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Project</label>
-              <select
+              <CompactSelect
+                label="Project"
+                placeholder="Select a project…"
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">Select a project…</option>
-                {projectsForDeveloper.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setProjectId}
+                options={projectsForDeveloper.map((p) => ({ label: p.name, value: p.id }))}
+              />
             </div>
           )}
 
           {needsCommunity && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Community</label>
-              <select
+              <CompactSelect
+                label="Community"
+                placeholder="Select a community…"
                 value={communityId}
-                onChange={(e) => setCommunityId(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">Select a community…</option>
-                {communities.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCommunityId}
+                options={communities.map((c) => ({ label: c.name, value: c.id }))}
+              />
             </div>
           )}
 

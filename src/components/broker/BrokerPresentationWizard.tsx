@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatAed } from "@/data/mock";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { ClientPropertyRequestSignal, CrmClientRow } from "@/lib/supabase/queries";
 import type { ProjectWithRelations } from "@/types/database";
 
@@ -227,19 +228,19 @@ export function BrokerPresentationWizard({
         {step === 1 && (
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-ink-100">Who is this presentation for?</h2>
-            <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="w-full max-w-sm rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">No client yet -- build it manually</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name}
-                  {latestRequestByClient[c.id] ? " (has a linked request)" : ""}
-                </option>
-              ))}
-            </select>
+            <div className="max-w-sm">
+              <CompactSelect
+                label="Client"
+                placeholder="No client yet -- build it manually"
+                hideLabel
+                value={clientId}
+                onChange={setClientId}
+                options={clients.map((c) => ({
+                  label: `${c.full_name}${latestRequestByClient[c.id] ? " (has a linked request)" : ""}`,
+                  value: c.id,
+                }))}
+              />
+            </div>
             <p className="text-xs text-ink-500">
               If this client has a linked property request, the next step suggests matching projects automatically
               -- you can still add or remove any of them.
@@ -268,30 +269,25 @@ export function BrokerPresentationWizard({
                 onChange={(e) => setFilterBudgetMax(e.target.value)}
                 className="w-36 rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
               />
-              <select
+              <CompactSelect
+                label="Bedrooms"
+                placeholder="Any bedrooms"
+                hideLabel
                 value={filterBedrooms}
-                onChange={(e) => setFilterBedrooms(e.target.value)}
-                className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 focus:outline-none"
-              >
-                <option value="">Any bedrooms</option>
-                {[0, 1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? "Studio" : `${n} bed`}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={setFilterBedrooms}
+                options={[0, 1, 2, 3, 4, 5].map((n) => ({
+                  label: n === 0 ? "Studio" : `${n} bed`,
+                  value: String(n),
+                }))}
+              />
+              <CompactSelect
+                label="Community"
+                placeholder="Any community"
+                hideLabel
                 value={filterCommunity}
-                onChange={(e) => setFilterCommunity(e.target.value)}
-                className="rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-1.5 text-xs text-ink-100 focus:outline-none"
-              >
-                <option value="">Any community</option>
-                {communities.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                onChange={setFilterCommunity}
+                options={communities.map((name) => ({ label: name, value: name }))}
+              />
             </div>
             <div className="max-h-96 space-y-1.5 overflow-y-auto rounded-lg border border-navy-600 bg-navy-800 p-2">
               {visibleProjects.length === 0 && <p className="p-3 text-xs text-ink-500">No projects match these filters.</p>}
@@ -401,19 +397,21 @@ export function BrokerPresentationWizard({
                 </label>
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Presentation mode</label>
-              <select
+            <div className="max-w-sm">
+              <CompactSelect
+                label="Presentation mode"
+                placeholder="Default -- everything, natural order"
                 value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                className="w-full max-w-sm rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="default">Default -- everything, natural order</option>
-                <option value="investor">Investor -- pricing &amp; payment plan first</option>
-                <option value="end_user">End User -- location &amp; lifestyle first</option>
-                <option value="quick_pitch">Quick Pitch -- projects only, no extra sections</option>
-                <option value="luxury">Luxury -- premium specs &amp; lifestyle, understated pricing</option>
-              </select>
+                onChange={setMode}
+                allowClear={false}
+                options={[
+                  { label: "Default -- everything, natural order", value: "default" },
+                  { label: "Investor -- pricing & payment plan first", value: "investor" },
+                  { label: "End User -- location & lifestyle first", value: "end_user" },
+                  { label: "Quick Pitch -- projects only, no extra sections", value: "quick_pitch" },
+                  { label: "Luxury -- premium specs & lifestyle, understated pricing", value: "luxury" },
+                ]}
+              />
             </div>
             <div className="rounded-lg border border-navy-600 bg-navy-800 p-3">
               <p className="mb-1.5 text-xs font-medium text-ink-400">

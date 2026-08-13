@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
@@ -33,6 +34,15 @@ export function BrokerListingForm({
   const router = useRouter();
   const [amenities, setAmenities] = useState<string[]>(listing?.amenities ?? []);
   const [listingType, setListingType] = useState<"sale" | "rent" | "lease">(listing?.listing_type ?? "sale");
+  const [propertyType, setPropertyType] = useState<string>(listing?.property_type ?? "");
+  const [availabilityStatus, setAvailabilityStatus] = useState<string>(listing?.availability_status ?? "available");
+  const [communityId, setCommunityId] = useState<string>(listing?.community_id ?? "");
+  // A brand-new listing defaults to "private" (nudges the broker to
+  // explicitly promote it once ready). Editing an existing row falls back
+  // to "public" if visibility is somehow missing -- matching the column's
+  // own DB default, not silently showing "Private" for a listing that's
+  // actually public.
+  const [visibility, setVisibility] = useState<string>(listing ? listing.visibility ?? "public" : "private");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
@@ -69,10 +79,10 @@ export function BrokerListingForm({
     const payload = {
       broker_id: brokerId,
       title: String(formData.get("title") ?? ""),
-      property_type: String(formData.get("property_type") ?? ""),
+      property_type: propertyType,
       listing_type: listingType,
       price_aed: Number(formData.get("price_aed")) || 0,
-      community_id: String(formData.get("community_id") ?? "") || null,
+      community_id: communityId || null,
       location_text: String(formData.get("location_text") ?? "").trim() || null,
       lat: coords.lat,
       lng: coords.lng,
@@ -81,8 +91,8 @@ export function BrokerListingForm({
       size_sqft: formData.get("size_sqft") ? Number(formData.get("size_sqft")) : null,
       description: String(formData.get("description") ?? ""),
       amenities,
-      availability_status: String(formData.get("availability_status") ?? "available"),
-      visibility: String(formData.get("visibility") ?? "private"),
+      availability_status: availabilityStatus,
+      visibility,
       whatsapp: String(formData.get("whatsapp") ?? "").trim() || brokerWhatsapp,
     };
 
@@ -144,29 +154,32 @@ export function BrokerListingForm({
         <h2 className="mb-4 text-sm font-semibold text-ink-100">Property Details</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Property Title" name="title" defaultValue={listing?.title} required className="sm:col-span-2" />
-          <SelectField
+          <CompactSelect
             label="Property Type"
-            name="property_type"
-            defaultValue={listing?.property_type}
+            placeholder="Select a property type"
+            value={propertyType}
+            onChange={setPropertyType}
             options={fallbackPropertyTypes.map((v) => ({ label: v, value: v }))}
           />
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Sale / Rent / Lease</label>
-            <select
-              value={listingType}
-              onChange={(e) => setListingType(e.target.value as "sale" | "rent" | "lease")}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="sale">Sale</option>
-              <option value="rent">Rent</option>
-              <option value="lease">Lease</option>
-            </select>
-          </div>
+          <CompactSelect
+            label="Sale / Rent / Lease"
+            placeholder="Select"
+            value={listingType}
+            onChange={(v) => setListingType(v as "sale" | "rent" | "lease")}
+            allowClear={false}
+            options={[
+              { label: "Sale", value: "sale" },
+              { label: "Rent", value: "rent" },
+              { label: "Lease", value: "lease" },
+            ]}
+          />
           <Field label="Price (AED)" name="price_aed" type="number" defaultValue={listing?.price_aed?.toString()} required />
-          <SelectField
+          <CompactSelect
             label="Property Status"
-            name="availability_status"
-            defaultValue={listing?.availability_status ?? "available"}
+            placeholder="Select a status"
+            value={availabilityStatus}
+            onChange={setAvailabilityStatus}
+            allowClear={false}
             options={[
               { label: "Available", value: "available" },
               { label: "Under Offer", value: "under_offer" },
@@ -174,23 +187,20 @@ export function BrokerListingForm({
               { label: "Rented", value: "rented" },
             ]}
           />
-          <SelectField
+          <CompactSelect
             label="Community"
-            name="community_id"
-            defaultValue={listing?.community_id ?? ""}
-            options={[{ label: "Select a community", value: "" }, ...communities.map((c) => ({ label: c.name, value: c.id }))]}
+            placeholder="Select a community"
+            value={communityId}
+            onChange={setCommunityId}
+            options={communities.map((c) => ({ label: c.name, value: c.id }))}
           />
           <Field label="Location (optional)" name="location_text" defaultValue={listing?.location_text ?? ""} placeholder="e.g. Marina Promenade, Tower 3" />
-          <SelectField
+          <CompactSelect
             label="Who Can See This"
-            name="visibility"
-            // A brand-new listing defaults to "private" (nudges the
-            // broker to explicitly promote it once ready). Editing an
-            // existing row falls back to "public" if visibility is
-            // somehow missing -- matching the column's own DB default,
-            // not silently showing "Private" for a listing that's
-            // actually public.
-            defaultValue={listing ? listing.visibility ?? "public" : "private"}
+            placeholder="Select visibility"
+            value={visibility}
+            onChange={setVisibility}
+            allowClear={false}
             options={[
               { label: "Private — only visible to you", value: "private" },
               { label: "Team — visible to brokers in your agency", value: "team" },
@@ -360,35 +370,6 @@ function Field({
         placeholder={placeholder}
         className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
       />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  options: { label: string; value: string }[];
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-ink-400">{label}</label>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

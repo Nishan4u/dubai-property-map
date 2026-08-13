@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 type Channel = "email" | "sms" | "whatsapp";
 
@@ -96,16 +97,18 @@ export function AdminCreateCampaignForm() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Channel</label>
-            <select
+            <CompactSelect
+              label="Channel"
+              placeholder="Channel"
               value={channel}
-              onChange={(e) => setChannel(e.target.value as Channel)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="email">Email</option>
-              <option value="sms">SMS</option>
-              <option value="whatsapp">WhatsApp</option>
-            </select>
+              onChange={(v) => setChannel(v as Channel)}
+              allowClear={false}
+              options={[
+                { label: "Email", value: "email" },
+                { label: "SMS", value: "sms" },
+                { label: "WhatsApp", value: "whatsapp" },
+              ]}
+            />
           </div>
 
           {channel === "email" && (

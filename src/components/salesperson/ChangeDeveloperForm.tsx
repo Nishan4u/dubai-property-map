@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface DeveloperOption {
   id: string;
@@ -47,18 +48,17 @@ export function ChangeDeveloperForm({
         {currentDeveloperId ? "Change Developer" : "Select the developer you work for"}
       </label>
       <div className="flex gap-2">
-        <select
+        <CompactSelect
+          label="Developer"
+          hideLabel
+          placeholder="Select a developer…"
           value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-        >
-          <option value="">Select a developer…</option>
-          {developers.filter((d) => d.id !== currentDeveloperId).map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+          onChange={setSelected}
+          className="flex-1"
+          options={developers
+            .filter((d) => d.id !== currentDeveloperId)
+            .map((d) => ({ label: d.name, value: d.id }))}
+        />
         <button
           type="submit"
           disabled={!selected || status === "loading"}

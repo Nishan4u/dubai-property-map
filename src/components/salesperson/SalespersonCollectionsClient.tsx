@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { generateReferralQrCode } from "@/lib/referralQrCode";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { CrmClientRow } from "@/lib/supabase/queries";
 
 interface Collection {
@@ -193,19 +194,13 @@ export function SalespersonCollectionsClient({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Client (optional)</label>
-            <select
+            <CompactSelect
+              label="Client (optional)"
+              placeholder="No client"
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">No client</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name}
-                </option>
-              ))}
-            </select>
+              onChange={setClientId}
+              options={clients.map((c) => ({ label: c.full_name, value: c.id }))}
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">
@@ -270,18 +265,20 @@ export function SalespersonCollectionsClient({
             </p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Presentation mode</label>
-            <select
+            <CompactSelect
+              label="Presentation mode"
+              placeholder="Select a presentation mode…"
               value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="default">Default -- everything, natural order</option>
-              <option value="investor">Investor -- pricing &amp; payment plan first</option>
-              <option value="end_user">End User -- location &amp; lifestyle first</option>
-              <option value="quick_pitch">Quick Pitch -- projects only, no extra sections</option>
-              <option value="luxury">Luxury -- premium specs &amp; lifestyle, understated pricing</option>
-            </select>
+              onChange={setMode}
+              allowClear={false}
+              options={[
+                { label: "Default -- everything, natural order", value: "default" },
+                { label: "Investor -- pricing & payment plan first", value: "investor" },
+                { label: "End User -- location & lifestyle first", value: "end_user" },
+                { label: "Quick Pitch -- projects only, no extra sections", value: "quick_pitch" },
+                { label: "Luxury -- premium specs & lifestyle, understated pricing", value: "luxury" },
+              ]}
+            />
           </div>
           <div className="flex gap-2">
             <button

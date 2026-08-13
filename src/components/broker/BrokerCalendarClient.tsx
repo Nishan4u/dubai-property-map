@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
 import { MonthCalendar } from "@/components/ui/MonthCalendar";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { CrmClientRow } from "@/lib/supabase/queries";
 
 interface Appointment {
@@ -164,19 +165,13 @@ export function BrokerCalendarClient({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Client (optional)</label>
-              <select
+              <CompactSelect
+                label="Client (optional)"
+                placeholder="No client"
                 value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">No client</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.full_name}
-                  </option>
-                ))}
-              </select>
+                onChange={setClientId}
+                options={clients.map((c) => ({ label: c.full_name, value: c.id }))}
+              />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-400">Location (optional)</label>

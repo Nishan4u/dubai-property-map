@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Plus } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface CreatedTeamMember {
   fullName: string;
@@ -107,19 +108,13 @@ export function AdminCreateTeamMemberForm({ roles }: { roles: { id: string; name
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Role</label>
-            <select
+            <CompactSelect
+              label="Role"
+              placeholder="Full Admin (unrestricted)"
               value={customRoleId}
-              onChange={(e) => setCustomRoleId(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">Full Admin (unrestricted)</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCustomRoleId}
+              options={roles.map((r) => ({ label: r.name, value: r.id }))}
+            />
           </div>
 
           {status === "error" && <p className="text-xs font-medium text-rose-400 sm:col-span-2">{errorMsg}</p>}

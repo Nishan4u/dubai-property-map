@@ -6,6 +6,7 @@ import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/uploadWithProgress";
 import { UploadProgressItem } from "@/components/ui/UploadProgress";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface AgencyOption {
   id: string;
@@ -96,16 +97,16 @@ export function ChangeAgencyForm({
           {currentBrokerageId ? "Change Agency" : "Connect to an Agency"}
         </label>
         <div className="flex gap-2">
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="flex-1 rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            <option value="">Select an agency…</option>
-            {agencies.filter((a) => a.id !== currentBrokerageId).map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+          <div className="flex-1">
+            <CompactSelect
+              label={currentBrokerageId ? "Change Agency" : "Connect to an Agency"}
+              placeholder="Select an agency…"
+              hideLabel
+              value={selected}
+              onChange={setSelected}
+              options={agencies.filter((a) => a.id !== currentBrokerageId).map((a) => ({ label: a.name, value: a.id }))}
+            />
+          </div>
           <button
             type="submit"
             disabled={!selected || status === "loading"}

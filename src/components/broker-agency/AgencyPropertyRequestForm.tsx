@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Send } from "lucide-react";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface SalespersonOption {
   id: string;
@@ -99,28 +100,24 @@ export function AgencyPropertyRequestForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Property Type</label>
-          <select
+          <CompactSelect
+            label="Property Type"
+            placeholder="Property Type"
             value={propertyType}
-            onChange={(e) => setPropertyType(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-          >
-            {propertyTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+            onChange={setPropertyType}
+            allowClear={false}
+            options={propertyTypes.map((t) => ({ label: t, value: t }))}
+          />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Bedrooms</label>
-          <select
+          <CompactSelect
+            label="Bedrooms"
+            placeholder="Bedrooms"
             value={bedrooms}
-            onChange={(e) => setBedrooms(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-          >
-            {bedroomOptions.map((b) => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
+            onChange={setBedrooms}
+            allowClear={false}
+            options={bedroomOptions.map((b) => ({ label: b, value: b }))}
+          />
         </div>
       </div>
 
@@ -147,42 +144,36 @@ export function AgencyPropertyRequestForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Purchase Purpose</label>
-          <select
+          <CompactSelect
+            label="Purchase Purpose"
+            placeholder="Purchase Purpose"
             value={purchasePurpose}
-            onChange={(e) => setPurchasePurpose(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-          >
-            {purposeOptions.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+            onChange={setPurchasePurpose}
+            allowClear={false}
+            options={purposeOptions.map((p) => ({ label: p, value: p }))}
+          />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-400">Payment Method</label>
-          <select
+          <CompactSelect
+            label="Payment Method"
+            placeholder="Payment Method"
             value={financing}
-            onChange={(e) => setFinancing(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-          >
-            {financingOptions.map((f) => (
-              <option key={f} value={f}>{f}</option>
-            ))}
-          </select>
+            onChange={setFinancing}
+            allowClear={false}
+            options={financingOptions.map((f) => ({ label: f, value: f }))}
+          />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-ink-400">Purchase Timeline</label>
-        <select
+        <CompactSelect
+          label="Purchase Timeline"
+          placeholder="Purchase Timeline"
           value={purchaseTimeline}
-          onChange={(e) => setPurchaseTimeline(e.target.value)}
-          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-        >
-          {timelineOptions.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+          onChange={setPurchaseTimeline}
+          allowClear={false}
+          options={timelineOptions.map((t) => ({ label: t, value: t }))}
+        />
       </div>
 
       <div>
@@ -206,19 +197,17 @@ export function AgencyPropertyRequestForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-ink-400">Select Developer Salesperson</label>
-        <select
+        <CompactSelect
+          label="Select Developer Salesperson"
+          placeholder="Select Developer Salesperson"
           value={salespersonId}
-          onChange={(e) => setSalespersonId(e.target.value)}
-          className="w-full rounded-lg border border-navy-600 bg-navy-800 px-2.5 py-2 text-xs text-ink-100 focus:outline-none"
-        >
-          {salespersons.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.full_name}
-              {s.job_title ? ` — ${s.job_title}` : ""}
-            </option>
-          ))}
-        </select>
+          onChange={setSalespersonId}
+          allowClear={false}
+          options={salespersons.map((s) => ({
+            label: `${s.full_name}${s.job_title ? ` — ${s.job_title}` : ""}`,
+            value: s.id,
+          }))}
+        />
       </div>
 
       {errorMsg && <p className="text-xs font-medium text-rose-400">{errorMsg}</p>}

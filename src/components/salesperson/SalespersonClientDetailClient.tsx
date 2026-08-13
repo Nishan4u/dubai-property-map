@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { SalespersonReservationsSection } from "@/components/salesperson/SalespersonReservationsSection";
 import type { getCrmClientDetailForSalesperson } from "@/lib/supabase/queries";
 
@@ -324,33 +325,43 @@ export function SalespersonClientDetailClient({
       <SectionCard title="Call & WhatsApp Log">
         <form onSubmit={handleAddCommunicationLog} className="mb-3 space-y-2">
           <div className="flex flex-wrap gap-2">
-            <select
+            <CompactSelect
+              label="Channel"
+              hideLabel
+              placeholder="Select a channel…"
               value={logChannel}
-              onChange={(e) => setLogChannel(e.target.value as "call" | "whatsapp")}
-              className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="call">Call</option>
-              <option value="whatsapp">WhatsApp</option>
-            </select>
-            <select
+              onChange={(v) => setLogChannel(v as "call" | "whatsapp")}
+              allowClear={false}
+              options={[
+                { label: "Call", value: "call" },
+                { label: "WhatsApp", value: "whatsapp" },
+              ]}
+            />
+            <CompactSelect
+              label="Direction"
+              hideLabel
+              placeholder="Select a direction…"
               value={logDirection}
-              onChange={(e) => setLogDirection(e.target.value as "outbound" | "inbound")}
-              className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="outbound">Outbound</option>
-              <option value="inbound">Inbound</option>
-            </select>
-            <select
+              onChange={(v) => setLogDirection(v as "outbound" | "inbound")}
+              allowClear={false}
+              options={[
+                { label: "Outbound", value: "outbound" },
+                { label: "Inbound", value: "inbound" },
+              ]}
+            />
+            <CompactSelect
+              label="Outcome"
+              hideLabel
+              placeholder="No outcome"
               value={logOutcome}
-              onChange={(e) => setLogOutcome(e.target.value)}
-              className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">No outcome</option>
-              <option value="connected">Connected</option>
-              <option value="no_answer">No Answer</option>
-              <option value="voicemail">Voicemail</option>
-              <option value="other">Other</option>
-            </select>
+              onChange={setLogOutcome}
+              options={[
+                { label: "Connected", value: "connected" },
+                { label: "No Answer", value: "no_answer" },
+                { label: "Voicemail", value: "voicemail" },
+                { label: "Other", value: "other" },
+              ]}
+            />
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <textarea

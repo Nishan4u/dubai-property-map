@@ -6,6 +6,7 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { CrmClientRow } from "@/lib/supabase/queries";
 
 const statusOptions = [
@@ -132,35 +133,31 @@ export function MyLeadsTable({ leads, clients }: { leads: LeadRow[]; clients: Cr
               <Badge tone={statusTone[l.status as (typeof statusOptions)[number]] ?? "neutral"}>
                 {l.status.replace(/_/g, " ")}
               </Badge>
-              <select
+              <CompactSelect
+                label="Status"
+                hideLabel
+                placeholder="Status"
                 disabled={savingId === l.id}
                 value={l.status}
-                onChange={(e) => handleStatusChange(l, e.target.value)}
-                className="rounded-md border border-navy-600 bg-navy-800 px-1.5 py-1 text-[11px] text-ink-300 focus:outline-none"
-              >
-                {statusOptions.map((s) => (
-                  <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-                ))}
-              </select>
+                onChange={(v) => handleStatusChange(l, v)}
+                allowClear={false}
+                options={statusOptions.map((s) => ({ label: s.replace(/_/g, " "), value: s }))}
+              />
             </div>
           ),
         },
         {
           header: "Client",
           render: (l) => (
-            <select
+            <CompactSelect
+              label="Client"
+              hideLabel
+              placeholder="Unlinked"
               disabled={savingId === l.id}
               value={l.client_id ?? ""}
-              onChange={(e) => handleClientChange(l, e.target.value)}
-              className="rounded-md border border-navy-600 bg-navy-800 px-1.5 py-1 text-[11px] text-ink-300 focus:outline-none"
-            >
-              <option value="">Unlinked</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => handleClientChange(l, v)}
+              options={clients.map((c) => ({ label: c.full_name, value: c.id }))}
+            />
           ),
         },
         { header: "Date", render: (l) => new Date(l.created_at).toLocaleDateString() },

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Trash2, Upload } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import { CoordinatesPicker } from "@/components/dashboard/CoordinatesPicker";
 import { ConstructionMilestonesManager } from "@/components/dashboard/ConstructionMilestonesManager";
 import { UnitTypesManager } from "@/components/dashboard/UnitTypesManager";
@@ -93,6 +94,12 @@ export function ProjectForm({
     lng: project?.lng ?? DUBAI_CENTER.lng,
   });
   const [linkedUpcomingId, setLinkedUpcomingId] = useState("");
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState<string>(developerOptions?.[0]?.id ?? "");
+  const [communityId, setCommunityId] = useState<string>(project?.communityId ?? "");
+  const [propertyType, setPropertyType] = useState<string>(project?.propertyType ?? "");
+  const [escrowStatus, setEscrowStatus] = useState<string>(project?.escrowStatus ?? "");
+  const [furnishing, setFurnishing] = useState<string>(project?.furnishing ?? "");
+  const [handoverQuarter, setHandoverQuarter] = useState<string>(project?.handoverQuarter ?? "");
 
   // listing_type in the DB is still a single flat value (buy/rent/off-plan/
   // ready -- see schema.sql) -- this just presents it as a friendlier
@@ -225,16 +232,16 @@ export function ProjectForm({
 
     const payload = {
       name,
-      community_id: String(formData.get("community_id")),
-      property_type: String(formData.get("property_type")),
+      community_id: communityId,
+      property_type: propertyType,
       listing_type: listingType,
       price_from_aed: Number(formData.get("price_from_aed")) || 0,
       payment_plan: String(formData.get("payment_plan") ?? ""),
-      escrow_status: String(formData.get("escrow_status") ?? "").trim() || null,
-      furnishing: String(formData.get("furnishing") ?? "").trim() || null,
+      escrow_status: escrowStatus || null,
+      furnishing: furnishing || null,
       bedrooms_from: Number(formData.get("bedrooms_from")) || 0,
       bedrooms_to: Number(formData.get("bedrooms_to")) || 0,
-      handover_quarter: String(formData.get("handover_quarter") ?? ""),
+      handover_quarter: handoverQuarter,
       handover_year: Number(formData.get("handover_year")) || null,
       // Only meaningful for a Ready listing -- cleared (not just hidden) if
       // the developer switches back to Off Plan, so a stale age never
@@ -279,9 +286,7 @@ export function ProjectForm({
       }
     } else {
       const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 7)}`;
-      const resolvedDeveloperId = developerOptions
-        ? String(formData.get("developer_id"))
-        : developerId;
+      const resolvedDeveloperId = developerOptions ? selectedDeveloperId : developerId;
       const linkedUpcoming = activeUpcomingProjects.find((u) => u.id === linkedUpcomingId);
       const finalizePayload = {
         ...payload,
@@ -349,9 +354,12 @@ export function ProjectForm({
       <SectionCard title="General">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {developerOptions && !project && (
-            <SelectField
+            <CompactSelect
               label="Developer"
-              name="developer_id"
+              placeholder="Select a developer"
+              value={selectedDeveloperId}
+              onChange={setSelectedDeveloperId}
+              allowClear={false}
               options={developerOptions.map((d) => ({ label: d.name, value: d.id }))}
             />
           )}
@@ -361,44 +369,46 @@ export function ProjectForm({
             defaultValue={project?.name}
             required
           />
-          <SelectField
+          <CompactSelect
             label="Community"
-            name="community_id"
-            defaultValue={project?.communityId}
+            placeholder="Select a community"
+            value={communityId}
+            onChange={setCommunityId}
             options={communities.map((c) => ({ label: c.name, value: c.id }))}
           />
-          <SelectField
+          <CompactSelect
             label="Property Type"
-            name="property_type"
-            defaultValue={project?.propertyType}
+            placeholder="Select a property type"
+            value={propertyType}
+            onChange={setPropertyType}
             options={propertyTypes.map((v) => ({
               label: v,
               value: v,
             }))}
           />
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Listing Type</label>
-            <select
-              value={transactionType}
-              onChange={(e) => setTransactionType(e.target.value as "sell" | "rent")}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="sell">Sell</option>
-              <option value="rent">Rent</option>
-            </select>
-          </div>
+          <CompactSelect
+            label="Listing Type"
+            placeholder="Select"
+            value={transactionType}
+            onChange={(v) => setTransactionType(v as "sell" | "rent")}
+            allowClear={false}
+            options={[
+              { label: "Sell", value: "sell" },
+              { label: "Rent", value: "rent" },
+            ]}
+          />
           {transactionType === "sell" && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">Sale Status</label>
-              <select
-                value={saleStatus}
-                onChange={(e) => setSaleStatus(e.target.value as "off-plan" | "ready")}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="off-plan">Off Plan</option>
-                <option value="ready">Ready</option>
-              </select>
-            </div>
+            <CompactSelect
+              label="Sale Status"
+              placeholder="Select"
+              value={saleStatus}
+              onChange={(v) => setSaleStatus(v as "off-plan" | "ready")}
+              allowClear={false}
+              options={[
+                { label: "Off Plan", value: "off-plan" },
+                { label: "Ready", value: "ready" },
+              ]}
+            />
           )}
           {saleStatus === "ready" && (
             <Field
@@ -412,21 +422,13 @@ export function ProjectForm({
         </div>
         {!project && activeUpcomingProjects.length > 0 && (
           <div className="mt-4">
-            <label className="mb-1 block text-xs font-medium text-ink-400">
-              Link to Upcoming Project
-            </label>
-            <select
+            <CompactSelect
+              label="Link to Upcoming Project"
+              placeholder="— None —"
               value={linkedUpcomingId}
-              onChange={(e) => handleLinkUpcoming(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">— None —</option>
-              {activeUpcomingProjects.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.internal_name}
-                </option>
-              ))}
-            </select>
+              onChange={handleLinkUpcoming}
+              options={activeUpcomingProjects.map((u) => ({ label: u.internal_name, value: u.id }))}
+            />
             <p className="mt-1 text-xs text-ink-500">
               Linking will hide that &quot;Coming Soon&quot; pin, carry over
               its location and logo, and publish this as the live project.
@@ -510,31 +512,32 @@ export function ProjectForm({
             defaultValue={project?.paymentPlan}
             placeholder="e.g. 70/30"
           />
-          <SelectField
+          <CompactSelect
             label="Escrow Account"
-            name="escrow_status"
-            defaultValue={project?.escrowStatus ?? ""}
+            placeholder="Leave blank"
+            value={escrowStatus}
+            onChange={setEscrowStatus}
             options={[
-              { label: "Leave blank", value: "" },
               { label: "Available", value: "available" },
               { label: "Not Available", value: "not_available" },
             ]}
           />
-          <SelectField
+          <CompactSelect
             label="Furnishing"
-            name="furnishing"
-            defaultValue={project?.furnishing ?? ""}
+            placeholder="Leave blank"
+            value={furnishing}
+            onChange={setFurnishing}
             options={[
-              { label: "Leave blank", value: "" },
               { label: "Furnished", value: "furnished" },
               { label: "Unfurnished", value: "unfurnished" },
               { label: "Semi-Furnished", value: "semi_furnished" },
             ]}
           />
-          <SelectField
+          <CompactSelect
             label="Handover Quarter"
-            name="handover_quarter"
-            defaultValue={project?.handoverQuarter}
+            placeholder="Select a quarter"
+            value={handoverQuarter}
+            onChange={setHandoverQuarter}
             options={["Q1", "Q2", "Q3", "Q4", "Ready"].map((v) => ({ label: v, value: v }))}
           />
           <Field
@@ -854,37 +857,6 @@ function Field({
         placeholder={placeholder}
         className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none"
       />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  options: { label: string; value: string }[];
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-ink-400">
-        {label}
-      </label>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

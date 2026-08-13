@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProjectFileManager, documentCategories } from "@/components/dashboard/ProjectFileManager";
 import { exteriorGalleryCategories, interiorGalleryCategories } from "@/lib/galleryCategories";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 const UNCATEGORIZED = "__uncategorized__";
 
@@ -39,54 +40,32 @@ export function MediaLibraryClient({
         <div className="max-w-2xl space-y-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-ink-400">Project</label>
-              <select
+              <CompactSelect
+                label="Project"
+                placeholder="Select a project…"
                 value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelected}
+                allowClear={false}
+                options={projects.map((p) => ({ label: p.name, value: p.id }))}
+              />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-ink-400">
-                {folder === "documents" ? "Document Type" : "Gallery Category"}
-              </label>
-              <select
+              <CompactSelect
+                label={folder === "documents" ? "Document Type" : "Gallery Category"}
+                placeholder={folder === "documents" ? "Select a document type…" : "Select a gallery category…"}
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                {folder === "documents" ? (
-                  documentCategories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <optgroup label="Exterior">
-                      {exteriorGalleryCategories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Interior">
-                      {interiorGalleryCategories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <option value={UNCATEGORIZED}>General (Uncategorized)</option>
-                  </>
-                )}
-              </select>
+                onChange={setCategory}
+                allowClear={false}
+                options={
+                  folder === "documents"
+                    ? documentCategories.map((c) => ({ label: c, value: c }))
+                    : [
+                        ...exteriorGalleryCategories.map((c) => ({ label: c, value: c, group: "Exterior" })),
+                        ...interiorGalleryCategories.map((c) => ({ label: c, value: c, group: "Interior" })),
+                        { label: "General (Uncategorized)", value: UNCATEGORIZED },
+                      ]
+                }
+              />
             </div>
           </div>
 

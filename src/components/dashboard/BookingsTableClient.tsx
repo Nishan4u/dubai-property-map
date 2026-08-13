@@ -6,6 +6,7 @@ import { List, CalendarDays } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { createClient } from "@/lib/supabase/client";
 import { notifyUser } from "@/lib/notify";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { DbBookingStatus } from "@/types/database";
 
 interface BookingRow {
@@ -92,17 +93,15 @@ export function BookingsTableClient({ bookings }: { bookings: BookingRow[] }) {
             {
               header: "Status",
               render: (b) => (
-                <select
+                <CompactSelect
+                  label="Status"
+                  hideLabel
+                  placeholder="Status"
                   value={b.status}
-                  onChange={(e) => updateStatus(b.id, e.target.value as DbBookingStatus)}
-                  className="rounded-lg border border-navy-600 bg-navy-800 px-2 py-1 text-xs text-ink-100 focus:outline-none"
-                >
-                  {statusOptions.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => updateStatus(b.id, v as DbBookingStatus)}
+                  options={statusOptions.map((s) => ({ label: s, value: s }))}
+                  allowClear={false}
+                />
               ),
             },
           ]}

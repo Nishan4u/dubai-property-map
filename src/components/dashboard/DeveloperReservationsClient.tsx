@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { ProjectUnitRow } from "@/types/database";
 
 interface UnitType {
@@ -253,55 +254,43 @@ export function DeveloperReservationsClient({
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">Reservation</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Project</label>
-            <select
-              required
+            <CompactSelect
+              label="Project"
+              placeholder="Select a project…"
               value={projectId}
-              onChange={(e) => handleSelectProject(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-            >
-              <option value="">Select a project…</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={handleSelectProject}
+              options={projects.map((p) => ({ label: p.name, value: p.id }))}
+            />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Unit Type (optional)</label>
-            <select
+            <CompactSelect
+              label="Unit Type (optional)"
+              placeholder="Select a unit type…"
               value={unitTypeId}
-              onChange={(e) => handleSelectUnitType(e.target.value)}
+              onChange={handleSelectUnitType}
               disabled={!projectId}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none disabled:opacity-50"
-            >
-              <option value="">Select a unit type…</option>
-              {unitTypes.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.unit_name ?? u.unit_type}
-                </option>
-              ))}
-            </select>
+              options={unitTypes.map((u) => ({ label: u.unit_name ?? u.unit_type ?? "", value: u.id }))}
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">Unit (optional)</label>
             {availableUnits.length > 0 && unitId !== "__manual__" ? (
-              <select
+              <CompactSelect
+                label="Unit (optional)"
+                hideLabel
+                placeholder="Select a unit…"
                 value={unitId}
-                onChange={(e) => handleSelectUnit(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">Select a unit…</option>
-                {availableUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    Unit {u.unit_number}
-                    {u.floor ? ` · Floor ${u.floor}` : ""}
-                    {u.price_aed != null ? ` · AED ${u.price_aed.toLocaleString()}` : ""}
-                  </option>
-                ))}
-                <option value="__manual__">Other (type manually)</option>
-              </select>
+                onChange={handleSelectUnit}
+                options={[
+                  ...availableUnits.map((u) => ({
+                    label: `Unit ${u.unit_number}${u.floor ? ` · Floor ${u.floor}` : ""}${
+                      u.price_aed != null ? ` · AED ${u.price_aed.toLocaleString()}` : ""
+                    }`,
+                    value: u.id,
+                  })),
+                  { label: "Other (type manually)", value: "__manual__" },
+                ]}
+              />
             ) : (
               <div className="flex items-center gap-2">
                 <input

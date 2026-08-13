@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface ProjectOption {
   id: string;
@@ -70,20 +71,13 @@ export function FeatureProjectSection({ projects }: { projects: ProjectOption[] 
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-navy-700 bg-navy-850 p-4">
         <div className="min-w-56 flex-1">
-          <label className="mb-1 block text-xs font-medium text-ink-400">Project</label>
-          <select
-            required
+          <CompactSelect
+            label="Project"
+            placeholder="Select a project…"
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-          >
-            <option value="">Select a project…</option>
-            {liveProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={setProjectId}
+            options={liveProjects.map((p) => ({ label: p.name, value: p.id }))}
+          />
         </div>
         <button
           type="submit"

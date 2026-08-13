@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/auditLog";
 import { DataTable } from "@/components/ui/DataTable";
 import { ADMIN_MODULES, type PermissionLevel } from "@/lib/permissions";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 interface CustomRoleRow {
   id: string;
@@ -133,15 +134,21 @@ export function AdminRolesManager({ roles }: { roles: CustomRoleRow[] }) {
               {ADMIN_MODULES.map((m) => (
                 <div key={m.key} className="flex items-center justify-between gap-2 rounded-lg border border-navy-700 bg-navy-900 px-3 py-2">
                   <span className="text-xs text-ink-300">{m.label}</span>
-                  <select
+                  <CompactSelect
+                    label={`${m.label} access level`}
+                    hideLabel
+                    allowClear={false}
+                    searchable={false}
+                    placeholder={`${m.label} access level`}
                     value={form.permissions[m.key] ?? "none"}
-                    onChange={(e) => setModuleLevel(m.key, e.target.value as PermissionLevel | "none")}
-                    className="rounded-md border border-navy-600 bg-navy-800 px-1.5 py-1 text-xs text-ink-100 focus:outline-none"
-                  >
-                    <option value="none">None</option>
-                    <option value="view">View</option>
-                    <option value="manage">Manage</option>
-                  </select>
+                    onChange={(v) => setModuleLevel(m.key, v as PermissionLevel | "none")}
+                    options={[
+                      { label: "None", value: "none" },
+                      { label: "View", value: "view" },
+                      { label: "Manage", value: "manage" },
+                    ]}
+                    className="w-32"
+                  />
                 </div>
               ))}
             </div>

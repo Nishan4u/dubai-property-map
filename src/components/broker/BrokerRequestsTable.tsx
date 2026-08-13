@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { CompactSelect } from "@/components/public/CompactSelect";
 import type { CrmClientRow } from "@/lib/supabase/queries";
 
 const statusTone: Record<string, "gold" | "blue" | "green" | "red" | "neutral"> = {
@@ -86,19 +87,15 @@ export function BrokerRequestsTable({ requests, clients }: { requests: RequestRo
         {
           header: "Client",
           render: (r) => (
-            <select
+            <CompactSelect
+              label="Client"
+              placeholder="Unlinked"
+              hideLabel
               disabled={savingId === r.id}
               value={r.client_id ?? ""}
-              onChange={(e) => handleClientChange(r, e.target.value)}
-              className="rounded-md border border-navy-600 bg-navy-800 px-1.5 py-1 text-[11px] text-ink-300 focus:outline-none"
-            >
-              <option value="">Unlinked</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => handleClientChange(r, v)}
+              options={clients.map((c) => ({ label: c.full_name, value: c.id }))}
+            />
           ),
         },
         { header: "Date", render: (r) => new Date(r.created_at).toLocaleDateString() },

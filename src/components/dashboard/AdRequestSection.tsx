@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
+import { CompactSelect } from "@/components/public/CompactSelect";
 
 const statusTone = {
   pending: "gold",
@@ -122,18 +123,14 @@ export function AdRequestSection({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-400">Placement</label>
-            <select
+            <CompactSelect
+              label="Placement"
+              placeholder="Select a placement…"
               value={placementType}
-              onChange={(e) => setPlacementType(e.target.value)}
-              className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-            >
-              {placementOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              onChange={setPlacementType}
+              options={placementOptions}
+              allowClear={false}
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-400">Link URL</label>
@@ -146,44 +143,28 @@ export function AdRequestSection({
           </div>
           {(placementType === "sponsored_pin" || placementType === "project_page_banner") && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">
-                {placementType === "sponsored_pin"
-                  ? "Project to highlight on the map"
-                  : "Project page to display the banner on"}
-              </label>
-              <select
-                required
+              <CompactSelect
+                label={
+                  placementType === "sponsored_pin"
+                    ? "Project to highlight on the map"
+                    : "Project page to display the banner on"
+                }
+                placeholder="Select a project…"
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">Select a project…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setProjectId}
+                options={projects.map((p) => ({ label: p.name, value: p.id }))}
+              />
             </div>
           )}
           {placementType === "community_banner" && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-400">
-                Community page to display on
-              </label>
-              <select
-                required
+              <CompactSelect
+                label="Community page to display on"
+                placeholder="Select a community…"
                 value={communityId}
-                onChange={(e) => setCommunityId(e.target.value)}
-                className="w-full rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-ink-100 focus:outline-none"
-              >
-                <option value="">Select a community…</option>
-                {communities.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCommunityId}
+                options={communities.map((c) => ({ label: c.name, value: c.id }))}
+              />
             </div>
           )}
           {errorMsg && (
