@@ -210,7 +210,7 @@ export default async function CommunityPage({
                 className="h-3 w-3 rounded-full"
                 style={{ background: community.pin_color }}
               />
-              {communityName}
+              <span className="font-serif font-medium">{communityName}</span>
               {community.region && (
                 <span className="rounded-full bg-navy-800 px-2 py-0.5 text-xs font-medium text-ink-400">
                   {community.region}

@@ -41,6 +41,10 @@
   --color-ink-500: var(--color-ink-500);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Powers the `font-serif` utility -- reserved for headlines, project/
+     community/developer names, and hero price figures. Everything else
+     (buttons, labels, tables, forms) stays on --font-sans. */
+  --font-serif: var(--font-fraunces);
 }
 
 * {

@@ -168,7 +168,7 @@ export function PresentationClient({ token }: { token: string }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <FolderOpen className="h-5 w-5 text-gold-400" />
-          <h1 className="text-xl font-bold text-ink-100">{title}</h1>
+          <h1 className="font-serif text-xl font-medium text-ink-100">{title}</h1>
           {MODE_LABELS[mode] && (
             <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gold-400">
               {MODE_LABELS[mode]}
@@ -258,13 +258,13 @@ export function PresentationClient({ token }: { token: string }) {
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-sm font-semibold text-ink-100">{p.name}</p>
+                  <p className="font-serif text-sm font-medium text-ink-100">{p.name}</p>
                   <p className="mt-0.5 truncate text-xs text-ink-400">
                     {p.kind === "brokerListing"
                       ? (p.communityName ?? "Location on request")
                       : `${p.developerName ? `by ${p.developerName}` : "Developer on request"}${p.communityName ? ` · ${p.communityName}` : p.developerName ? " · Location on request" : ""}`}
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-gold-400">
+                  <p className="mt-2 font-serif text-sm italic font-semibold text-gold-400">
                     {p.priceFromAed != null
                       ? p.kind === "project"
                         ? `From ${formatPrice(p.priceFromAed)}`

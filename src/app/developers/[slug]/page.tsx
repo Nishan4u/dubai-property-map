@@ -153,7 +153,7 @@ export default async function DeveloperProfilePage({
           )}
           <div className="flex-1">
             <h1 className="flex items-center gap-2 text-xl font-bold text-ink-100">
-              {developerName}
+              <span className="font-serif font-medium">{developerName}</span>
               {developer.verified && (
                 <BadgeCheck className="h-5 w-5 text-sky-400" />
               )}

@@ -31,11 +31,11 @@ export function BrokerListingCard({
         {listing.property_type}
       </div>
       <div className="p-4">
-        <p className="truncate text-sm font-semibold text-ink-100">{listing.title}</p>
+        <p className="truncate font-serif text-sm font-medium text-ink-100">{listing.title}</p>
         <p className="text-xs text-ink-500">
           {listing.property_type} · <span className="capitalize">{listing.listing_type}</span> · {listing.communities?.name ?? "Dubai"}
         </p>
-        <p className="mt-1 text-sm font-semibold text-gold-400">{formatAed(listing.price_aed)}</p>
+        <p className="mt-1 font-serif text-sm italic font-semibold text-gold-400">{formatAed(listing.price_aed)}</p>
         <div className="mt-3 flex items-center gap-2 border-t border-navy-800 pt-3">
           {brokerPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

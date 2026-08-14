@@ -59,7 +59,7 @@ export function CommunityCard({
       </button>
       <div className={clsx("flex items-center gap-2 pr-6", featured && "mt-5")}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: pinColor }} />
-        <h3 className="text-sm font-semibold text-ink-100">{name}</h3>
+        <h3 className="font-serif text-sm font-medium text-ink-100">{name}</h3>
       </div>
       {region && <p className="mt-1 text-xs text-ink-500">{region}</p>}
       <p className="mt-2 line-clamp-2 text-xs text-ink-400">{description}</p>

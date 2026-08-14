@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import { FavoritesProvider } from "@/components/auth/FavoritesProvider";
 import { CommunityFavoritesProvider } from "@/components/auth/CommunityFavoritesProvider";
 import { AnalyticsScripts } from "@/components/public/AnalyticsScripts";
@@ -19,6 +19,17 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Reserved for headlines, project/community/developer names, and hero price
+// figures only (via the `font-serif` utility) -- every button, label, table,
+// and form input keeps using Geist. See docs/MASTER_PLAN.md UI design audit.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const SITE_URL = "https://dubaipropertymap.ae";
@@ -99,7 +110,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-navy-950 text-ink-100">
         <AnalyticsScripts />

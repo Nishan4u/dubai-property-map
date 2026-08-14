@@ -310,7 +310,7 @@ export default async function ProjectDetailsPage({
                   </Badge>
                 ))}
               </div>
-              <h1 className="mt-2 text-2xl font-bold text-ink-100">
+              <h1 className="mt-2 font-serif text-2xl font-medium text-ink-100">
                 {project.name}
               </h1>
               <p className="mt-1 flex items-center gap-1 text-sm text-ink-400">
@@ -332,7 +332,7 @@ export default async function ProjectDetailsPage({
                 />
               </div>
               <p className="mt-2 text-xs text-ink-500">Starting From</p>
-              <p className="text-2xl font-bold text-gold-400">
+              <p className="font-serif text-2xl italic font-bold text-gold-400">
                 {formatPrice(project.priceFromAed, currency)}
               </p>
               <p className="flex items-center justify-end gap-1 text-xs text-ink-400">

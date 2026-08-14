@@ -55,7 +55,7 @@ export function ProjectCard({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="truncate text-sm font-semibold text-ink-100 group-hover:text-gold-400">
+          <h4 className="truncate font-serif text-sm font-medium text-ink-100 group-hover:text-gold-400">
             {project.name}
           </h4>
           <div className="flex shrink-0 items-center">
@@ -83,7 +83,7 @@ export function ProjectCard({
         </div>
         <p className="truncate text-sm font-medium text-ink-200">by {developerName}</p>
         <p className="truncate text-xs text-ink-500">{communityName}</p>
-        <p className="mt-1 text-sm font-semibold text-gold-400">
+        <p className="mt-1 font-serif text-sm italic font-semibold text-gold-400">
           From {formatPrice(project.priceFromAed)}
         </p>
         <p className="mt-0.5 text-xs text-ink-400">

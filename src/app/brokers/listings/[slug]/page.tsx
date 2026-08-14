@@ -45,11 +45,11 @@ export default async function BrokerListingDetailPage({ params }: { params: Prom
 
         <div className="mt-6 rounded-2xl border border-navy-700 bg-navy-900 p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-gold-400">{listing.listing_type}</p>
-          <h1 className="mt-1 text-2xl font-bold text-ink-100">{listing.title}</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-ink-100">{listing.title}</h1>
           <p className="mt-1 flex items-center gap-1 text-sm text-ink-400">
             <MapPin className="h-4 w-4" /> {community?.name ?? "Dubai"}
           </p>
-          <p className="mt-3 text-2xl font-bold text-gold-400">{formatAed(listing.price_aed)}</p>
+          <p className="mt-3 font-serif text-2xl italic font-bold text-gold-400">{formatAed(listing.price_aed)}</p>
 
           <div className="mt-5 grid grid-cols-3 gap-4 border-t border-navy-800 pt-5 text-sm text-ink-300">
             {listing.bedrooms != null && (

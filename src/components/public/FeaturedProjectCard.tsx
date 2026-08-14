@@ -131,7 +131,7 @@ export function FeaturedProjectCard({
       <div className="p-2.5 sm:p-3.5">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="text-xs font-semibold text-ink-100 sm:text-sm">
+            <h3 className="font-serif text-xs font-medium text-ink-100 sm:text-sm">
               {project.name}
             </h3>
             <p className="text-[10px] text-ink-500">by {developerName}</p>
@@ -161,7 +161,7 @@ export function FeaturedProjectCard({
         </div>
 
         <dl className="mt-2 space-y-1 text-[10px] sm:text-xs">
-          <Row label="Starting From" value={formatPrice(project.priceFromAed)} />
+          <Row label="Starting From" value={formatPrice(project.priceFromAed)} emphasize />
           <Row
             label="Handover"
             value={`${project.handoverQuarter} ${project.handoverYear}`}
@@ -236,10 +236,14 @@ function Row({
   label,
   value,
   icon,
+  emphasize,
 }: {
   label: string;
   value: string;
   icon?: boolean;
+  /** The one hero price figure on this card -- everything else in the
+   * dl (Handover, Location, Bedrooms) stays plain Geist. */
+  emphasize?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -247,7 +251,9 @@ function Row({
         {icon && <MapPin className="h-3 w-3" />}
         {label}
       </dt>
-      <dd className="font-medium text-ink-200">{value}</dd>
+      <dd className={emphasize ? "font-serif italic font-semibold text-gold-400" : "font-medium text-ink-200"}>
+        {value}
+      </dd>
     </div>
   );
 }
