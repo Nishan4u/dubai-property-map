@@ -23,6 +23,13 @@ const roles = ["buyer", "developer", "admin", "broker", "salesperson", "broker_a
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
   const [rows, setRows] = useState(users);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Themed replacements for window.confirm()/window.alert() -- those native
+  // dialogs block JS execution while open (which is why "Deleting…" stayed
+  // stuck on the row underneath one), don't match the site's dark theme,
+  // and their exact rendering is unreliable across browsers. A confirm
+  // step + an inline, dismissible error banner replace both.
+  const [confirmTarget, setConfirmTarget] = useState<UserRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function changeRole(id: string, role: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, role } : r)));
@@ -38,8 +45,11 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
     await logAudit(suspended ? "user.suspended" : "user.reinstated", "profile", id);
   }
 
-  async function handleDelete(u: UserRow) {
-    if (!window.confirm(`Permanently delete ${u.full_name ?? u.email}'s account? This cannot be undone.`)) return;
+  async function confirmDelete() {
+    const u = confirmTarget;
+    if (!u) return;
+    setConfirmTarget(null);
+    setDeleteError(null);
     setDeletingId(u.id);
     const res = await fetch("/api/admin/users/delete", {
       method: "POST",
@@ -50,7 +60,12 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
       setRows((prev) => prev.filter((r) => r.id !== u.id));
     } else {
       const data = await res.json().catch(() => ({}));
-      window.alert(data.error ?? "Failed to delete user.");
+      // Coerce defensively -- an unexpected non-string `error` value (or a
+      // response body that isn't real JSON at all) must never render as
+      // raw/garbled content, it should read as a real sentence.
+      const message =
+        typeof data.error === "string" && data.error.trim() ? data.error : "Failed to delete user.";
+      setDeleteError(message);
     }
     setDeletingId(null);
   }
@@ -118,7 +133,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                   {u.suspended ? "Reinstate" : "Suspend"}
                 </button>
                 <button
-                  onClick={() => handleDelete(u)}
+                  onClick={() => setConfirmTarget(u)}
                   disabled={deletingId === u.id}
                   className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50"
                 >
@@ -132,6 +147,41 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
       />
       {rows.length === 0 && (
         <p className="text-sm text-ink-500">No users yet.</p>
+      )}
+
+      {deleteError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError(null)} className="shrink-0 font-medium text-rose-200 hover:text-rose-100">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {confirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/70 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-navy-700 bg-navy-850 p-6">
+            <h2 className="text-sm font-semibold text-ink-100">Delete this account?</h2>
+            <p className="mt-2 text-sm text-ink-400">
+              Permanently delete <span className="font-medium text-ink-200">{confirmTarget.full_name ?? confirmTarget.email}</span>
+              &apos;s account? This cannot be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmTarget(null)}
+                className="rounded-lg border border-navy-600 px-4 py-2 text-xs font-medium text-ink-300 hover:text-ink-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="rounded-lg bg-rose-500 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-400"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

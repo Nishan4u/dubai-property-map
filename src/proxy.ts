@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/lib/supabase/proxy";
 import { DEVICE_TOKEN_COOKIE, hashToken } from "@/lib/broker/session";
-import { extractAgencyStorefrontSubdomain } from "@/lib/agencySubdomain";
+import { extractAgencyStorefrontSubdomain, AGENCY_STOREFRONT_ROOT_DOMAIN } from "@/lib/agencySubdomain";
 
 interface RedirectEntry {
   to_path: string;
@@ -198,7 +198,36 @@ async function checkSubscriptionGate(request: NextRequest, response: NextRespons
 // are untouched, only ads are suppressed here.
 const NO_ADS_PATH_PREFIXES = ["/admin", "/dashboard", "/broker", "/broker-agency", "/salesperson", "/staff", "/embed"];
 
+// Guards against an unrelated domain's stale/leftover DNS pointing an A
+// record at this same server IP and silently getting served the real
+// app -- confirmed live: hitad.ae (an unrelated UAE classifieds site)
+// resolves to this exact IP with no matching TLS cert or vhost, and
+// Google had indexed this site's own /favorites page under hitad.ae's
+// URL as a result, since Nginx has no server_name block for it and falls
+// through to whatever the default vhost is. Fixed at the app layer
+// (rather than an Nginx config change, which would need direct VPS
+// access this workflow doesn't have) -- any Host header that isn't the
+// root domain, one of its subdomains (agency storefronts, www, or plain
+// local dev) gets a bare 404 before any other work runs, so no page
+// content, redirect target, or app structure is ever disclosed to a
+// hostname this site doesn't recognize as its own.
+function isRecognizedHost(hostname: string | null): boolean {
+  if (!hostname) return false;
+  const host = hostname.split(":")[0].toLowerCase();
+  return (
+    host === AGENCY_STOREFRONT_ROOT_DOMAIN ||
+    host === `www.${AGENCY_STOREFRONT_ROOT_DOMAIN}` ||
+    host.endsWith(`.${AGENCY_STOREFRONT_ROOT_DOMAIN}`) ||
+    host === "localhost" ||
+    host.endsWith(".localhost")
+  );
+}
+
 export async function proxy(request: NextRequest) {
+  if (!isRecognizedHost(request.headers.get("host"))) {
+    return new NextResponse("Not Found", { status: 404 });
+  }
+
   // Agency White-Label Storefront -- checked first and returns
   // immediately, before any of the path-based logic below (redirects,
   // ads, subscription gates, admin IP allowlist), none of which apply to
