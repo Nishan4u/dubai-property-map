@@ -133,13 +133,43 @@ interface SubscriptionGate {
   subscribePath: string;
   profileColumn: "broker_id" | "salesperson_id" | "broker_agency_id";
   table: "brokers" | "salespersons" | "brokerages";
+  accountType: "broker" | "salesperson" | "broker_agency";
 }
 
 const SUBSCRIPTION_GATES: SubscriptionGate[] = [
-  { pathPrefix: "/broker", subscribePath: "/broker/subscription", profileColumn: "broker_id", table: "brokers" },
-  { pathPrefix: "/salesperson", subscribePath: "/salesperson/subscription", profileColumn: "salesperson_id", table: "salespersons" },
-  { pathPrefix: "/broker-agency", subscribePath: "/broker-agency/subscription", profileColumn: "broker_agency_id", table: "brokerages" },
+  { pathPrefix: "/broker", subscribePath: "/broker/subscription", profileColumn: "broker_id", table: "brokers", accountType: "broker" },
+  { pathPrefix: "/salesperson", subscribePath: "/salesperson/subscription", profileColumn: "salesperson_id", table: "salespersons", accountType: "salesperson" },
+  { pathPrefix: "/broker-agency", subscribePath: "/broker-agency/subscription", profileColumn: "broker_agency_id", table: "brokerages", accountType: "broker_agency" },
 ];
+
+// Global Free Access override (patch_72/patch_88, admin-editable via
+// FreeAccessSettingsPanel.tsx on /admin/settings) -- when an admin turns
+// an account type on there, every account of that type should skip
+// subscription gating entirely. This is already respected by
+// isFreeAccessEnabled()/resolveSubscriptionMapAccess() (queries.ts) for
+// map/browsing access and by the property-request submission routes, and
+// mirrored server-side by resolve_subscription_map_access() (patch_82's
+// RLS function) -- but checkSubscriptionGate() below was added later
+// (see its own comment) as a completely separate enforcement layer and
+// never learned about this table, so a free-access account was still
+// being locked out of their own portal. Public-read RLS (patch_72), so
+// the anon key is safe here -- same cache shape/TTL as getRedirects().
+let freeAccessCache: Set<string> | null = null;
+let freeAccessCachedAt = 0;
+
+async function getFreeAccessAccountTypes(): Promise<Set<string>> {
+  if (freeAccessCache && Date.now() - freeAccessCachedAt < CACHE_TTL_MS) {
+    return freeAccessCache;
+  }
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  const { data } = await supabase.from("free_access_settings").select("account_type, enabled").eq("enabled", true);
+  freeAccessCache = new Set((data ?? []).map((r) => r.account_type as string));
+  freeAccessCachedAt = Date.now();
+  return freeAccessCache;
+}
 
 // Full portal lockout until subscription_status is 'active' -- previously
 // the only place that actually checked subscription status was the
@@ -159,6 +189,9 @@ async function checkSubscriptionGate(request: NextRequest, response: NextRespons
   const { pathname } = request.nextUrl;
   const gate = SUBSCRIPTION_GATES.find((g) => pathname === g.pathPrefix || pathname.startsWith(`${g.pathPrefix}/`));
   if (!gate || pathname === gate.subscribePath) return response;
+
+  const freeAccessTypes = await getFreeAccessAccountTypes();
+  if (freeAccessTypes.has(gate.accountType)) return response;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
