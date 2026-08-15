@@ -58,9 +58,26 @@ export default async function BrokerProfilePage({ params }: { params: Promise<{ 
     ...(broker.photo_url ? { image: broker.photo_url } : {}),
   };
 
+  // Same rich-result pattern already shipped on /projects/[slug].
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://dubaipropertymap.ae/" },
+      { "@type": "ListItem", position: 2, name: "Brokers", item: "https://dubaipropertymap.ae/brokers" },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: broker.full_name,
+        item: `https://dubaipropertymap.ae/brokers/${broker.slug}`,
+      },
+    ],
+  };
+
   return (
     <PublicShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <BrokerProfileClient
         broker={broker}
         listings={listings.map((l) => ({

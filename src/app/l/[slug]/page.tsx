@@ -21,6 +21,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `/l/${slug}`,
       images: [page.hero_image_url],
     }),
+    // Marketing campaign pages (admin-authored, patch_110) -- meant to be
+    // reached via a paid ad/campaign link with its own tracking, not
+    // discovered organically. Left out of sitemap.ts and out of
+    // robots.ts's disallow list (a direct campaign link must still work),
+    // but noindex here stops it from competing with or duplicating the
+    // real project/community pages it usually promotes in search results.
+    robots: { index: false, follow: true },
   };
 }
 

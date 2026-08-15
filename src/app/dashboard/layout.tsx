@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { DeveloperShellClient } from "@/components/dashboard/DeveloperShellClient";
 import { DeveloperOnboarding } from "@/components/dashboard/DeveloperOnboarding";
 
+// Defense-in-depth against indexing -- robots.ts already disallows
+// "/dashboard", but a page-level noindex (same pattern already used on
+// /embed/developer/[slug]) makes exclusion resilient even against a
+// crawler that doesn't respect robots.txt.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function DeveloperDashboardLayout({
   children,
 }: {

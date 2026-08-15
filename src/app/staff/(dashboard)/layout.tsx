@@ -2,6 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StaffShellClient } from "@/components/staff/StaffShellClient";
 
+// Defense-in-depth against indexing -- robots.ts already disallows
+// "/staff", but a page-level noindex (same pattern already used on
+// /embed/developer/[slug]) makes exclusion resilient even against a
+// crawler that doesn't respect robots.txt.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {

@@ -34,11 +34,20 @@ export default function robots(): MetadataRoute.Robots {
       // lines below!) along with "/sign"/"/salesperson"/"/staff". Both
       // use "$"/trailing-slash anchoring instead to disallow exactly the
       // intended tree and nothing adjacent.
+      //
+      // /favorites and /login, /register, /forgot-password -- all
+      // personalized (favorites) or auth-form (the rest) pages with no
+      // unique content for a guest crawler, previously missing here.
+      // /account was already covered.
       disallow: [
         "/dashboard",
         "/admin",
         "/account",
         "/auth",
+        "/favorites",
+        "/login",
+        "/register",
+        "/forgot-password",
         "/present",
         "/sign",
         "/reset-password",

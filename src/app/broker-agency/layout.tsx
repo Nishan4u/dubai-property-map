@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { BrokerAgencyShellClient } from "@/components/broker-agency/BrokerAgencyShellClient";
 import { BrokerAgencyLicenseUpload } from "@/components/broker-agency/BrokerAgencyLicenseUpload";
 
+// Defense-in-depth against indexing -- robots.ts already disallows
+// "/broker-agency", but a page-level noindex (same pattern already
+// used on /embed/developer/[slug]) makes exclusion resilient even
+// against a crawler that doesn't respect robots.txt.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function BrokerAgencyLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {

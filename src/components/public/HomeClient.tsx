@@ -160,7 +160,13 @@ export function HomeClient({
   );
 
   useEffect(() => {
+    // Not just a lazy useState initializer -- this component can stay
+    // mounted across a client-side navigation to a new ?tag=... (e.g.
+    // clicking "New Launches" while already on the homepage), so it needs
+    // to keep syncing to tagParam after mount too, not just seed it once.
+    // Same legitimate pattern as AllProjectsClient.tsx's qParam sync.
     if (tagParam && validTags.includes(tagParam as ProjectTag)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTag(tagParam as ProjectTag);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,7 +297,6 @@ export function HomeClient({
           setRestoreView(view);
         }
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedSearchId]);
 
   function handleMapViewChange(view: Omit<MapViewState, "activeLayers">) {
@@ -496,6 +501,13 @@ export function HomeClient({
   const [featuredExpanded, setFeaturedExpanded] = useState(false);
 
   useEffect(() => {
+    // Resets the carousel back to the first slide whenever the featured
+    // set itself changes (e.g. a filter/community change recomputes
+    // filteredProjects) -- a legitimate "adjust UI position state when a
+    // derived list changes" sync, not something a lazy initializer could
+    // replace (featuredIndex is also independently advanced by the
+    // interval effect right below).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFeaturedIndex(0);
   }, [featuredProjects]);
 
@@ -535,6 +547,13 @@ export function HomeClient({
         simulatedFullscreen && "fixed inset-0 z-[100]"
       )}
     >
+      {/* The homepage is the single highest-traffic URL on the domain and
+          had no <h1> anywhere in its tree -- the map/hero UI has no natural
+          slot for a large visible heading without a design pass, so this is
+          a real, non-empty heading kept visually hidden (still in the DOM
+          and accessibility tree, not display:none) rather than a spammy
+          keyword dump -- matches the page's actual title/description. */}
+      <h1 className="sr-only">Dubai Property Map — Find Off-Plan and Ready Properties in Dubai</h1>
       <SiteHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}

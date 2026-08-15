@@ -196,11 +196,31 @@ export default async function CommunityPage({
     },
   };
 
+  // Same rich-result pattern already shipped on /projects/[slug].
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://dubaipropertymap.ae/" },
+      { "@type": "ListItem", position: 2, name: "Communities", item: "https://dubaipropertymap.ae/communities" },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: communityName,
+        item: `https://dubaipropertymap.ae/communities/${community.slug}`,
+      },
+    ],
+  };
+
   return (
     <PublicShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-navy-700 bg-navy-850 p-6">

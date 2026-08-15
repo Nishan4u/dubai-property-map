@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { BrokerShellClient } from "@/components/broker/BrokerShellClient";
 import { BrokerOnboarding } from "@/components/broker/BrokerOnboarding";
 
+// Defense-in-depth against indexing -- robots.ts already disallows
+// "/broker/" (and the bare "/broker" root), but a page-level noindex
+// (same pattern already used on /embed/developer/[slug]) makes
+// exclusion resilient even against a crawler that doesn't respect
+// robots.txt. Doesn't touch the entirely public "/brokers" directory.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function BrokerLayout({
   children,
 }: {

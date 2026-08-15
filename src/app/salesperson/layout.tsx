@@ -3,6 +3,12 @@ import { ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SalespersonShellClient } from "@/components/salesperson/SalespersonShellClient";
 
+// Defense-in-depth against indexing -- robots.ts already disallows
+// "/salesperson", but a page-level noindex (same pattern already used
+// on /embed/developer/[slug]) makes exclusion resilient even against a
+// crawler that doesn't respect robots.txt.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function SalespersonLayout({
   children,
 }: {

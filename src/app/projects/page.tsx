@@ -11,13 +11,18 @@ import {
 } from "@/lib/supabase/queries";
 import { mapCommunity, mapDeveloper, mapProject } from "@/lib/supabase/mappers";
 import { isAdsEnabled } from "@/lib/adsEnabled";
+import { buildOpenGraph } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
+  const title = "All Projects | Dubai Property Map";
+  const description = "Search and filter every off-plan and ready project on Dubai Property Map.";
   return {
-    title: "All Projects | Dubai Property Map",
-    description: "Search and filter every off-plan and ready project on Dubai Property Map.",
+    title,
+    description,
+    alternates: { canonical: "/projects" },
+    openGraph: buildOpenGraph({ title, description, url: "/projects" }),
   };
 }
 
