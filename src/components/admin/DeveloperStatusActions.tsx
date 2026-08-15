@@ -23,11 +23,26 @@ export function DeveloperStatusActions({
 
   async function updateStatus(next: "active" | "suspended", verified?: boolean) {
     setLoading(true);
-    await fetch(`/api/admin/developers/${developerId}/status`, {
+    const res = await fetch(`/api/admin/developers/${developerId}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: next, verified }),
     });
+    if (!res.ok) {
+      // The route 403s a restricted admin without "developers: manage"
+      // permission, 404s an already-deleted developer, etc. -- this used
+      // to be silently swallowed (no response check at all), so the
+      // button just appeared to do nothing. It also used to send the
+      // "your account has been suspended/approved" notification
+      // unconditionally, even when the update itself had failed --
+      // telling a developer their status changed when it hadn't.
+      const data = await res.json().catch(() => null);
+      window.alert(
+        typeof data?.error === "string" && data.error.trim() ? data.error : "Failed to update developer status."
+      );
+      setLoading(false);
+      return;
+    }
     await notifyDeveloperTeam(developerId, statusMessage[next]);
     router.refresh();
     setLoading(false);
