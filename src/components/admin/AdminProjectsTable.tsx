@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SearchableDataTable } from "@/components/admin/SearchableDataTable";
 import { ProjectApprovalActions } from "@/components/admin/ProjectApprovalActions";
 import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
 import { projectStatusTone } from "@/lib/adminBadgeTones";
+import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/auditLog";
 import type { Project, ApprovalStatus } from "@/types";
 
 const tabs: { label: string; value: ApprovalStatus | "all" }[] = [
@@ -25,9 +28,35 @@ const tone: Record<ApprovalStatus, "gold" | "blue" | "green" | "red"> = {
 };
 
 export function AdminProjectsTable({ projects }: { projects: Project[] }) {
+  const router = useRouter();
   const [tab, setTab] = useState<ApprovalStatus | "all">("all");
   const filtered =
     tab === "all" ? projects : projects.filter((p) => p.approvalStatus === tab);
+
+  async function handleDeleteSelected(ids: string[]) {
+    const names = ids.map((id) => projects.find((p) => p.id === id)?.name).filter(Boolean);
+    if (
+      !window.confirm(
+        `Delete ${ids.length} project${ids.length === 1 ? "" : "s"}? This removes each project, its unit types, reservations, favorites, and collection items. A project with an existing property request can't be deleted until that request is resolved. This cannot be undone.\n\n${names.join(", ")}`
+      )
+    ) {
+      return;
+    }
+    const supabase = createClient();
+    const failed: string[] = [];
+    for (const id of ids) {
+      const project = projects.find((p) => p.id === id);
+      await logAudit("project.deleted", "project", id, { name: project?.name });
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+      if (error) failed.push(project?.name ?? id);
+    }
+    if (failed.length > 0) {
+      window.alert(
+        `${failed.length} project${failed.length === 1 ? "" : "s"} couldn't be deleted (most likely an existing property request still references ${failed.length === 1 ? "it" : "them"}): ${failed.join(", ")}`
+      );
+    }
+    router.refresh();
+  }
 
   return (
     <>
@@ -50,6 +79,8 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
       <SearchableDataTable
         searchPlaceholder="Search projects by name or developer..."
         searchFields={(p) => [p.name, p.developerName ?? ""]}
+        selectable
+        onDeleteSelected={handleDeleteSelected}
         columns={[
           { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
           { header: "Developer", render: (p) => p.developerName ?? "—" },
