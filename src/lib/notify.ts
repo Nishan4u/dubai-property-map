@@ -51,6 +51,30 @@ export async function notifyDeveloperTeam(
   );
 }
 
+// Fans a notification out to every admin account, mirroring
+// notifyDeveloperTeam's exact shape but matching on role instead of a
+// specific developer_id -- used by routes with no single natural owner
+// to notify (e.g. a public investment-lead submission with no assigned
+// broker/salesperson yet).
+export async function notifyAdmins(message: string, client?: SupabaseClient) {
+  const supabase = client ?? createClient();
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin");
+
+  if (!profiles?.length) return;
+
+  await supabase.from("notifications").insert(
+    profiles.map((p) => ({
+      user_id: p.id,
+      message,
+      project_id: null,
+    }))
+  );
+}
+
 export async function sendLeadWebhook(
   developerId: string,
   payload: Record<string, unknown>

@@ -26,6 +26,7 @@ export const ADMIN_MODULES: ModuleDef[] = [
   { key: "communities", label: "Communities" },
   { key: "catalog", label: "Catalog" },
   { key: "leads", label: "Leads" },
+  { key: "investment-leads", label: "Investment Leads" },
   { key: "property-requests", label: "Property Requests" },
   { key: "users", label: "Users" },
   { key: "bookings", label: "Bookings" },

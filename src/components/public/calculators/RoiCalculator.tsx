@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { NumberField, ResultCard, ResultRow } from "./fields";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
+import { computeRoi } from "@/lib/calculators";
 
 // A pure calculator over figures the user supplies themselves (purchase
 // price, their own rent/expense estimates) -- it never states or implies
@@ -20,12 +21,10 @@ export function RoiCalculator({ priceAed }: { priceAed?: number }) {
   const [annualRent, setAnnualRent] = useState(Math.round((priceAed ?? 1500000) * 0.06));
   const [annualExpenses, setAnnualExpenses] = useState(Math.round((priceAed ?? 1500000) * 0.01));
 
-  const { netAnnualIncome, cashOnCashRoi, grossRoi } = useMemo(() => {
-    const netAnnualIncome = annualRent - annualExpenses;
-    const cashOnCashRoi = cashInvested > 0 ? (netAnnualIncome / cashInvested) * 100 : 0;
-    const grossRoi = price > 0 ? (annualRent / price) * 100 : 0;
-    return { netAnnualIncome, cashOnCashRoi, grossRoi };
-  }, [price, cashInvested, annualRent, annualExpenses]);
+  const { netAnnualIncome, cashOnCashRoi, grossRoi } = useMemo(
+    () => computeRoi({ priceAed: price, cashInvested, annualRent, annualExpenses }),
+    [price, cashInvested, annualRent, annualExpenses]
+  );
 
   return (
     <div className="space-y-3">

@@ -34,6 +34,7 @@ import {
   Plug,
   KeyRound,
   KeySquare,
+  TrendingUp,
 } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
 import { AdminQuickSearch } from "@/components/admin/AdminQuickSearch";
@@ -51,6 +52,7 @@ const navItems = [
   { label: "Communities", href: "/communities", icon: Landmark },
   { label: "Catalog", href: "/catalog", icon: Tags },
   { label: "Leads", href: "/leads", icon: Users },
+  { label: "Investment Leads", href: "/investment-leads", icon: TrendingUp },
   { label: "Property Requests", href: "/property-requests", icon: ClipboardCheck },
   { label: "Users", href: "/users", icon: UserCog },
   { label: "Bookings", href: "/bookings", icon: CalendarCheck },

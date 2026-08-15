@@ -711,6 +711,21 @@ export async function getCommunityBySlug(slug: string) {
   return data;
 }
 
+// Same shape as getCommunityBySlug, keyed by id instead -- the Investment
+// Report endpoint receives a community_id from the wizard's CompactSelect
+// (sourced from getCommunities()), not a slug.
+export async function getCommunityById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 // Real per-community nearest-place data (patch_124) -- top 3 named places
 // per category with both straight-line and estimated driving distance.
 // Pre-migration or for a community outside the imported set, this simply
@@ -1333,6 +1348,20 @@ export async function getAllLeadsAdmin() {
   return data ?? [];
 }
 
+// Same shape as getAllLeadsAdmin(), for the separate investment_leads
+// table (Investment Report quiz submissions, distinct from the
+// project-scoped `leads` table above).
+export async function getAllInvestmentLeadsAdmin() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("investment_leads")
+    .select("*, communities(name)")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getAllProjectsAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -1938,6 +1967,22 @@ export async function getBankTransferSettings() {
     iban: byKey.bank_transfer_iban ?? "",
     swift: byKey.bank_transfer_swift ?? "",
   };
+}
+
+// Same shape as getBankTransferSettings() above, for the Investment
+// Report quiz's WhatsApp handoff CTA. Degrades to "" (CTA simply doesn't
+// render, see InvestmentQuizWizard.tsx) if the row hasn't been set yet or
+// patch_147 hasn't run.
+export async function getSupportWhatsappNumber(): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "support_whatsapp_number")
+    .maybeSingle();
+
+  if (error || !data) return "";
+  return data.value ?? "";
 }
 
 // PostgREST's "table not in schema cache" — thrown until

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { NumberField, ResultCard, ResultRow } from "./fields";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { convertFromAed, convertToAed } from "@/lib/i18n/currency";
+import { computeRentalYield } from "@/lib/calculators";
 
 export function RentalYieldCalculator({ priceAed }: { priceAed?: number }) {
   const { currency } = useLocale();
@@ -11,11 +12,10 @@ export function RentalYieldCalculator({ priceAed }: { priceAed?: number }) {
   const [annualRent, setAnnualRent] = useState(Math.round((priceAed ?? 1500000) * 0.06));
   const [annualCosts, setAnnualCosts] = useState(Math.round((priceAed ?? 1500000) * 0.008));
 
-  const { grossYield, netYield } = useMemo(() => {
-    const grossYield = price > 0 ? (annualRent / price) * 100 : 0;
-    const netYield = price > 0 ? ((annualRent - annualCosts) / price) * 100 : 0;
-    return { grossYield, netYield };
-  }, [price, annualRent, annualCosts]);
+  const { grossYield, netYield } = useMemo(
+    () => computeRentalYield({ priceAed: price, annualRent, annualCosts }),
+    [price, annualRent, annualCosts]
+  );
 
   return (
     <div className="space-y-3">
