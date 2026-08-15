@@ -1287,6 +1287,30 @@ section as modules get built out.
   deploy, including confirming a Private listing genuinely disappears from
   both agency oversight surfaces while still showing on the owning
   broker's own listings page.
+- Public Investment Lead-Qualification Wizard + gated Investment Report
+  (net-new, from a marketing-funnel strategy pitch, not part of the
+  original Module 20 spec): a public `/invest` page, a 5-step quiz
+  (purpose, budget, community, timeline, contact) modeled directly on
+  `BrokerPresentationWizard.tsx`'s step-rail pattern. On submit, a
+  branded report renders in place — for a chosen community, real
+  published-project prices/Investment Score/nearby real places (via
+  `findNearestByCategory`) and an ROI/Yield snapshot computed from
+  `src/lib/calculators.ts` (newly extracted, shared math, first used by
+  the existing ROI/Rental Yield calculators); with no community picked,
+  a citywide top-5-communities fallback by live project count — never a
+  fabricated figure either way. Writes go through
+  `POST /api/investment-leads` using the service-role client into a new
+  `investment_leads` table (`patch_147`) that deliberately has **zero**
+  anonymous-insert RLS policy of any kind, following this exact
+  codebase's own documented lesson from `leads`' original open-insert
+  policy being found live-exploitable (`patch_40`/`patch_48`) — the API
+  route itself does validation + IP rate limiting instead. Admin
+  oversight at `/admin/investment-leads` (status/assigned-to, manual
+  only — no auto-routing engine exists anywhere in this codebase, and
+  none was added here). Explicitly deferred, not built: lead scoring,
+  CRM pipeline stages on `crm_clients`, and custom Meta/GA/TikTok
+  conversion events at funnel milestones — the other three candidates
+  from the same pitch.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account
