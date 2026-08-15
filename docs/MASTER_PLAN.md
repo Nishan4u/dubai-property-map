@@ -1106,7 +1106,17 @@ section as modules get built out.
   its own absolute URL fell back to a localhost base), added
   `alternates.canonical` to Projects/Communities/Developers/Blog, and
   added `Place`/`Organization` JSON-LD to Communities/Developers
-  (Projects already had `RealEstateListing`).
+  (Projects already had `RealEstateListing`). A follow-up fresh audit
+  found `sitemap.ts` was missing `/projects`/`/brokers` (+ profiles)/
+  `/invest`/`/calculators` entirely (real pages with real metadata,
+  just never added); added `BreadcrumbList` JSON-LD to Communities/
+  Developers/Brokers to match Projects; added page-level `noindex` to
+  all 6 auth-gated portal layouts as defense-in-depth alongside
+  `robots.ts`; gave the homepage a real (sr-only) `<h1>` — it had none
+  despite being the single highest-traffic URL on the domain; added a
+  branded `not-found.tsx` (previously Next's bare default); noindexed
+  `/l/[slug]` marketing landing pages (campaign-only, not meant to
+  compete with the real pages they promote in search results).
 - Public project/developer pages now show a real, crawlable summary to
   guests and unsubscribed viewers instead of a fully generic blurred
   placeholder — name, developer, community, property type, starting
