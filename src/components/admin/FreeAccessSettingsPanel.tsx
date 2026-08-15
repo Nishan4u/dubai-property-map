@@ -23,15 +23,32 @@ export function FreeAccessSettingsPanel({ settings }: { settings: FreeAccessSett
   );
   const [savingType, setSavingType] = useState<string | null>(null);
 
+  // The switch used to flip optimistically and never check whether the
+  // write actually succeeded -- a silently-failed update (RLS hiccup,
+  // stale session, dropped request) would leave the UI showing "off"
+  // while the database row was still "on", with no way to tell from the
+  // screen. proxy.ts and every other enforcement point reads the
+  // database, not this component's local state, so that mismatch was a
+  // real, invisible bug: an admin could believe an account type was
+  // gated when it never actually was. Now the write's result is checked
+  // and the toggle reverts + surfaces an error on failure, instead of
+  // trusting the optimistic flip.
   async function handleToggle(accountType: string) {
-    const next = !values[accountType];
+    const previous = values[accountType];
+    const next = !previous;
     setValues((prev) => ({ ...prev, [accountType]: next }));
     setSavingType(accountType);
     const supabase = createClient();
-    await supabase
+    const { error } = await supabase
       .from("free_access_settings")
       .update({ enabled: next, updated_at: new Date().toISOString() })
       .eq("account_type", accountType);
+    if (error) {
+      setValues((prev) => ({ ...prev, [accountType]: previous }));
+      window.alert(
+        `Couldn't save this change (${labels[accountType] ?? accountType} is still ${previous ? "ON" : "OFF"}): ${error.message}`
+      );
+    }
     setSavingType(null);
   }
 
