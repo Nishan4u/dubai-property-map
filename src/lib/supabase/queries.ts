@@ -662,6 +662,24 @@ export async function getProjectSitemapEntries() {
   return data ?? [];
 }
 
+// "Upload Brochure -> AI Draft Project" (patch_149). RLS-scoped (a
+// developer sees their own project's extraction, an admin sees any) --
+// degrades to null on error/pre-migration rather than throwing, same
+// defensive convention as every other recently-added optional feature.
+export async function getLatestProjectAiExtraction(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_ai_extractions")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
 export async function getDevelopers() {
   const supabase = await createClient();
   const { data, error } = await supabase

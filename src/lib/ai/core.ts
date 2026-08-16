@@ -2,7 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export interface ChatMessage {
   role: "user" | "assistant";
-  content: string;
+  // Widened from plain `string` so a caller (e.g. document extraction)
+  // can send a document/image content block alongside text. The
+  // Anthropic SDK's own MessageParam.content is already typed
+  // `string | Array<ContentBlockParam>`, and the mapping below was
+  // already a direct passthrough -- this needed no other change to
+  // runToolLoop itself. Every existing caller still passes a plain
+  // string, so this is additive/non-breaking.
+  content: string | Anthropic.ContentBlockParam[];
 }
 
 export type ToolDispatcher = (

@@ -111,6 +111,9 @@ export interface Project {
   dldPermitNumber?: string | null;
   trakheesiNumber?: string | null;
   madmounQrUrl?: string | null;
+  // patch_149 -- 'manual' (every existing/normal-flow project) or
+  // 'ai_extracted' (created via Upload Brochure -> AI Draft Project).
+  dataSource?: "manual" | "ai_extracted";
   // Derived from the project_unit_types child table when the list query
   // joins it (spec section 12: Unit Type / Size sqft search filters).
   // Absent (not empty-array) when the query didn't join it.

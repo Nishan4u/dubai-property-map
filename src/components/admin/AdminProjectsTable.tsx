@@ -82,7 +82,15 @@ export function AdminProjectsTable({ projects }: { projects: Project[] }) {
         selectable
         onDeleteSelected={handleDeleteSelected}
         columns={[
-          { header: "Project", render: (p) => <span className="font-medium text-ink-100">{p.name}</span> },
+          {
+            header: "Project",
+            render: (p) => (
+              <span className="flex items-center gap-2">
+                <span className="font-medium text-ink-100">{p.name}</span>
+                {p.dataSource === "ai_extracted" && <Badge tone="blue">AI</Badge>}
+              </span>
+            ),
+          },
           { header: "Developer", render: (p) => p.developerName ?? "—" },
           {
             header: "Status",

@@ -1321,6 +1321,45 @@ section as modules get built out.
   CRM pipeline stages on `crm_clients`, and custom Meta/GA/TikTok
   conversion events at funnel milestones — the other three candidates
   from the same pitch.
+- Upload Brochure → AI Draft Project (first slice of a larger AI Data-
+  Extraction & Auto-Listing pitch, not part of the original module
+  list): a developer uploads a project brochure PDF at
+  `/dashboard/projects/upload`; `extractProjectFromDocument`
+  (`src/lib/ai/projectExtraction.ts`) sends it to Claude (`claude-sonnet-5`,
+  deliberately stronger than the conversational assistants' Haiku
+  default — document extraction is accuracy-critical) as a real, non-
+  beta PDF content block, forcing one structured tool call that returns
+  every `ProjectForm`-relevant field paired with a 0-100 confidence
+  score, `null`/0 rather than a guess for anything the document doesn't
+  state. The route (`POST /api/developer/projects/extract-brochure`)
+  creates the draft `projects` row first (`status: 'draft'`,
+  `data_source: 'ai_extracted'`, patch_149) — required before any file
+  upload, since `project-media`'s RLS policy needs an existing owned
+  project row — then stores the original PDF and a
+  `project_ai_extractions` record (patch_149, same zero-anonymous-insert
+  RLS pattern as `investment_leads`). The community field is held to a
+  stricter standard than the rest — resolved against the real
+  `communities` list server-side, `null` rather than a guess on no
+  confident match, since a wrong relationship is more misleading than a
+  wrong price a human can visually catch. No new review screen: the
+  draft lands in the existing `/dashboard/projects/[id]` and
+  `/admin/projects/[id]` edit pages (already fully working, pre-fill-
+  capable) with a new `AiExtractionBanner` above the form summarizing
+  confidence and flagging low-confidence fields; `AdminProjectsTable`
+  gets a small "AI" badge. `ProjectForm.tsx` and `ProjectApprovalActions.tsx`
+  are completely unmodified. Explicitly deferred: a dedicated AI Review
+  Queue/AI Center dashboard, per-field inline confidence in the form
+  itself, duplicate-project detection, admin-triggered upload-on-behalf-
+  of-a-developer, and the pitch's much larger scope (DLD API
+  integration, automated periodic site scanning, AI image/vision
+  classification) — genuine external/infrastructure blockers or
+  natural fast-follows, not code gaps. Full browser E2E (uploading a
+  real PDF as a logged-in developer) wasn't verifiable this session — no
+  developer login session was available; the extraction function's
+  own fail-safe gate (throws a clear "not configured" error rather than
+  a raw API failure) was confirmed directly, and this local environment
+  also has no working `ANTHROPIC_API_KEY` configured, so a live
+  Anthropic API call couldn't be tested here either.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

@@ -281,6 +281,9 @@ export interface ProjectRow {
   dld_permit_number: string | null;
   trakheesi_number: string | null;
   madmoun_qr_url: string | null;
+  // patch_149 -- 'manual' (every existing/normal-flow row) or
+  // 'ai_extracted' (created via Upload Brochure -> AI Draft Project).
+  data_source: "manual" | "ai_extracted";
 }
 
 export interface ConstructionMilestoneRow {

@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectForm } from "@/components/dashboard/ProjectForm";
 import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
+import { AiExtractionBanner } from "@/components/dashboard/AiExtractionBanner";
 import {
   getAmenitiesList,
   getCommunities,
+  getLatestProjectAiExtraction,
   getPropertyTypes,
   requireDeveloperProfile,
 } from "@/lib/supabase/queries";
@@ -21,7 +23,7 @@ export default async function EditProjectPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: row }, profile, communityRows, { data: milestones }, { data: unitTypeRows }, propertyTypes, amenities] =
+  const [{ data: row }, profile, communityRows, { data: milestones }, { data: unitTypeRows }, propertyTypes, amenities, extraction] =
     await Promise.all([
       supabase
         .from("projects")
@@ -42,6 +44,7 @@ export default async function EditProjectPage({
         .order("sort_order", { ascending: true }),
       getPropertyTypes(),
       getAmenitiesList(),
+      getLatestProjectAiExtraction(id),
     ]);
 
   if (!row) notFound();
@@ -62,6 +65,7 @@ export default async function EditProjectPage({
           redirectTo="/dashboard/projects"
         />
       </div>
+      {project.dataSource === "ai_extracted" && extraction && <AiExtractionBanner extraction={extraction} />}
       <ProjectForm
         project={project}
         developerId={profile.developer_id}
