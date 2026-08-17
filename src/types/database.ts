@@ -290,6 +290,10 @@ export interface ProjectRow {
   // research (which can auto-publish above a confidence threshold) --
   // used to gate the public AiDiscoveryDisclosure badge.
   ai_source_type: "brochure_upload" | "web_discovery" | null;
+  // patch_151 -- set only when the AI Discovery ingest route actually
+  // re-checks an already-discovered (ai_source_type = 'web_discovery')
+  // project for changes. Null forever for manual/brochure projects.
+  ai_last_checked_at: string | null;
 }
 
 export interface ConstructionMilestoneRow {

@@ -119,6 +119,10 @@ export interface Project {
   // a brochure upload was submitted by the real developer and always
   // goes through human review before publishing, unlike discovery).
   aiSourceType?: "brochure_upload" | "web_discovery" | null;
+  // patch_151 -- when this web_discovery project was last re-checked
+  // for changes by the AI Discovery refresh cycle. Null until its
+  // first check-in, and always null for manual/brochure projects.
+  aiLastCheckedAt?: string | null;
   // Derived from the project_unit_types child table when the list query
   // joins it (spec section 12: Unit Type / Size sqft search filters).
   // Absent (not empty-array) when the query didn't join it.

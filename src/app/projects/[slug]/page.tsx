@@ -8,6 +8,7 @@ import { ProjectPublicSummary } from "@/components/public/ProjectPublicSummary";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
 import { AiDiscoveryDisclosure } from "@/components/public/AiDiscoveryDisclosure";
+import { ProjectChangeHistory } from "@/components/ui/ProjectChangeHistory";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyRequestPropertyPanel";
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
@@ -24,6 +25,7 @@ import {
   getConstructionMilestones,
   getMapAccessStatus,
   getProjectBySlug,
+  getProjectChangeLog,
   getProjectDocumentsByCategory,
   getProjectGallerySections,
   getProjectMediaFiles,
@@ -141,16 +143,18 @@ export default async function ProjectDetailsPage({
     .slice(0, 3)
     .map((p) => mapProject(p));
 
-  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes, unitAvailability, adsEnabled] = await Promise.all([
-    getProjectMediaFiles(project.id, "gallery"),
-    getProjectGallerySections(project.id),
-    getProjectDocumentsByCategory(project.id),
-    getConstructionMilestones(project.id),
-    getActiveProjectBanner(project.id),
-    getProjectUnitTypes(project.id),
-    getProjectUnitAvailability(project.id),
-    isAdsEnabled(),
-  ]);
+  const [gallery, gallerySections, documents, milestones, projectBanner, unitTypes, unitAvailability, adsEnabled, changeLog] =
+    await Promise.all([
+      getProjectMediaFiles(project.id, "gallery"),
+      getProjectGallerySections(project.id),
+      getProjectDocumentsByCategory(project.id),
+      getConstructionMilestones(project.id),
+      getActiveProjectBanner(project.id),
+      getProjectUnitTypes(project.id),
+      getProjectUnitAvailability(project.id),
+      isAdsEnabled(),
+      project.aiSourceType === "web_discovery" ? getProjectChangeLog(project.id) : Promise.resolve([]),
+    ]);
   const unitTypeFloorPlans: Record<string, Awaited<ReturnType<typeof getUnitTypeFloorPlans>>> =
     Object.fromEntries(
       await Promise.all(
@@ -325,7 +329,7 @@ export default async function ProjectDetailsPage({
               </p>
               {project.aiSourceType === "web_discovery" && (
                 <div className="mt-2">
-                  <AiDiscoveryDisclosure />
+                  <AiDiscoveryDisclosure lastCheckedAt={project.aiLastCheckedAt} />
                 </div>
               )}
             </div>
@@ -410,6 +414,12 @@ export default async function ProjectDetailsPage({
                     />
                   )}
                 </div>
+              </Section>
+            )}
+
+            {project.aiSourceType === "web_discovery" && changeLog.length > 0 && (
+              <Section title="Change History">
+                <ProjectChangeHistory changes={changeLog} mode="public" />
               </Section>
             )}
 

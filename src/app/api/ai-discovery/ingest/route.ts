@@ -34,6 +34,12 @@ interface DiscoveryCandidate {
     handoverQuarter?: CandidateField<string>;
     handoverYear?: CandidateField<number>;
     launchDate?: CandidateField<string>;
+    // Optional, 0-100. Set on creation when known; on a refresh check
+    // (see REFRESH_FIELDS below) this is the headline field the whole
+    // 24h re-check cycle exists for -- construction status/completion
+    // changing over time is the literal example this feature is named
+    // "change detection" after.
+    constructionProgressPercent?: CandidateField<number>;
     amenities?: CandidateField<string[]>;
     tags?: CandidateField<string[]>;
   };
@@ -97,6 +103,22 @@ async function verifyImageUrl(url: unknown): Promise<string | null> {
   }
 }
 
+// Fields the ingest route will diff against an already-discovered
+// project's current values on a refresh check (see the existingProject
+// branch below). Deliberately a short, high-value list -- status/price/
+// date facts that genuinely change over a project's lifecycle -- not
+// every candidate field. Identity fields (name, developer, community,
+// property type) are never refreshed automatically; a real identity
+// correction should go through normal admin editing, not an unattended
+// re-check.
+const REFRESH_FIELDS = [
+  { key: "constructionProgressPercent", column: "construction_progress_percent", kind: "number" },
+  { key: "priceFromAed", column: "price_from_aed", kind: "number" },
+  { key: "handoverQuarter", column: "handover_quarter", kind: "string" },
+  { key: "handoverYear", column: "handover_year", kind: "number" },
+  { key: "paymentPlan", column: "payment_plan", kind: "string" },
+] as const;
+
 export async function POST(request: NextRequest) {
   const secret = process.env.AI_DISCOVERY_INGEST_SECRET;
   const auth = request.headers.get("authorization");
@@ -141,7 +163,7 @@ export async function POST(request: NextRequest) {
   const results: Array<{
     name: string;
     developerName: string;
-    outcome: "published" | "drafted" | "skipped" | "error";
+    outcome: "published" | "drafted" | "skipped" | "error" | "updated" | "flagged" | "no_change";
     reason?: string;
     projectId?: string;
     projectSlug?: string;
@@ -221,7 +243,118 @@ export async function POST(request: NextRequest) {
         developerId = devInsert.data.id;
       }
 
-      const matchedCommunity = matchCommunity(raw.fields.communityNameGuess?.value, communities);
+      const fields = raw.fields;
+
+      // Existing-project lookup -- EXACT match only, scoped to this
+      // developer. Checked BEFORE community matching (a refresh
+      // candidate may not even include a community guess) so a check-in
+      // on an already-discovered project never gets skipped for lacking
+      // a field only fresh creation needs.
+      const { data: existingProject } = await admin
+        .from("projects")
+        .select(
+          "id, ai_source_type, construction_progress_percent, price_from_aed, handover_quarter, handover_year, payment_plan"
+        )
+        .eq("developer_id", developerId)
+        .ilike("name", name)
+        .maybeSingle();
+
+      if (existingProject) {
+        // Refresh path (change detection, follow-on to patch_150's
+        // discovery-only pipeline). Only ever re-checks this platform's
+        // own AI Discovery projects -- a manual or brochure-uploaded
+        // project that happens to share an exact name is left
+        // completely untouched; this pipeline never modifies developer-
+        // or admin-entered data.
+        if (existingProject.ai_source_type !== "web_discovery") {
+          results.push({ name, developerName, outcome: "skipped", reason: "duplicate matches a non-AI-Discovery project" });
+          continue;
+        }
+
+        const changes: Array<{
+          field_name: string;
+          old_value: string | null;
+          new_value: string;
+          confidence: number;
+          applied: boolean;
+        }> = [];
+        const updatePayload: Record<string, unknown> = {};
+
+        for (const { key, column, kind } of REFRESH_FIELDS) {
+          const candidateField = fields[key as keyof typeof fields] as CandidateField<unknown> | undefined;
+          if (!candidateField || candidateField.value === null || candidateField.value === undefined) continue;
+          if (kind === "string" && String(candidateField.value).trim() === "") continue;
+
+          const newValue = candidateField.value;
+          const oldValue = (existingProject as unknown as Record<string, unknown>)[column];
+          const changed =
+            kind === "number"
+              ? Number(newValue) !== Number(oldValue)
+              : String(newValue).trim() !== String(oldValue ?? "").trim();
+          if (!changed) continue;
+
+          const confidence = clampConfidence(candidateField.confidence);
+          const applied = discoveryEnabled && confidence >= threshold;
+          changes.push({
+            field_name: key,
+            old_value: oldValue === null || oldValue === undefined ? null : String(oldValue),
+            new_value: String(newValue),
+            confidence,
+            applied,
+          });
+          if (applied) updatePayload[column] = newValue;
+        }
+
+        // Always stamp ai_last_checked_at, even when nothing changed --
+        // this IS the 24h re-check happening, whether or not it found
+        // anything worth reporting.
+        await admin
+          .from("projects")
+          .update({ ...updatePayload, ai_last_checked_at: new Date().toISOString() })
+          .eq("id", existingProject.id);
+
+        if (changes.length === 0) {
+          results.push({ name, developerName, outcome: "no_change", projectId: existingProject.id });
+          continue;
+        }
+
+        await admin
+          .from("project_ai_field_changes")
+          .insert(changes.map((c) => ({ project_id: existingProject.id, source_urls: sourceUrls, ...c })));
+
+        const appliedCount = changes.filter((c) => c.applied).length;
+        await admin.from("project_ai_extractions").insert({
+          project_id: existingProject.id,
+          developer_id: developerId,
+          source_file_name: "AI web research (refresh check)",
+          source_file_url: null,
+          source_type: "web_discovery",
+          is_refresh: true,
+          source_urls: sourceUrls,
+          extracted_fields: fields as unknown as Record<string, ExtractedField<unknown>>,
+          overall_confidence: Math.round(changes.reduce((a, c) => a + c.confidence, 0) / changes.length),
+          model: "external-cloud-agent",
+          auto_published: appliedCount > 0,
+        });
+
+        await logAudit(
+          "project.ai_discovery_refresh_checked",
+          "project",
+          existingProject.id,
+          { name, developerName, fieldsChanged: changes.length, fieldsApplied: appliedCount, sourceUrls },
+          { client: admin }
+        );
+
+        results.push({
+          name,
+          developerName,
+          outcome: appliedCount > 0 ? "updated" : "flagged",
+          projectId: existingProject.id,
+        });
+        continue;
+      }
+
+      const matchedCommunity = matchCommunity(fields.communityNameGuess?.value, communities);
       if (!matchedCommunity) {
         // projects.community_id is NOT NULL -- never insert a guess,
         // skip rather than break the constraint or fabricate a match.
@@ -229,19 +362,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Project dedup -- EXACT match only, scoped to this developer.
-      const { data: existingProject } = await admin
-        .from("projects")
-        .select("id")
-        .eq("developer_id", developerId)
-        .ilike("name", name)
-        .maybeSingle();
-      if (existingProject) {
-        results.push({ name, developerName, outcome: "skipped", reason: "duplicate for this developer" });
-        continue;
-      }
-
-      const fields = raw.fields;
       const confidences = Object.values(fields)
         .map((f) => (f && typeof f === "object" && "confidence" in f ? clampConfidence((f as CandidateField<unknown>).confidence) : null))
         .filter((c): c is number => typeof c === "number");
@@ -272,6 +392,7 @@ export async function POST(request: NextRequest) {
           handover_quarter: fields.handoverQuarter?.value ?? "",
           handover_year: fields.handoverYear?.value ?? null,
           launch_date: fields.launchDate?.value ?? null,
+          construction_progress_percent: fields.constructionProgressPercent?.value ?? 0,
           description: fields.description?.value ?? "",
           amenities: fields.amenities?.value ?? [],
           tags: fields.tags?.value ?? [],
@@ -281,6 +402,7 @@ export async function POST(request: NextRequest) {
           views: 0,
           gradient: pickGradient(),
           cover_image_url: coverImageUrl,
+          ai_last_checked_at: new Date().toISOString(),
         })
         .select("id, slug")
         .single();
@@ -332,21 +454,27 @@ export async function POST(request: NextRequest) {
   const drafted = results.filter((r) => r.outcome === "drafted").length;
   const skipped = results.filter((r) => r.outcome === "skipped").length;
   const errors = results.filter((r) => r.outcome === "error").length;
+  const updated = results.filter((r) => r.outcome === "updated").length;
+  const flagged = results.filter((r) => r.outcome === "flagged").length;
+  const noChange = results.filter((r) => r.outcome === "no_change").length;
 
   await logAudit(
     "project_ai_discovery.batch_completed",
     "ai_discovery_batch",
     null,
-    { processed: results.length, published, drafted, skipped, errors, results },
+    { processed: results.length, published, drafted, skipped, errors, updated, flagged, noChange, results },
     { client: admin }
   );
 
-  if (published > 0 || drafted > 0) {
-    await notifyAdmins(
-      `AI Project Discovery run: ${published} auto-published, ${drafted} queued for review${skipped ? `, ${skipped} skipped` : ""}. Review from Admin > Projects.`,
-      admin
-    );
+  if (published > 0 || drafted > 0 || updated > 0 || flagged > 0) {
+    const parts = [
+      published > 0 && `${published} auto-published`,
+      drafted > 0 && `${drafted} queued for review`,
+      updated > 0 && `${updated} existing listing${updated === 1 ? "" : "s"} auto-updated`,
+      flagged > 0 && `${flagged} change${flagged === 1 ? "" : "s"} flagged for review (confidence too low to auto-apply)`,
+    ].filter(Boolean);
+    await notifyAdmins(`AI Project Discovery run: ${parts.join(", ")}. Review from Admin > Projects.`, admin);
   }
 
-  return NextResponse.json({ processed: results.length, published, drafted, skipped, errors, results });
+  return NextResponse.json({ processed: results.length, published, drafted, skipped, errors, updated, flagged, noChange, results });
 }

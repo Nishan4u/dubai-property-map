@@ -1375,30 +1375,72 @@ section as modules get built out.
   patch_90) and, per the user's explicit choice after being warned of
   the real risk, auto-publishes candidates above a confidence
   threshold (`platform_settings.ai_discovery_confidence_threshold`,
-  default 85) while lower-confidence ones land in the existing draft/
+  lowered by the user to ~55% for this kind of data after the default
+  85% produced zero auto-publishes on the first real batch — the
+  averaging formula pulls the score down for legitimately-null
+  optional fields like price/payment plan even on well-sourced
+  projects) while lower-confidence ones land in the existing draft/
   pending review queue unchanged. Ships with `ai_discovery_enabled`
   defaulted to `'false'` — a real kill switch requiring no deploy to
-  flip. A new `AiDiscoveryDisclosure` badge appears on the public
-  project page for `ai_source_type === 'web_discovery'` projects only
-  (not brochure uploads, which are developer-submitted and always
-  human-reviewed) — every auto-published test project renders it
-  correctly, confirmed via a real live end-to-end test against the
-  actual database (create → auto-publish → publicly visible page →
-  disclosure badge rendered → cleaned up after). `slugify`/gradient-
+  flip; the user has since enabled it in production and approved the
+  first batch (43 projects live). A new `AiDiscoveryDisclosure` badge
+  appears on the public project page for `ai_source_type ===
+  'web_discovery'` projects only (not brochure uploads, which are
+  developer-submitted and always human-reviewed). `slugify`/gradient-
   pick/community-matching were extracted from the brochure-upload
   route into a new shared `projectDraftUtils.ts` now that two routes
-  need them. Explicitly deferred: refreshing/change-detection on
-  already-listed projects (discovery of new projects only, per the
-  user's own scope choice), image/gallery auto-sourcing (real
-  licensing exposure with no rights-verification infrastructure
-  anywhere in this codebase), per-project follower alerts (no "follow
-  a project" feature exists), and a dedicated auto-published-vs-human-
-  approved visual badge in `AdminProjectsTable` (the data already
-  captures the distinction via `project_ai_extractions.auto_published`
-  and two distinct audit-log action strings, visible via the audit
-  log). The actual recurring cloud routine itself is a separate,
-  later step — created only once this batch is deployed and the
-  endpoint is confirmed live in production.
+  need them. The recurring cloud routine (`AI Project Discovery -
+  Dubai Real Estate`, daily 06:17 Asia/Dubai) is live in production.
+  Reusable-only image sourcing was added to the ingest route
+  (`verifyImageUrl` — HEAD-checks a URL is real and actually serves an
+  image; the calling agent is instructed to only ever set `imageUrl`
+  when the source page itself explicitly grants press/media reuse,
+  never a plain marketing photo) — a research pass across all 43
+  existing listings found zero images that met this bar (every
+  developer's press/media pages carry only a generic "All rights
+  reserved" notice, no explicit reuse grant), confirming the standard
+  is strict by design, not a bug. Still deferred: per-project follower
+  alerts (no "follow a project" feature exists), and a dedicated
+  auto-published-vs-human-approved visual badge in
+  `AdminProjectsTable` (the data already captures the distinction via
+  `project_ai_extractions.auto_published` and two distinct audit-log
+  action strings, visible via the audit log).
+- AI Project Discovery — change detection / 24h refresh (patch_151,
+  follow-on to patch_150): the ingest route now recognizes when a
+  submitted candidate's developer+name exactly matches an already-
+  discovered (`ai_source_type = 'web_discovery'`) project and, instead
+  of skipping it as a duplicate, diffs a short list of lifecycle
+  fields (`construction_progress_percent`, `price_from_aed`,
+  `handover_quarter`, `handover_year`, `payment_plan`) against the
+  project's current values. A genuine change is logged to a new
+  `project_ai_field_changes` table (old value, new value, confidence,
+  source URLs) and applied to the live project row only when
+  confidence clears the same auto-publish threshold used for new
+  discoveries — otherwise it's logged but not applied, visible to
+  admins as a flagged, unapplied proposal. Never touches manual or
+  brochure-uploaded projects, and never refreshes identity fields
+  (name/developer/community/property type) — only the lifecycle facts
+  that genuinely change over a project's life. A new `GET /api/ai-
+  discovery/refresh-candidates` route (same bearer-secret auth as
+  ingest) hands the cloud routine its own stalest-first worklist of up
+  to 8 past discoveries with their current recorded values, since the
+  routine has no database credentials of any kind and can't query this
+  itself; the routine's prompt now has a second part instructing it to
+  research up to 5 of these per run and report only genuine, sourced
+  changes — silence is the correct outcome when nothing changed, never
+  a resubmission of unchanged values. A new `ProjectChangeHistory`
+  component (`components/ui`, shared by both the public project page
+  and the admin project editor) renders the log — public view shows
+  only applied changes (RLS-scoped, not app-layer filtered), admin
+  view also shows unapplied/low-confidence proposals and why. Verified
+  end-to-end against the live database pre-deployment: the new GET
+  route correctly 401s without the secret and returns real current
+  values for real stale projects; an empty-candidates POST returns the
+  new response shape cleanly; the public project page renders with
+  zero console errors and correctly omits the change-history section
+  and "last checked" text when the migration hasn't landed yet (pure
+  additive degrade, not a crash). Not yet applied to production —
+  `patch_151_ai_discovery_refresh.sql` is handed off, not run.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

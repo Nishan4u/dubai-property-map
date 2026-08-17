@@ -3,10 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { ProjectForm } from "@/components/dashboard/ProjectForm";
 import { DeleteProjectButton } from "@/components/admin/DeleteProjectButton";
 import { AiExtractionBanner } from "@/components/dashboard/AiExtractionBanner";
+import { ProjectChangeHistory } from "@/components/ui/ProjectChangeHistory";
 import {
   getAmenitiesList,
   getCommunities,
   getLatestProjectAiExtraction,
+  getProjectChangeLog,
   getPropertyTypes,
 } from "@/lib/supabase/queries";
 import { mapCommunity, mapProject } from "@/lib/supabase/mappers";
@@ -22,7 +24,7 @@ export default async function AdminEditProjectPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: row }, communityRows, { data: milestones }, { data: unitTypeRows }, propertyTypes, amenities, extraction] =
+  const [{ data: row }, communityRows, { data: milestones }, { data: unitTypeRows }, propertyTypes, amenities, extraction, changeLog] =
     await Promise.all([
       supabase
         .from("projects")
@@ -43,6 +45,7 @@ export default async function AdminEditProjectPage({
       getPropertyTypes(),
       getAmenitiesList(),
       getLatestProjectAiExtraction(id),
+      getProjectChangeLog(id),
     ]);
 
   if (!row) notFound();
@@ -66,6 +69,9 @@ export default async function AdminEditProjectPage({
         />
       </div>
       {project.dataSource === "ai_extracted" && extraction && <AiExtractionBanner extraction={extraction} />}
+      {project.aiSourceType === "web_discovery" && changeLog.length > 0 && (
+        <ProjectChangeHistory changes={changeLog} mode="admin" title="AI Discovery change history" />
+      )}
       <ProjectForm
         project={project}
         communities={communities}

@@ -680,6 +680,25 @@ export async function getLatestProjectAiExtraction(projectId: string) {
   return data;
 }
 
+// patch_151 -- change history for a web_discovery project's AI refresh
+// cycle. Deliberately ONE function for both public and admin callers:
+// RLS itself is what narrows the result set (applied=true only for an
+// anonymous/non-admin session, everything for an admin session), the
+// same "let RLS do the scoping" convention already used elsewhere in
+// this codebase (e.g. getTeamListings). Degrades to [] on error/no
+// migration, matching every other AI Discovery query in this file.
+export async function getProjectChangeLog(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_ai_field_changes")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data;
+}
+
 export async function getDevelopers() {
   const supabase = await createClient();
   const { data, error } = await supabase
