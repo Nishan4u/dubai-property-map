@@ -55,6 +55,7 @@ export function mapProject(row: ProjectWithRelations): Project {
     trakheesiNumber: row.trakheesi_number ?? null,
     madmounQrUrl: row.madmoun_qr_url ?? null,
     dataSource: row.data_source ?? "manual",
+    aiSourceType: row.ai_source_type ?? null,
     updatedAt: row.updated_at,
     createdAt: row.created_at,
     developerName: row.developers?.name,

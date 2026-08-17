@@ -1360,6 +1360,45 @@ section as modules get built out.
   a raw API failure) was confirmed directly, and this local environment
   also has no working `ANTHROPIC_API_KEY` configured, so a live
   Anthropic API call couldn't be tested here either.
+- AI Project Discovery (patch_150, first slice of "24-hour self-
+  updating" auto-discovery): a new `POST /api/ai-discovery/ingest`
+  route, called once daily by a genuine Anthropic-cloud scheduled
+  agent (not app infra — this VPS has no reachable cron) that does its
+  own web research for new Dubai project announcements and submits
+  structured candidates with per-field confidence and real source
+  URLs. DLD's own open-data page has real project data but its export
+  is CAPTCHA-gated, so it can't be an automated source — the route is
+  explicit that this is AI-compiled market intelligence, not
+  government-verified data. The route resolves/creates developers and
+  matches communities using exact-match-only logic (this codebase has
+  its own documented false-positive history from looser matching,
+  patch_90) and, per the user's explicit choice after being warned of
+  the real risk, auto-publishes candidates above a confidence
+  threshold (`platform_settings.ai_discovery_confidence_threshold`,
+  default 85) while lower-confidence ones land in the existing draft/
+  pending review queue unchanged. Ships with `ai_discovery_enabled`
+  defaulted to `'false'` — a real kill switch requiring no deploy to
+  flip. A new `AiDiscoveryDisclosure` badge appears on the public
+  project page for `ai_source_type === 'web_discovery'` projects only
+  (not brochure uploads, which are developer-submitted and always
+  human-reviewed) — every auto-published test project renders it
+  correctly, confirmed via a real live end-to-end test against the
+  actual database (create → auto-publish → publicly visible page →
+  disclosure badge rendered → cleaned up after). `slugify`/gradient-
+  pick/community-matching were extracted from the brochure-upload
+  route into a new shared `projectDraftUtils.ts` now that two routes
+  need them. Explicitly deferred: refreshing/change-detection on
+  already-listed projects (discovery of new projects only, per the
+  user's own scope choice), image/gallery auto-sourcing (real
+  licensing exposure with no rights-verification infrastructure
+  anywhere in this codebase), per-project follower alerts (no "follow
+  a project" feature exists), and a dedicated auto-published-vs-human-
+  approved visual badge in `AdminProjectsTable` (the data already
+  captures the distinction via `project_ai_extractions.auto_published`
+  and two distinct audit-log action strings, visible via the audit
+  log). The actual recurring cloud routine itself is a separate,
+  later step — created only once this batch is deployed and the
+  endpoint is confirmed live in production.
 
 **Not yet built (net-new from this document):**
 - Module 27 "Security" — 2FA, Device Tracking, Login History, Account

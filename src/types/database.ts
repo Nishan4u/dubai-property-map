@@ -284,6 +284,12 @@ export interface ProjectRow {
   // patch_149 -- 'manual' (every existing/normal-flow row) or
   // 'ai_extracted' (created via Upload Brochure -> AI Draft Project).
   data_source: "manual" | "ai_extracted";
+  // patch_150 -- nullable, set only alongside data_source = 'ai_extracted'.
+  // Distinguishes a developer-submitted brochure upload (always human-
+  // reviewed before publishing) from AI Project Discovery's own web
+  // research (which can auto-publish above a confidence threshold) --
+  // used to gate the public AiDiscoveryDisclosure badge.
+  ai_source_type: "brochure_upload" | "web_discovery" | null;
 }
 
 export interface ConstructionMilestoneRow {

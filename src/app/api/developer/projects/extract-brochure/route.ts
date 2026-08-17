@@ -3,28 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isRateLimited } from "@/lib/ai/rateLimit";
 import { extractProjectFromDocument, type ExtractedField } from "@/lib/ai/projectExtraction";
+import { pickGradient, slugify, matchCommunity } from "@/lib/ai/projectDraftUtils";
 import { getCommunities, getPropertyTypes, getAmenitiesList } from "@/lib/supabase/queries";
 import { notifyAdmins } from "@/lib/notify";
 import { categorySlug } from "@/lib/documentCategories";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
-
-const gradients = [
-  "from-amber-500/40 via-slate-800 to-slate-950",
-  "from-sky-500/40 via-slate-800 to-slate-950",
-  "from-emerald-500/40 via-slate-800 to-slate-950",
-  "from-fuchsia-500/40 via-slate-800 to-slate-950",
-  "from-rose-500/40 via-slate-800 to-slate-950",
-  "from-indigo-500/40 via-slate-800 to-slate-950",
-];
-
-function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 // "Upload Brochure -> AI Draft Project" (patch_149). Mirrors the same
 // service-role, route-does-its-own-validation shape already established
@@ -98,11 +82,7 @@ export async function POST(request: NextRequest) {
   // community list (exact, then case-insensitive substring) rather than
   // trusting the model's own id-guessing -- no confident match means
   // null, not a guess.
-  const communityGuess = (fields.communityNameGuess?.value ?? "").trim().toLowerCase();
-  const matchedCommunity = communityGuess
-    ? communities.find((c) => c.name.toLowerCase() === communityGuess) ??
-      communities.find((c) => c.name.toLowerCase().includes(communityGuess) || communityGuess.includes(c.name.toLowerCase()))
-    : null;
+  const matchedCommunity = matchCommunity(fields.communityNameGuess?.value, communities);
 
   const name = fields.name?.value?.trim() || "Untitled Project (AI Draft)";
   const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -139,7 +119,7 @@ export async function POST(request: NextRequest) {
       rating: 0,
       reviews: 0,
       views: 0,
-      gradient: gradients[Math.floor(Math.random() * gradients.length)],
+      gradient: pickGradient(),
     })
     .select("id")
     .single();

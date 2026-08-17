@@ -7,6 +7,7 @@ import { ProjectCard } from "@/components/public/ProjectCard";
 import { ProjectPublicSummary } from "@/components/public/ProjectPublicSummary";
 import { ProjectEnquiryPanel } from "@/components/public/ProjectEnquiryPanel";
 import { ShareButton } from "@/components/public/ShareButton";
+import { AiDiscoveryDisclosure } from "@/components/public/AiDiscoveryDisclosure";
 import { RequestPropertyPanel } from "@/components/broker/RequestPropertyPanel";
 import { AgencyRequestPropertyPanel } from "@/components/broker-agency/AgencyRequestPropertyPanel";
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
@@ -322,6 +323,11 @@ export default async function ProjectDetailsPage({
                   {developer?.name}
                 </Link>
               </p>
+              {project.aiSourceType === "web_discovery" && (
+                <div className="mt-2">
+                  <AiDiscoveryDisclosure />
+                </div>
+              )}
             </div>
             <div className="text-right">
               <div className="flex justify-end">

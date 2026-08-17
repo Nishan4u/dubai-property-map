@@ -114,6 +114,11 @@ export interface Project {
   // patch_149 -- 'manual' (every existing/normal-flow project) or
   // 'ai_extracted' (created via Upload Brochure -> AI Draft Project).
   dataSource?: "manual" | "ai_extracted";
+  // patch_150 -- which AI path an ai_extracted project came from.
+  // Gates the public AiDiscoveryDisclosure badge (web_discovery only --
+  // a brochure upload was submitted by the real developer and always
+  // goes through human review before publishing, unlike discovery).
+  aiSourceType?: "brochure_upload" | "web_discovery" | null;
   // Derived from the project_unit_types child table when the list query
   // joins it (spec section 12: Unit Type / Size sqft search filters).
   // Absent (not empty-array) when the query didn't join it.
