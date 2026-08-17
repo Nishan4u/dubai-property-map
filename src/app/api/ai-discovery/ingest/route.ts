@@ -38,6 +38,13 @@ interface DiscoveryCandidate {
     tags?: CandidateField<string[]>;
   };
   sourceUrls: string[];
+  // Optional. The calling agent is instructed to only ever set this when
+  // the source explicitly grants reuse (a developer press kit/media page
+  // stating images are available for press/media use) -- never a plain
+  // marketing photo with no stated license. This route can't verify that
+  // judgment call itself, so it does the one thing it CAN verify: confirm
+  // the URL is real and actually serves an image before trusting it.
+  imageUrl?: string | null;
 }
 
 function clampConfidence(n: unknown): number {
@@ -56,6 +63,38 @@ function validSourceUrls(urls: unknown): string[] {
       return false;
     }
   });
+}
+
+// The calling agent decides WHETHER an image is reusable (a judgment call
+// this route can't make); this only verifies the URL is real and actually
+// serves an image, so a broken/mistyped link never lands as a project's
+// cover photo. Never blocks the candidate on failure -- an image is a
+// nice-to-have, not a requirement like sourceUrls.
+async function verifyImageUrl(url: unknown): Promise<string | null> {
+  if (typeof url !== "string") return null;
+  try {
+    new URL(url);
+  } catch {
+    return null;
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    // Some real-world hosts (e.g. Wikimedia) 400 a bare fetch with no
+    // descriptive User-Agent -- identify honestly rather than pretend to
+    // be a browser.
+    const res = await fetch(url, {
+      method: "HEAD",
+      signal: controller.signal,
+      headers: { "User-Agent": "DubaiPropertyMapBot/1.0 (+https://dubaipropertymap.ae; AI Project Discovery image check)" },
+    });
+    clearTimeout(timeout);
+    const contentType = res.headers.get("content-type") ?? "";
+    if (res.ok && contentType.startsWith("image/")) return url;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -211,6 +250,7 @@ export async function POST(request: NextRequest) {
 
       const willAutoPublish = discoveryEnabled && overallConfidence >= threshold;
       const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 7)}`;
+      const coverImageUrl = await verifyImageUrl(raw.imageUrl);
 
       const { data: draft, error: insertError } = await admin
         .from("projects")
@@ -240,6 +280,7 @@ export async function POST(request: NextRequest) {
           reviews: 0,
           views: 0,
           gradient: pickGradient(),
+          cover_image_url: coverImageUrl,
         })
         .select("id, slug")
         .single();
